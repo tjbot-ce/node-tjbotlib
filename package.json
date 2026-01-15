@@ -1,57 +1,99 @@
 {
   "name": "tjbot",
-  "version": "2.0.2",
+  "version": "3.0.0",
   "description": "Node.js library for writing TJBot recipes",
-  "main": "dist/cjs/tjbot.js",
-  "module": "dist/mjs/tjbot.js",
-  "directories": {
-    "lib": "lib",
-    "test": "__tests__"
-  },
-  "exports": {
-    ".": {
-      "import": "./dist/mjs/tjbot.js",
-      "require": "./dist/cjs/tjbot.js"
-    }
-  },
   "dependencies": {
-    "bluebird": "^3.7.2",
+    "@iarna/toml": "^2.2.5",
+    "@inquirer/prompts": "^8.2.0",
+    "axios": "^1.13.2",
+    "cli-progress": "^3.12.0",
     "color-model": "^0.2.2",
     "colornames": "^1.1.1",
-    "fifo": "^2.3.0",
-    "ibm-watson": "^5.7.0",
+    "fifo": "^2.4.1",
+    "import-meta-resolve": "^4.2.0",
+    "js-easing-functions": "^1.0.3",
+    "js-yaml": "^4.1.1",
     "mic": "^2.1.2",
-    "node-raspistill": "^1.0.1",
-    "pigpio": "^3.2.3",
-    "rpi-ws281x-native": "^0.10.1",
+    "node-libgpiod": "^0.6.0",
+    "node-raspistill": "^2.0.1",
+    "pi-spi": "^1.2.1",
+    "pigpio": "^3.3.1",
+    "rpi-cam-lib": "^1.1.1",
+    "rpi-ws281x-native": "^1.0.4",
     "semaphore": "^1.1.0",
+    "sherpa-onnx-linux-arm64": "^1.12.19",
+    "sherpa-onnx-node": "^1.12.20",
     "sleep": "^6.3.0",
-    "sound-player": "^1.0.13",
-    "temp": "^0.9.1",
-    "winston": "^3.3.3"
+    "temp": "^0.9.4",
+    "winston": "^3.19.0",
+    "zod": "^4.3.5"
+  },
+  "optionalDependencies": {
+    "@google-cloud/speech": "^7.2.1",
+    "@google-cloud/text-to-speech": "^6.4.0",
+    "ibm-watson": "^12.1.1",
+    "microsoft-cognitiveservices-speech-sdk": "^1.47.0"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.11.5",
-    "babel-eslint": "^10.1.0",
-    "babel-jest": "^26.3.0",
+    "@eslint/js": "^9.39.2",
+    "@types/cli-progress": "^3.11.6",
+    "@types/colornames": "^1.1.5",
+    "@types/js-yaml": "^4.0.9",
+    "@types/pi-spi": "^0.0.31",
+    "@types/rpi-ws281x-native": "^1.0.3",
+    "@types/temp": "^0.9.4",
+    "@vitest/coverage-v8": "^4.0.16",
     "braintree-jsdoc-template": "^3.3.0",
-    "eslint": "^7.8.1",
-    "eslint-config-airbnb-base": "^14.2.0",
-    "eslint-config-standard": "^14.1.1",
-    "eslint-plugin-import": "^2.22.0",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.1",
-    "jest": "^26.4.2",
-    "jsdoc": "^3.6.5",
-    "typescript": "^4.4.4"
+    "copyfiles": "^2.4.1",
+    "eslint": "^9.39.2",
+    "globals": "^17.0.0",
+    "jsdoc": "^4.0.5",
+    "markdownlint-cli": "^0.47.0",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.52.0",
+    "vitest": "^4.0.16",
+    "wav": "^1.0.2"
   },
+  "main": "./dist/tjbot.js",
+  "exports": {
+    ".": {
+      "import": "./dist/tjbot.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
+    "build": "tsc",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.{js,ts}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.{js,ts}\"",
+    "generate-docs": "test -d ../ibmtjbot.github.io && jsdoc --configure .jsdoc.json --verbose || echo 'Skipping docs generation: ../ibmtjbot.github.io not found'",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "markdownlint": "markdownlint \"**/*.md\" --ignore node_modules",
+    "markdownlint:fix": "markdownlint \"**/*.md\" --ignore node_modules --fix",
+    "postbuild": "copyfiles -u 1 src/**/*.toml dist/ && copyfiles -u 1 src/**/*.yaml dist/",
+    "postinstall": "bash scripts/setup-sherpa.sh",
     "prebuild": "rm -rf dist/*",
-    "build": "tsc -p tsconfig-mjs.json && tsc -p tsconfig-cjs.json",
-    "postbuild": "sh fixup.sh",
-    "test": "jest test.tjbotlib.js",
-    "generate-docs": "jsdoc --configure .jsdoc.json --verbose"
+    "pretest": "npm run build",
+    "test": "vitest run tests/core",
+    "test:coverage": "vitest --coverage",
+    "test-camera": "node tests/live/camera.test.js",
+    "test-led": "node tests/live/led.test.js",
+    "test-microphone": "node tests/live/microphone.test.js",
+    "test-servo": "node tests/live/servo.test.js",
+    "test-speaker": "node tests/live/speaker.test.js",
+    "test-stt": "node tests/live/stt.test.js",
+    "test-tts": "node tests/live/tts.test.js",
+    "update-deps": "npx npm-check-updates",
+    "upgrade-deps": "npx npm-check-updates -u"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
   },
   "repository": {
     "type": "git",

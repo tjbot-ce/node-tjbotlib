@@ -1,0 +1,45 @@
+/**
+ * Copyright 2025 IBM Corp. All Rights Reserved.
+ * Copyright 2026-present TJBot Contributors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/**
+ * Camera controller for TJBot
+ * Handles camera initialization and photo capture using rpi-cam-lib
+ */
+export declare class CameraController {
+    private camera?;
+    private resolution;
+    private verticalFlip;
+    private horizontalFlip;
+    constructor();
+    /**
+     * Initialize the camera with configuration
+     * @param resolution Camera resolution as [width, height]
+     * @param verticalFlip Whether to vertically flip the image
+     * @param horizontalFlip Whether to horizontally flip the image
+     */
+    initialize(resolution: [number, number], verticalFlip: boolean, horizontalFlip: boolean): void;
+    /**
+     * Capture a photo
+     * @param atPath Optional path to save the photo. If not provided, a temporary file will be used.
+     * @returns Path to the saved photo
+     * @throws TJBotError if the camera is not initialized or if capture fails
+     */
+    capturePhoto(atPath?: string): Promise<string>;
+    /**
+     * Clean up resources
+     */
+    cleanup(): void;
+}

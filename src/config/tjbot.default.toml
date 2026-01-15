@@ -1,0 +1,187 @@
+################################################################################
+# TJBot Configuration File
+################################################################################
+
+[log]
+# Valid logging levels are 'error', 'warning', 'info', 'verbose', 'debug'
+# Set this to 'error' or 'warning' to reduce log verbosity
+# Set this to 'verbose' or 'debug' to see detailed logs for troubleshooting
+level = 'info'
+
+[hardware]
+# Hardware devices to initialize with TJBot
+# Set to true to enable, false to disable (or omit to disable)
+speaker = false          # Text-to-speech synthesis output
+microphone = false       # Speech-to-text audio input
+led_common_anode = false # LED with common anode (traditional RGB LED)
+led_neopixel = false     # Addressable RGB NeoPixel LED
+servo = false            # Servo motor for arm/movement
+camera = false           # Camera module for image capture
+
+[listen]
+# 'device' specifies the audio device `arecord` will use for audio recording.
+# Leave blank to auto-pick, or run `aplay -L` to list devices.
+device = ''
+
+# Microphone sampling rate in Hz (44.1k works; 16k reduces CPU for offline models)
+microphoneRate = 44100
+
+# Number of audio channels (1 is typical for mics; 2 also works)
+microphoneChannels = 2
+
+[listen.backend]
+# 'type' chooses the STT provider:
+#   'local'  -> sherpa-onnx on-device (OFFLINE by default, can also do streaming models)
+#   'ibm-watson-stt' -> IBM Cloud STT (STREAMING)
+#   'google-cloud-stt' -> Google Cloud STT (STREAMING)
+#   'azure-stt' -> Microsoft Azure STT (single-shot, treated as OFFLINE for API usage)
+# If you add a callback for an offline model or omit it for a streaming model, TJBot will throw a TJBotError.
+type = 'local'
+
+[listen.backend.local]
+# DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
+# See sherpa-models.yaml for other available models and their URLs.
+# More STT models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+model = 'sherpa-onnx-whisper-base.en'
+modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.en.tar.bz2'
+
+[listen.backend.local.vad]
+# Voice activity detection (VAD) is used for local OFFLINE models (e.g. whisper, moonshine).
+# When enabled, TJBot uses a VAD model to segment speech and stop on silence.
+# Streaming models (zipformer, paraformer) use built-in endpoint detection instead.
+# We recommend keeping VAD enabled, but you can disable it if desired.
+enabled = true
+
+# DEFAULT MODEL: Silero VAD (~350KB)
+# More VAD models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+model = 'silero_vad.onnx'
+modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx'
+
+[listen.backend.ibm-watson-stt]
+# Specify the STT model to use.
+#
+# Full list of IBM Watson STT models:
+# https://cloud.ibm.com/docs/speech-to-text?topic=speech-to-text-models-ng
+model = 'en-US_Multimedia'
+
+# 'inactivityTimeout' specifies the number of seconds of silence allowed
+# after which the listening session will automatically end.
+# Set to -1 to disable automatic timeout.
+inactivityTimeout = -1
+
+# 'backgroundAudioSuppression' specifies the level of background audio suppression
+# to apply during speech recognition. Ranges from 0.0 to 1.0, where higher values
+# result in more aggressive suppression of background noise.
+backgroundAudioSuppression = 0.4
+
+# If true, interim results will be returned during streaming recognition.
+interimResults = false
+
+# Optional: path to ibm-credentials.env file containing IBM API credentials
+# If not specified, TJBot will search for the file in this order:
+#   1. Current working directory (./ibm-credentials.env)
+#   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
+credentialsPath = ''
+
+[see]
+# Camera resolution is width x height
+# Common resolutions: [1920, 1080], [1280, 720], [640, 480]
+cameraResolution = [1920, 1080]
+
+# If true, flips the camera image vertically
+verticalFlip = false
+
+# If true, flips the camera image horizontally
+horizontalFlip = false
+
+[shine.neopixel]
+# NeoPixel LED Pin Configuration
+#
+# Note: Configuration parameters are model-specific. Each Raspberry Pi driver uses
+# only the parameters relevant to its hardware:
+#   - Raspberry Pi 3 & 4: Uses 'gpioPin' (PWM-based NeoPixel control)
+#   - Raspberry Pi 5:     Uses 'spiInterface' (SPI-based NeoPixel control)
+
+# ====== FOR RASPBERRY PI 3 & 4: GPIO PIN ======
+# Available pins: GPIO10, GPIO12, GPIO18, GPIO21
+#
+# GPIO21 is recommended because:
+#   - Does not share PWM hardware with GPIO18 (servo pin)
+#   - Avoids conflicts with common peripherals
+#
+# GPIO18 also works but requires disabling audio:
+#   1. Edit /boot/config.txt
+#   2. Change: dtparam=audio=on
+#   3. To: dtparam=audio=off
+#   4. Reboot your Pi
+gpioPin = 21  # GPIO21 / Physical pin 40 (RPi3/4 only)
+
+# ====== FOR RASPBERRY PI 5: SPI INTERFACE ======
+# Raspberry Pi 5 uses the Serial Peripheral Interface (SPI) for NeoPixel control.
+# The spiInterface value corresponds to the SPI device:
+#   /dev/spidev0.0 - Primary SPI bus (default, for GPIO10)
+#   /dev/spidev0.1 - Secondary SPI bus (if available)
+#
+# GPIO10 (physical pin 19) is the only GPIO that works with /dev/spidev0.0 on RPi5.
+spiInterface = "/dev/spidev0.0"
+
+# Use GRB format for NeoPixel colors. Change this to 'true' if your LED shines
+# green when it is supposed to shine red.
+useGRBFormat = false
+
+[shine.commonanode]
+# Common Anode LEDs are connected with three GPIO pins for red, green, and blue.
+redPin = 19   # GPIO19 / Physical pin 35
+greenPin = 13 # GPIO13 / Physical pin 33
+bluePin = 12  # GPIO12 / Physical pin 32
+
+[speak]
+# 'device' specifies the audio device `aplay` will use for audio playback
+# in most cases, leaving this blank should just work. if you have difficulty
+# with audio playback, please refer to the TJBot wiki:
+#   https://github.com/ibmtjbot/tjbot/wiki/Troubleshooting-TJBot#audio-issues
+# also, you can use `aplay -l` to list available audio output devices
+device = ''
+
+[speak.backend]
+# 'type' specifies which text-to-speech backend to use.
+# Valid options:
+#   'local', which uses the sherpa-onnx TTS engine (no internet connection required)
+#   'ibm-watson-tts', which uses the IBM Watson Text-to-Speech cloud service (requires an `ibm-credentials.env` file for API credentials)
+#   'google-cloud-tts', which uses the Google Cloud Text-to-Speech service (requires a `google-credentials.json` file for API credentials)
+#   'azure-tts', which uses the Microsoft Azure Text-to-Speech service (requires an `azure-credentials.env` file for API credentials)
+# By default, TJBot uses the local sherpa-onnx TTS engine.
+type = 'local'
+
+[speak.backend.local]
+# DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
+# See sherpa-models.yaml for other available models and their URLs.
+# More TTS models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+model = 'vits-piper-en_US-ryan-medium'
+modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2'
+
+[speak.backend.ibm-watson-tts]
+# 'voice' specifies the IBM Watson Text-to-Speech voice to use.
+# Available IBM voices include:
+#   en-US_AllisonV3Voice
+#   en-US_EmilyV3Voice
+#   en-US_HenryV3Voice
+#   en-US_KevinV3Voice
+#   en-US_LisaV3Voice
+#   en-US_MichaelV3Voice
+#   en-US_OliviaV3Voice
+# For a complete list of available voices, see:
+#   https://cloud.ibm.com/docs/text-to-speech?topic=text-to-speech-voices
+voice = 'en-US_MichaelV3Voice'
+
+# Optional: path to ibm-credentials.env file containing IBM API credentials
+# If not specified, TJBot will search for the file in this order:
+#   1. Current working directory (./ibm-credentials.env)
+#   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
+credentialsPath = ''
+
+[wave]
+# The GPIO chip and pin number for controlling a servo motor
+# connected to TJBot's arm.
+gpioChip = 0  # GPIO chip 0
+servoPin = 18 # GPIO18 / Physical Pin 12
