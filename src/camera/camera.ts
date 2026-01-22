@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-
 import { execFile } from 'child_process';
 import temp from 'temp';
 import winston from 'winston';
@@ -25,7 +24,6 @@ import { TJBotError } from '../utils/index.js';
  * Camera controller for TJBot
  * Handles camera initialization and photo capture using rpi-cam-lib
  */
-
 
 export class CameraController {
     private resolution: [number, number];
@@ -58,16 +56,22 @@ export class CameraController {
      * @throws TJBotError if the camera command fails
      */
     async capturePhoto(atPath?: string): Promise<string> {
-        const photoPath = atPath ?? temp.path({
-            prefix: 'tjbot',
-            suffix: '.jpg',
-        });
+        const photoPath =
+            atPath ??
+            temp.path({
+                prefix: 'tjbot',
+                suffix: '.jpg',
+            });
         const args = [
-            '--output', photoPath,
-            '--width', this.resolution[0].toString(),
-            '--height', this.resolution[1].toString(),
+            '--output',
+            photoPath,
+            '--width',
+            this.resolution[0].toString(),
+            '--height',
+            this.resolution[1].toString(),
             '--nopreview',
-            '--camera', '0',
+            '--camera',
+            '0',
         ];
         if (this.verticalFlip) args.push('--vflip');
         if (this.horizontalFlip) args.push('--hflip');

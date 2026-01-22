@@ -17,14 +17,12 @@
  * limitations under the License.
  */
 
-
 import { strict as assert } from 'assert';
 import { existsSync } from 'fs';
 import { TJBot } from '../../dist/tjbot.js';
 import { isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
 
 const LOG_LEVEL = 'info';
-
 
 async function runTest() {
     initWinston(LOG_LEVEL);
@@ -47,7 +45,7 @@ async function runTest() {
     const tjbot = new TJBot({
         log: { level: LOG_LEVEL },
         hardware: { camera: true },
-        see: { cameraResolution: [640, 480] }
+        see: { cameraResolution: [640, 480] },
     });
 
     try {
@@ -70,7 +68,6 @@ async function runTest() {
         console.log(formatTitle('Camera Test Complete'));
         console.log('Note: Check the captured images to verify quality and settings.');
         console.log('Photo paths have been displayed above.\n');
-
     } catch (error) {
         console.error('\n✗ Error during TJBot.look() test:', error.message);
         console.error('\nMake sure:');

@@ -213,7 +213,7 @@ class TJBot {
                     throw new TJBotError('TJBot is not configured with an LED. ' +
                         'Please check that you included the ' +
                         `${Hardware.LED_NEOPIXEL} or ${Hardware.LED_COMMON_ANODE} ` +
-                        'hardware in TJBot\'s configuration.');
+                        "hardware in TJBot's configuration.");
                 }
                 break;
             case Capability.SPEAK:

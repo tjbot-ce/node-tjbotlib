@@ -47,16 +47,21 @@ export class CameraController {
      * @throws TJBotError if the camera command fails
      */
     async capturePhoto(atPath) {
-        const photoPath = atPath ?? temp.path({
-            prefix: 'tjbot',
-            suffix: '.jpg',
-        });
+        const photoPath = atPath ??
+            temp.path({
+                prefix: 'tjbot',
+                suffix: '.jpg',
+            });
         const args = [
-            '--output', photoPath,
-            '--width', this.resolution[0].toString(),
-            '--height', this.resolution[1].toString(),
+            '--output',
+            photoPath,
+            '--width',
+            this.resolution[0].toString(),
+            '--height',
+            this.resolution[1].toString(),
             '--nopreview',
-            '--camera', '0',
+            '--camera',
+            '0',
         ];
         if (this.verticalFlip)
             args.push('--vflip');
