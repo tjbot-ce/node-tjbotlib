@@ -39,12 +39,3 @@ export declare enum Hardware {
     SERVO = "servo",
     SPEAKER = "speaker"
 }
-/**
- * IBM Watson AI services
- * @readonly
- * @enum {string}
- */
-export declare enum WatsonService {
-    SPEECH_TO_TEXT = "speech_to_text",
-    TEXT_TO_SPEECH = "text_to_speech"
-}

@@ -15,7 +15,8 @@
  * limitations under the License.
  */
 
-import { RPICam } from 'rpi-cam-lib';
+
+import { execFile } from 'child_process';
 import temp from 'temp';
 import winston from 'winston';
 import { TJBotError } from '../utils/index.js';
@@ -24,8 +25,9 @@ import { TJBotError } from '../utils/index.js';
  * Camera controller for TJBot
  * Handles camera initialization and photo capture using rpi-cam-lib
  */
+
+
 export class CameraController {
-    private camera?: RPICam;
     private resolution: [number, number];
     private verticalFlip: boolean;
     private horizontalFlip: boolean;
@@ -46,81 +48,50 @@ export class CameraController {
         this.resolution = resolution;
         this.verticalFlip = verticalFlip;
         this.horizontalFlip = horizontalFlip;
-
-        // Instantiate the camera once during initialization
-        if (!this.camera) {
-            this.camera = new RPICam(0, { autoReserve: false });
-            winston.debug('📷 camera instance created');
-        }
+        winston.debug('📷 camera instance configured for rpicam-still');
     }
 
     /**
-     * Capture a photo
+     * Capture a photo by invoking rpicam-still via child_process
      * @param atPath Optional path to save the photo. If not provided, a temporary file will be used.
      * @returns Path to the saved photo
-     * @throws TJBotError if the camera is not initialized or if capture fails
+     * @throws TJBotError if the camera command fails
      */
     async capturePhoto(atPath?: string): Promise<string> {
-        if (!this.camera) {
-            throw new TJBotError('Camera not initialized. Call initialize() first.');
-        }
+        const photoPath = atPath ?? temp.path({
+            prefix: 'tjbot',
+            suffix: '.jpg',
+        });
+        const args = [
+            '--output', photoPath,
+            '--width', this.resolution[0].toString(),
+            '--height', this.resolution[1].toString(),
+            '--nopreview',
+            '--camera', '0',
+        ];
+        if (this.verticalFlip) args.push('--vflip');
+        if (this.horizontalFlip) args.push('--hflip');
 
-        if (atPath === undefined) {
-            atPath = temp.path({
-                prefix: 'tjbot',
-                suffix: '.jpg',
+        winston.verbose(`📷 capturing image at path: ${photoPath}`);
+        winston.debug(`📷 rpicam-still args: ${args.join(' ')}`);
+
+        return new Promise((resolve, reject) => {
+            execFile('rpicam-still', args, (error, stdout, stderr) => {
+                if (error) {
+                    winston.error(`📷 rpicam-still error: ${stderr || error.message}`);
+                    reject(new TJBotError(stderr || error.message));
+                } else {
+                    winston.debug(`📷 rpicam-still stdout: ${stdout}`);
+                    resolve(photoPath);
+                }
             });
-        }
-
-        // Generate a unique task ID for this capture
-        const taskId = `tjbot-photo-${Date.now()}`;
-
-        // Map config to rpi-cam-lib options
-        const cameraOptions = {
-            flipHorizontal: this.horizontalFlip,
-            flipVertical: this.verticalFlip,
-        };
-
-        winston.verbose(`📷 capturing image at path: ${atPath}`);
-        winston.debug(`📷 camera options: ${JSON.stringify(cameraOptions)}`);
-
-        try {
-            const result = await this.camera.serveStill(
-                atPath,
-                this.resolution[0],
-                this.resolution[1],
-                taskId,
-                cameraOptions
-            );
-
-            if (!result.success) {
-                const errorMessage = result.error?.readable || JSON.stringify(result.error) || 'Unknown camera error';
-                throw new TJBotError(errorMessage);
-            }
-
-            return atPath;
-        } catch (error) {
-            let errorMessage = 'Unknown error';
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            } else if (typeof error === 'object' && error !== null) {
-                errorMessage = JSON.stringify(error);
-            } else if (typeof error === 'string') {
-                errorMessage = error;
-            }
-            winston.error(`📷 failed to capture image: ${errorMessage}`);
-            throw error;
-        }
+        });
     }
 
     /**
-     * Clean up resources
+     * Clean up resources (no-op for direct process invocation)
      */
     cleanup(): void {
-        if (this.camera) {
-            // Kill any remaining tasks before cleanup
-            this.camera.killAllTasks(true);
-            winston.debug('📷 camera cleaned up');
-        }
+        winston.debug('📷 camera cleanup (no-op for rpicam-still)');
     }
 }

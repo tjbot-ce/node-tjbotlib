@@ -4,6 +4,8 @@
 
 [log]
 # Valid logging levels are 'error', 'warning', 'info', 'verbose', 'debug'
+# Set this to 'error' or 'warning' to reduce log verbosity
+# Set this to 'verbose' or 'debug' to see detailed logs for troubleshooting
 level = 'info'
 
 [hardware]

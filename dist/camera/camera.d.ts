@@ -19,7 +19,6 @@
  * Handles camera initialization and photo capture using rpi-cam-lib
  */
 export declare class CameraController {
-    private camera?;
     private resolution;
     private verticalFlip;
     private horizontalFlip;
@@ -32,14 +31,14 @@ export declare class CameraController {
      */
     initialize(resolution: [number, number], verticalFlip: boolean, horizontalFlip: boolean): void;
     /**
-     * Capture a photo
+     * Capture a photo by invoking rpicam-still via child_process
      * @param atPath Optional path to save the photo. If not provided, a temporary file will be used.
      * @returns Path to the saved photo
-     * @throws TJBotError if the camera is not initialized or if capture fails
+     * @throws TJBotError if the camera command fails
      */
     capturePhoto(atPath?: string): Promise<string>;
     /**
-     * Clean up resources
+     * Clean up resources (no-op for direct process invocation)
      */
     cleanup(): void;
 }

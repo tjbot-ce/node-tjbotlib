@@ -41,14 +41,4 @@ export var Hardware;
     Hardware["SERVO"] = "servo";
     Hardware["SPEAKER"] = "speaker";
 })(Hardware || (Hardware = {}));
-/**
- * IBM Watson AI services
- * @readonly
- * @enum {string}
- */
-export var WatsonService;
-(function (WatsonService) {
-    WatsonService["SPEECH_TO_TEXT"] = "speech_to_text";
-    WatsonService["TEXT_TO_SPEECH"] = "text_to_speech";
-})(WatsonService || (WatsonService = {}));
 //# sourceMappingURL=constants.js.map
