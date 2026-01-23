@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-import { createInterface } from 'node:readline';
 import { execSync } from 'node:child_process';
 import winston from 'winston';
 
@@ -31,24 +30,6 @@ export function isCommandAvailable(command) {
     } catch {
         return false;
     }
-}
-
-/**
- * Prompts the user for input in an interactive test
- * @param {string} question - The question to ask the user
- * @returns {Promise<string>} - The user's response
- */
-export function promptUser(question) {
-    return new Promise((resolve) => {
-        const rl = createInterface({
-            input: process.stdin,
-            output: process.stdout,
-        });
-        rl.question(question, (answer) => {
-            rl.close();
-            resolve(answer);
-        });
-    });
 }
 
 /**
@@ -72,16 +53,6 @@ export async function isModuleAvailable(moduleName) {
     } catch (_e) {
         return false;
     }
-}
-
-/**
- * Prompt user for yes/no confirmation
- * @param {string} question - The question to ask
- * @returns {Promise<boolean>} - True if user answered yes (or pressed enter), false if no
- */
-export async function confirmUser(question) {
-    const answer = await promptUser(question);
-    return answer.trim() === '' || answer.toLowerCase().match(/^(yes|y)$/) !== null;
 }
 
 /**

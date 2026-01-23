@@ -19,7 +19,8 @@
 
 import { writeFileSync, unlinkSync } from 'fs';
 import { AudioPlayer } from '../../dist/speaker/audio-player.js';
-import { confirmUser, isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
+import { isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
+import { confirm } from '@inquirer/prompts';
 
 const LOG_LEVEL = 'info';
 
@@ -94,7 +95,7 @@ async function runTest() {
             audioPlayer.play(testAudioPath);
         });
 
-        const result1 = await confirmUser('Did you hear audio playback? (yes/no): ');
+        const result1 = await confirm({ message: 'Did you hear audio playback?' });
         console.log(result1 ? '✓ PASS' : '✗ FAIL');
 
         // Clean up test audio file

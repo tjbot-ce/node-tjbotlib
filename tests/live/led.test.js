@@ -128,31 +128,31 @@ async function runTest() {
         // Test 1: Red LED
         console.log('Test 1: Shining RED');
         await tjbot.shine('red');
-        const result1 = await confirm('Did the LED turn RED?');
+        const result1 = await confirm({ message: 'Did the LED turn RED?' });
         console.log(result1 ? '✓ PASS' : '✗ FAIL');
 
         // Test 2: Green LED
         console.log('\nTest 2: Shining GREEN');
         await tjbot.shine('green');
-        const result2 = await confirm('Did the LED turn GREEN?');
+        const result2 = await confirm({ message: 'Did the LED turn GREEN?' });
         console.log(result2 ? '✓ PASS' : '✗ FAIL');
 
         // Test 3: Blue LED
         console.log('\nTest 3: Shining BLUE');
         await tjbot.shine('blue');
-        const result3 = await confirm('Did the LED turn BLUE?');
+        const result3 = await confirm({ message: 'Did the LED turn BLUE?' });
         console.log(result3 ? '✓ PASS' : '✗ FAIL');
 
         // Test 4: Hex color
         console.log('\nTest 4: Shining PURPLE (hex #9400D3)');
         await tjbot.shine('#9400D3');
-        const result4 = await confirm('Did the LED turn PURPLE?');
+        const result4 = await confirm({ message: 'Did the LED turn PURPLE?' });
         console.log(result4 ? '✓ PASS' : '✗ FAIL');
 
         // Test 5: Pulse
         console.log('\nTest 5: Pulsing YELLOW (1 second)');
         await tjbot.pulse('yellow', 1);
-        const result5 = await confirm('Did the LED pulse YELLOW?');
+        const result5 = await confirm({ message: 'Did the LED pulse YELLOW?' });
         console.log(result5 ? '✓ PASS' : '✗ FAIL');
 
         // Turn off LED
