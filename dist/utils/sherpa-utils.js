@@ -235,8 +235,8 @@ export class SherpaModelManager {
     /**
      * Ensure an STT model is downloaded and cached
      */
-    async ensureSTTModelDownloaded(modelName, downloadUrl) {
-        await this.ensureMetadataLoaded();
+    ensureSTTModelDownloaded(modelName, downloadUrl) {
+        this.ensureMetadataLoaded();
         const info = this.sttModels.find((m) => m.key === modelName);
         if (!info) {
             throw new TJBotError(`Unknown STT model key: ${modelName}`);
@@ -254,7 +254,7 @@ export class SherpaModelManager {
      * Ensure a TTS model is downloaded and cached
      */
     async ensureTTSModelDownloaded(modelName, downloadUrl) {
-        await this.ensureMetadataLoaded();
+        this.ensureMetadataLoaded();
         const info = this.ttsModels.find((m) => m.model === modelName);
         const logLabel = info?.label ?? modelName;
         const modelDir = path.join(this.getTTSModelCacheDir(), modelName);
@@ -321,7 +321,7 @@ export class SherpaModelManager {
      * Ensure the Silero VAD model is downloaded
      */
     async ensureVADModelDownloaded() {
-        await this.ensureMetadataLoaded();
+        this.ensureMetadataLoaded();
         const modelCacheDir = this.getSTTModelCacheDir();
         const dest = path.join(modelCacheDir, this.vadModel.filename);
         if (fs.existsSync(dest)) {
@@ -335,94 +335,5 @@ export class SherpaModelManager {
         await fs.promises.rm(tmpDir, { recursive: true, force: true });
         return dest;
     }
-}
-// =============================================================================
-// Backward Compatibility Exports
-// These maintain the existing functional API while using the singleton internally
-// =============================================================================
-/**
- * @deprecated Use SherpaModelManager.getInstance().getSTTModelMetadata() instead
- */
-export const STT_MODEL_METADATA = [];
-/**
- * @deprecated Use SherpaModelManager.getInstance().getVADModel() instead
- */
-export const VAD_MODEL = {
-    url: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx',
-    filename: 'silero_vad.onnx',
-};
-/**
- * @deprecated Use SherpaModelManager.getInstance().getSTTModels() instead
- */
-export const STT_MODELS = [];
-/**
- * @deprecated Use SherpaModelManager.getInstance().getTTSModels() instead
- */
-export const TTS_MODELS = [];
-/**
- * @deprecated Use SherpaModelManager.getInstance().getSTTModelCacheDir() instead
- */
-export function getSTTModelCacheDir() {
-    return SherpaModelManager.getInstance().getSTTModelCacheDir();
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().getTTSModelCacheDir() instead
- */
-export function getTTSModelCacheDir() {
-    return SherpaModelManager.getInstance().getTTSModelCacheDir();
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().listDownloadedModels() instead
- */
-export async function listDownloadedModels(modelDir) {
-    return await SherpaModelManager.getInstance().listDownloadedModels(modelDir);
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().isModelDownloaded() instead
- */
-export async function isModelDownloaded(modelName, modelDir) {
-    return await SherpaModelManager.getInstance().isModelDownloaded(modelName, modelDir);
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().isSTTModelDownloaded() instead
- */
-export async function isSTTModelDownloaded(modelName) {
-    return await SherpaModelManager.getInstance().isSTTModelDownloaded(modelName);
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().isTTSModelDownloaded() instead
- */
-export async function isTTSModelDownloaded(modelName) {
-    return await SherpaModelManager.getInstance().isTTSModelDownloaded(modelName);
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().downloadFile() instead
- */
-export async function downloadFile(url, destination) {
-    return SherpaModelManager.getInstance().downloadFile(url, destination);
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().extractTarBz2() instead
- */
-export async function extractTarBz2(archivePath, destinationDir) {
-    return SherpaModelManager.getInstance().extractTarBz2(archivePath, destinationDir);
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().ensureSTTModelDownloaded() instead
- */
-export async function ensureSTTModelDownloaded(modelName, downloadUrl) {
-    return SherpaModelManager.getInstance().ensureSTTModelDownloaded(modelName, downloadUrl);
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().ensureTTSModelDownloaded() instead
- */
-export async function ensureTTSModelDownloaded(modelName, downloadUrl) {
-    return SherpaModelManager.getInstance().ensureTTSModelDownloaded(modelName, downloadUrl);
-}
-/**
- * @deprecated Use SherpaModelManager.getInstance().ensureVADModelDownloaded() instead
- */
-export async function ensureVADModelDownloaded() {
-    return SherpaModelManager.getInstance().ensureVADModelDownloaded();
 }
 //# sourceMappingURL=sherpa-utils.js.map
