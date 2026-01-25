@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Capability, Hardware } from './utils/index.js';
-import { RPiHardwareDriver } from './rpi-drivers/index.js';
-import { TJBotConfig } from './config/tjbot-config.js';
 import type { TJBotConfigSchema } from './config/config-types.js';
+import { TJBotConfig } from './config/tjbot-config.js';
+import { RPiHardwareDriver } from './rpi-drivers/index.js';
+import { Capability, Hardware } from './utils/index.js';
 /**
  * Class representing a TJBot
  */
@@ -89,6 +89,20 @@ declare class TJBot {
      * @public
      */
     listen(callback?: (text: string) => void): Promise<string | void>;
+    /**
+     * List all installed (downloaded) Sherpa-ONNX STT models on this device.
+     * @returns {string[]} Array of installed model keys
+     */
+    installedSTTModels(): string[];
+    /**
+     * List recommended Sherpa-ONNX STT models for this device.
+     * @returns {Array<{ key: string, label: string, kind: string }>} Array of recommended model info
+     */
+    recommendedSTTModels(): Array<{
+        key: string;
+        label: string;
+        kind: string;
+    }>;
     /** ------------------------------------------------------------------------ */
     /** LOOK                                                                      */
     /** ------------------------------------------------------------------------ */
@@ -161,6 +175,19 @@ declare class TJBot {
      * @public
      */
     play(soundFile: string): Promise<void>;
+    /**
+     * List all installed (downloaded) Sherpa-ONNX TTS models on this device.
+     * @returns {string[]} Array of installed TTS model keys
+     */
+    installedTTSModels(): string[];
+    /**
+     * List recommended Sherpa-ONNX TTS models for this device.
+     * @returns {Array<{ model: string, label?: string }>} Array of recommended TTS model info
+     */
+    recommendedTTSModels(): Array<{
+        model: string;
+        label?: string;
+    }>;
     /** ------------------------------------------------------------------------ */
     /** WAVE                                                                     */
     /** ------------------------------------------------------------------------ */

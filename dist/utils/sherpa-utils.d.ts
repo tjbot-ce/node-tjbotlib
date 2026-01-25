@@ -58,7 +58,7 @@ export declare class SherpaModelManager {
      * Load model metadata from YAML file
      * If no path provided, uses default sherpa-models.yaml in config directory
      */
-    loadMetadata(yamlPath?: string): Promise<void>;
+    loadMetadata(yamlPath?: string): void;
     /**
      * Ensure metadata is loaded, throw if not
      */
@@ -157,19 +157,19 @@ export declare function getTTSModelCacheDir(): string;
 /**
  * @deprecated Use SherpaModelManager.getInstance().listDownloadedModels() instead
  */
-export declare function listDownloadedModels(modelDir: string): string[];
+export declare function listDownloadedModels(modelDir: string): Promise<string[]>;
 /**
  * @deprecated Use SherpaModelManager.getInstance().isModelDownloaded() instead
  */
-export declare function isModelDownloaded(modelName: string, modelDir: string): boolean;
+export declare function isModelDownloaded(modelName: string, modelDir: string): Promise<boolean>;
 /**
  * @deprecated Use SherpaModelManager.getInstance().isSTTModelDownloaded() instead
  */
-export declare function isSTTModelDownloaded(modelName: string): boolean;
+export declare function isSTTModelDownloaded(modelName: string): Promise<boolean>;
 /**
  * @deprecated Use SherpaModelManager.getInstance().isTTSModelDownloaded() instead
  */
-export declare function isTTSModelDownloaded(modelName: string): boolean;
+export declare function isTTSModelDownloaded(modelName: string): Promise<boolean>;
 /**
  * @deprecated Use SherpaModelManager.getInstance().downloadFile() instead
  */

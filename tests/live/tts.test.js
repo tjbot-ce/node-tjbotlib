@@ -48,7 +48,7 @@ async function runTest() {
 
     // Load Sherpa model metadata for local backend
     const manager = SherpaModelManager.getInstance();
-    await manager.loadMetadata();
+    manager.loadMetadata();
 
     // Check for required dependencies
     console.log(formatSection('Checking audio playback tools'));
@@ -197,16 +197,18 @@ async function promptBackendSpecificOptions(selectedBackend, manager) {
 
 async function promptSherpaONNXTTSOptions(manager) {
     // Get available models from metadata
-    const models = manager.getTTSModels();
-    const choices = models.map((m) => {
-        const downloaded = manager.isTTSModelDownloaded(m.model);
-        const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
-        return {
-            name: `${m.label || m.model} ${status}`,
-            value: m.model,
-            short: m.label || m.model,
-        };
-    });
+    const models = await manager.getTTSModels();
+    const choices = await Promise.all(
+        models.map(async (m) => {
+            const downloaded = await manager.isTTSModelDownloaded(m.model);
+            const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
+            return {
+                name: `${m.label || m.model} ${status}`,
+                value: m.model,
+                short: m.label || m.model,
+            };
+        })
+    );
 
     const modelKey = await select({
         message: 'Select a Sherpa-ONNX TTS model (voice):',

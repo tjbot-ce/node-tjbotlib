@@ -96,7 +96,7 @@ export class SherpaModelManager {
      * Load model metadata from YAML file
      * If no path provided, uses default sherpa-models.yaml in config directory
      */
-    async loadMetadata(yamlPath?: string): Promise<void> {
+    loadMetadata(yamlPath?: string): void {
         if (this.metadataLoaded) {
             winston.debug('Sherpa model metadata already loaded');
             return;
@@ -112,7 +112,7 @@ export class SherpaModelManager {
 
             winston.debug(`Loading Sherpa model metadata from: ${yamlPath}`);
 
-            const fileContents = await fs.promises.readFile(yamlPath, 'utf8');
+            const fileContents = fs.readFileSync(yamlPath, 'utf8');
             const data = yaml.load(fileContents) as SherpaModelsYAML;
 
             this.sttModels = data.stt_models || [];
@@ -134,9 +134,7 @@ export class SherpaModelManager {
      */
     private ensureMetadataLoaded(): void {
         if (!this.metadataLoaded) {
-            throw new TJBotError(
-                'Sherpa model metadata not loaded. Call SherpaModelManager.getInstance().loadMetadata() first.'
-            );
+            this.loadMetadata();
         }
     }
 
@@ -194,6 +192,7 @@ export class SherpaModelManager {
      * List downloaded models in a directory
      */
     listDownloadedModels(modelDir: string): string[] {
+        this.ensureMetadataLoaded();
         try {
             if (!fs.existsSync(modelDir)) {
                 return [];
@@ -305,7 +304,7 @@ export class SherpaModelManager {
     /**
      * Ensure an STT model is downloaded and cached
      */
-    async ensureSTTModelDownloaded(modelName: string, downloadUrl: string): Promise<string> {
+    ensureSTTModelDownloaded(modelName: string, downloadUrl: string): Promise<string> {
         this.ensureMetadataLoaded();
 
         const info = this.sttModels.find((m) => m.key === modelName);
@@ -477,29 +476,29 @@ export function getTTSModelCacheDir(): string {
 /**
  * @deprecated Use SherpaModelManager.getInstance().listDownloadedModels() instead
  */
-export function listDownloadedModels(modelDir: string): string[] {
-    return SherpaModelManager.getInstance().listDownloadedModels(modelDir);
+export async function listDownloadedModels(modelDir: string): Promise<string[]> {
+    return await SherpaModelManager.getInstance().listDownloadedModels(modelDir);
 }
 
 /**
  * @deprecated Use SherpaModelManager.getInstance().isModelDownloaded() instead
  */
-export function isModelDownloaded(modelName: string, modelDir: string): boolean {
-    return SherpaModelManager.getInstance().isModelDownloaded(modelName, modelDir);
+export async function isModelDownloaded(modelName: string, modelDir: string): Promise<boolean> {
+    return await SherpaModelManager.getInstance().isModelDownloaded(modelName, modelDir);
 }
 
 /**
  * @deprecated Use SherpaModelManager.getInstance().isSTTModelDownloaded() instead
  */
-export function isSTTModelDownloaded(modelName: string): boolean {
-    return SherpaModelManager.getInstance().isSTTModelDownloaded(modelName);
+export async function isSTTModelDownloaded(modelName: string): Promise<boolean> {
+    return await SherpaModelManager.getInstance().isSTTModelDownloaded(modelName);
 }
 
 /**
  * @deprecated Use SherpaModelManager.getInstance().isTTSModelDownloaded() instead
  */
-export function isTTSModelDownloaded(modelName: string): boolean {
-    return SherpaModelManager.getInstance().isTTSModelDownloaded(modelName);
+export async function isTTSModelDownloaded(modelName: string): Promise<boolean> {
+    return await SherpaModelManager.getInstance().isTTSModelDownloaded(modelName);
 }
 
 /**

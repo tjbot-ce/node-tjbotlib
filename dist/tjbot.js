@@ -14,21 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// internal classes
-import { Capability, Hardware, normalizeColor, sleep, TJBotError } from './utils/index.js';
-import { ServoPosition } from './servo/index.js';
-import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
 import { TJBotConfig } from './config/tjbot-config.js';
+import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
+import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
+import { Capability, Hardware, normalizeColor, SherpaModelManager, sleep, TJBotError } from './utils/index.js';
 // node modules
-import temp from 'temp';
-import colorToHex from 'colornames';
 import cm from 'color-model';
-import winston from 'winston';
-import { easeInOutQuad } from 'js-easing-functions';
+import colorToHex from 'colornames';
 import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { easeInOutQuad } from 'js-easing-functions';
 import { dirname, join } from 'path';
+import temp from 'temp';
+import { fileURLToPath } from 'url';
+import winston from 'winston';
 // Read version from package.json
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
@@ -266,6 +265,27 @@ class TJBot {
         // Offline / single-shot: return the transcript
         return await this.rpiDriver.listenForTranscript();
     }
+    /**
+     * List all installed (downloaded) Sherpa-ONNX STT models on this device.
+     * @returns {string[]} Array of installed model keys
+     */
+    installedSTTModels() {
+        const manager = SherpaModelManager.getInstance();
+        const allModels = manager.getSTTModelMetadata();
+        return allModels.filter((m) => manager.isSTTModelDownloaded(m.key)).map((m) => m.key);
+    }
+    /**
+     * List recommended Sherpa-ONNX STT models for this device.
+     * @returns {Array<{ key: string, label: string, kind: string }>} Array of recommended model info
+     */
+    recommendedSTTModels() {
+        const manager = SherpaModelManager.getInstance();
+        return manager.getSTTModelMetadata().map((m) => ({
+            key: m.key,
+            label: m.label,
+            kind: m.kind,
+        }));
+    }
     /** ------------------------------------------------------------------------ */
     /** LOOK                                                                      */
     /** ------------------------------------------------------------------------ */
@@ -410,6 +430,26 @@ class TJBot {
      */
     async play(soundFile) {
         await this.rpiDriver.playAudio(soundFile);
+    }
+    /**
+     * List all installed (downloaded) Sherpa-ONNX TTS models on this device.
+     * @returns {string[]} Array of installed TTS model keys
+     */
+    installedTTSModels() {
+        const manager = SherpaModelManager.getInstance();
+        const allModels = manager.getTTSModels();
+        return allModels.filter((m) => manager.isTTSModelDownloaded(m.model)).map((m) => m.model);
+    }
+    /**
+     * List recommended Sherpa-ONNX TTS models for this device.
+     * @returns {Array<{ model: string, label?: string }>} Array of recommended TTS model info
+     */
+    recommendedTTSModels() {
+        const manager = SherpaModelManager.getInstance();
+        return manager.getTTSModels().map((m) => ({
+            model: m.model,
+            label: m.label,
+        }));
     }
     /** ------------------------------------------------------------------------ */
     /** WAVE                                                                     */

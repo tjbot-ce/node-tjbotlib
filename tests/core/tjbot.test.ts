@@ -511,3 +511,33 @@ describe('TJBot - Configuration Access', () => {
         expect(typeof tj.rpiDriver).toBe('object');
     });
 });
+
+describe('TJBot - Model Listing Methods', () => {
+    let tj: TJBot;
+
+    beforeEach(() => {
+        tj = new TJBot();
+    });
+
+    test('installedSTTModels returns an array', () => {
+        const result = tj.installedSTTModels();
+        expect(Array.isArray(result)).toBe(true);
+    });
+
+    test('recommendedSTTModels returns a non-empty array', () => {
+        const result = tj.recommendedSTTModels();
+        expect(Array.isArray(result)).toBe(true);
+        expect(result.length).toBeGreaterThan(0);
+    });
+
+    test('installedTTSModels returns an array', () => {
+        const result = tj.installedTTSModels();
+        expect(Array.isArray(result)).toBe(true);
+    });
+
+    test('recommendedTTSModels returns a non-empty array', () => {
+        const result = tj.recommendedTTSModels();
+        expect(Array.isArray(result)).toBe(true);
+        expect(result.length).toBeGreaterThan(0);
+    });
+});

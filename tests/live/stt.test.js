@@ -50,7 +50,7 @@ async function runTest() {
 
     // Load Sherpa model metadata for local backend
     const manager = SherpaModelManager.getInstance();
-    await manager.loadMetadata();
+    manager.loadMetadata();
 
     // Get user configuration choices
     const selectedBackend = await promptBackendChoice();
@@ -208,16 +208,18 @@ async function promptBackendSpecificOptions(selectedBackend, manager) {
 
 async function promptSherpaONNXOptions(manager) {
     // Get available models from metadata
-    const models = manager.getSTTModelMetadata();
-    const choices = models.map((m) => {
-        const downloaded = manager.isSTTModelDownloaded(m.folder);
-        const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
-        return {
-            name: `${m.label} [${m.kind}] ${status}`,
-            value: m.key,
-            short: m.label,
-        };
-    });
+    const models = await manager.getSTTModelMetadata();
+    const choices = await Promise.all(
+        models.map(async (m) => {
+            const downloaded = await manager.isSTTModelDownloaded(m.folder);
+            const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
+            return {
+                name: `${m.label} [${m.kind}] ${status}`,
+                value: m.key,
+                short: m.label,
+            };
+        })
+    );
 
     const modelKey = await select({
         message: 'Select a Sherpa-ONNX model:',

@@ -49,7 +49,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
         try {
             // Load model metadata from YAML
             const manager = SherpaModelManager.getInstance();
-            await manager.loadMetadata();
+            manager.loadMetadata();
 
             // Set environment variables to reduce noisy logging
             if (!process.env.SHERPA_ONNX_LOG_LEVEL) {
