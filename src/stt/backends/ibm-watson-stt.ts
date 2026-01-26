@@ -24,14 +24,7 @@ import winston from 'winston';
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
 import { ListenConfig } from '../../config/index.js';
 import { TJBotError } from '../../utils/index.js';
-
-interface IBMWatsonSTTConfig {
-    model?: string;
-    inactivityTimeout?: number;
-    backgroundAudioSuppression?: number;
-    interimResults?: boolean;
-    credentialsPath?: string;
-}
+import type { STTBackendIBMWatsonConfig } from '../../config/config-types.js';
 
 /**
  * IBM Watson Speech-to-Text Engine
@@ -43,13 +36,13 @@ interface IBMWatsonSTTConfig {
 export class IBMWatsonSTTEngine extends STTEngine {
     private sttService: SpeechToTextV1 | undefined;
 
-    constructor(config?: Record<string, unknown>) {
+    constructor(config?: STTBackendIBMWatsonConfig) {
         super(config);
     }
 
     async initialize(): Promise<void> {
         try {
-            const config = this.config as IBMWatsonSTTConfig | undefined;
+            const config = this.config as STTBackendIBMWatsonConfig | undefined;
             const credentialsPath = config?.credentialsPath;
             // Load IBM credentials from file
             this.loadCredentials(credentialsPath);
@@ -113,7 +106,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
         }
 
         const listenConfig: ListenConfig = options.listenConfig ?? {};
-        const backendConfig = (listenConfig.backend?.['ibm-watson-stt'] ?? {}) as IBMWatsonSTTConfig;
+        const backendConfig = (listenConfig.backend?.['ibm-watson-stt'] ?? {}) as STTBackendIBMWatsonConfig;
 
         const rate: number = (listenConfig.microphoneRate as number) ?? 44100;
         const channels: number = (listenConfig.microphoneChannels as number) ?? 2;

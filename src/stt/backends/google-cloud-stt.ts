@@ -22,17 +22,7 @@ import winston from 'winston';
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
 import { ListenConfig } from '../../config/index.js';
 import { TJBotError } from '../../utils/index.js';
-
-interface GoogleCloudSTTConfig {
-    model?: string;
-    languageCode?: string;
-    credentialsPath?: string;
-    encoding?: string;
-    sampleRateHertz?: number;
-    audioChannelCount?: number;
-    enableAutomaticPunctuation?: boolean;
-    interimResults?: boolean;
-}
+import type { STTBackendGoogleCloudConfig } from '../../config/config-types.js';
 
 /**
  * Google Cloud Speech-to-Text Engine
@@ -44,13 +34,13 @@ interface GoogleCloudSTTConfig {
 export class GoogleCloudSTTEngine extends STTEngine {
     private client: SpeechClient | undefined;
 
-    constructor(config?: Record<string, unknown>) {
+    constructor(config?: STTBackendGoogleCloudConfig) {
         super(config);
     }
 
     async initialize(): Promise<void> {
         try {
-            const config = this.config as GoogleCloudSTTConfig | undefined;
+            const config = this.config as STTBackendGoogleCloudConfig | undefined;
             const credentialsPath = this.resolveCredentialsPath(config?.credentialsPath);
 
             // Set credentials path in environment variable
@@ -107,7 +97,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
         }
 
         const listenConfig: ListenConfig = options.listenConfig ?? {};
-        const backendConfig = (listenConfig.backend?.['google-cloud-stt'] ?? {}) as GoogleCloudSTTConfig;
+        const backendConfig = (listenConfig.backend?.['google-cloud-stt'] ?? {}) as STTBackendGoogleCloudConfig;
 
         const sampleRateHertz: number =
             backendConfig.sampleRateHertz ?? (listenConfig.microphoneRate as number) ?? 44100;

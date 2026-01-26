@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
+import type { TTSBackendAzureConfig } from '../../config/config-types.js';
 /**
  * Azure Cognitive Services Text-to-Speech Engine
  *
@@ -25,7 +25,7 @@ import { TTSEngineConfig } from '../../config/index.js';
 export declare class AzureTTSEngine extends TTSEngine {
     private subscriptionKey;
     private region;
-    constructor(config?: TTSEngineConfig);
+    constructor(config?: TTSBackendAzureConfig);
     initialize(): Promise<void>;
     private loadCredentials;
     private resolveCredentialsPath;

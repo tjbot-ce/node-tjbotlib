@@ -26,7 +26,9 @@ import { ServoPosition } from '../servo/index.js';
 import { SpeakerController } from '../speaker/index.js';
 import { STTController } from '../stt/stt.js';
 import { TTSController } from '../tts/tts.js';
-import { Capability, Hardware, convertHexToRgbColor, isCommandAvailable, TJBotError } from '../utils/index.js';
+import { Capability, convertHexToRgbColor, Hardware, isCommandAvailable, TJBotError } from '../utils/index.js';
+import { ImageClassificationResult, ImageSegmentationResult, ObjectDetectionResult } from '../vision/index.js';
+import { VisionController } from '../vision/vision.js';
 
 export abstract class RPiHardwareDriver {
     // capability checks
@@ -56,6 +58,9 @@ export abstract class RPiHardwareDriver {
 
     // SEE
     abstract capturePhoto(atPath?: string): Promise<string>;
+    abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    abstract segmentImage(image: Buffer | string): Promise<ImageSegmentationResult>;
 
     // SHINE
     abstract renderLED(hexColor: string): Promise<void>;
@@ -79,14 +84,17 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     protected microphoneController?: MicrophoneController;
     protected speakerController?: SpeakerController;
 
-    // controllers for STT and TTS
+    // controllers for STT, TTS, CV
     protected sttController?: STTController;
     protected ttsController?: TTSController;
+    protected visionController?: VisionController;
 
     // cached configuration for speak
     protected speakConfig: SpeakConfig = {};
     // cached configuration for listen
     protected listenConfig: ListenConfig = {};
+    // cached configuration for see
+    protected seeConfig: SeeConfig = {};
 
     constructor() {
         super();
@@ -121,6 +129,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const verticalFlip = config.verticalFlip ?? false;
         const horizontalFlip = config.horizontalFlip ?? false;
         this.cameraController.initialize([width, height], verticalFlip, horizontalFlip);
+        this.visionController = new VisionController(config);
         this.initializedHardware.add(Hardware.CAMERA);
     }
 
@@ -231,6 +240,30 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
             throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
         }
         return this.cameraController.capturePhoto(atPath);
+    }
+
+    async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
+        if (!this.visionController)
+            throw new TJBotError(
+                'Vision controller is not initialized. Make sure to call setupCamera() before using Vision.'
+            );
+        return this.visionController.detectObjects(image);
+    }
+
+    async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
+        if (!this.visionController)
+            throw new TJBotError(
+                'Vision controller is not initialized. Make sure to call setupCamera() before using Vision.'
+            );
+        return this.visionController.classifyImage(image);
+    }
+
+    async segmentImage(image: Buffer | string): Promise<ImageSegmentationResult> {
+        if (!this.visionController)
+            throw new TJBotError(
+                'Vision controller is not initialized. Make sure to call setupCamera() before using Vision.'
+            );
+        return this.visionController.segmentImage(image);
     }
 
     async renderLED(hexColor: string): Promise<void> {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
+import type { TTSBackendLocalConfig } from '../../config/config-types.js';
 /**
  * Sherpa-ONNX Local Text-to-Speech Engine
  *
@@ -25,7 +25,7 @@ import { TTSEngineConfig } from '../../config/index.js';
 export declare class SherpaONNXTTSEngine extends TTSEngine {
     private ttsEngine;
     private modelPath;
-    constructor(config?: TTSEngineConfig);
+    constructor(config?: TTSBackendLocalConfig);
     /**
      * Initialize the sherpa-onnx TTS engine.
      * Pre-downloads the configured model.

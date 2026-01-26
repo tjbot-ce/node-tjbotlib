@@ -303,6 +303,30 @@ class TJBot {
         const path = await this.rpiDriver.capturePhoto(filePath);
         return path;
     }
+    /**
+     * Detect objects in an image using the configured CV engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ObjectDetectionResult[]>}
+     */
+    async detectObjects(image) {
+        return this.rpiDriver.detectObjects(image);
+    }
+    /**
+     * Classify an image using the configured CV engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageClassificationResult[]>}
+     */
+    async classifyImage(image) {
+        return this.rpiDriver.classifyImage(image);
+    }
+    /**
+     * Segment an image using the configured CV engine (if supported).
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageSegmentationResult>}
+     */
+    async segmentImage(image) {
+        return this.rpiDriver.segmentImage(image);
+    }
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */
     /** ------------------------------------------------------------------------ */

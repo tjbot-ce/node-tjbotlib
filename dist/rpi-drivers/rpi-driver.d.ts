@@ -24,6 +24,8 @@ import { SpeakerController } from '../speaker/index.js';
 import { STTController } from '../stt/stt.js';
 import { TTSController } from '../tts/tts.js';
 import { Capability, Hardware } from '../utils/index.js';
+import { ImageClassificationResult, ImageSegmentationResult, ObjectDetectionResult } from '../vision/index.js';
+import { VisionController } from '../vision/vision.js';
 export declare abstract class RPiHardwareDriver {
     abstract hasHardware(hardware: Hardware): boolean;
     abstract hasCapability(capability: Capability): boolean;
@@ -45,6 +47,9 @@ export declare abstract class RPiHardwareDriver {
         abortSignal?: AbortSignal;
     }): Promise<string>;
     abstract capturePhoto(atPath?: string): Promise<string>;
+    abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    abstract segmentImage(image: Buffer | string): Promise<ImageSegmentationResult>;
     abstract renderLED(hexColor: string): Promise<void>;
     abstract renderLEDCommonAnode(rgbColor: [number, number, number]): void;
     abstract renderLEDNeopixel(hexColor: string): Promise<void>;
@@ -59,8 +64,10 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     protected speakerController?: SpeakerController;
     protected sttController?: STTController;
     protected ttsController?: TTSController;
+    protected visionController?: VisionController;
     protected speakConfig: SpeakConfig;
     protected listenConfig: ListenConfig;
+    protected seeConfig: SeeConfig;
     constructor();
     hasHardware(hardware: Hardware): boolean;
     hasCapability(capability: Capability): boolean;
@@ -79,6 +86,9 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         abortSignal?: AbortSignal;
     }): Promise<string>;
     capturePhoto(atPath?: string): Promise<string>;
+    detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    segmentImage(image: Buffer | string): Promise<ImageSegmentationResult>;
     renderLED(hexColor: string): Promise<void>;
     playAudio(audioPath: string): Promise<void>;
     speak(message: string): Promise<void>;

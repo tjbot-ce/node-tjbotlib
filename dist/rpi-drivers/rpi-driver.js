@@ -20,7 +20,8 @@ import { MicrophoneController } from '../microphone/index.js';
 import { SpeakerController } from '../speaker/index.js';
 import { STTController } from '../stt/stt.js';
 import { TTSController } from '../tts/tts.js';
-import { Capability, Hardware, convertHexToRgbColor, isCommandAvailable, TJBotError } from '../utils/index.js';
+import { Capability, convertHexToRgbColor, Hardware, isCommandAvailable, TJBotError } from '../utils/index.js';
+import { VisionController } from '../vision/vision.js';
 export class RPiHardwareDriver {
 }
 export class RPiBaseHardwareDriver extends RPiHardwareDriver {
@@ -30,6 +31,8 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         this.speakConfig = {};
         // cached configuration for listen
         this.listenConfig = {};
+        // cached configuration for see
+        this.seeConfig = {};
         this.initializedHardware = new Set();
     }
     hasHardware(hardware) {
@@ -58,6 +61,7 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const verticalFlip = config.verticalFlip ?? false;
         const horizontalFlip = config.horizontalFlip ?? false;
         this.cameraController.initialize([width, height], verticalFlip, horizontalFlip);
+        this.visionController = new VisionController(config);
         this.initializedHardware.add(Hardware.CAMERA);
     }
     setupMicrophone(config) {
@@ -138,6 +142,21 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
             throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
         }
         return this.cameraController.capturePhoto(atPath);
+    }
+    async detectObjects(image) {
+        if (!this.visionController)
+            throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        return this.visionController.detectObjects(image);
+    }
+    async classifyImage(image) {
+        if (!this.visionController)
+            throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        return this.visionController.classifyImage(image);
+    }
+    async segmentImage(image) {
+        if (!this.visionController)
+            throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        return this.visionController.segmentImage(image);
     }
     async renderLED(hexColor) {
         if (this.hasHardware(Hardware.LED_COMMON_ANODE)) {

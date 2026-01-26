@@ -129,7 +129,7 @@ describe('Zod Schema Validation - Complete TJBot Config', () => {
         expect(result.success).toBe(true);
     });
 
-    test('accepts config with extra properties (passthrough)', () => {
+    test('accepts config with extra properties (loose)', () => {
         const result = tjbotConfigSchema.safeParse({
             log: { level: 'info' },
             customField: 'customValue',

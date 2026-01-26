@@ -18,8 +18,8 @@ import fs from 'fs';
 import path from 'path';
 import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
 import { TJBotError, SherpaModelManager } from '../../utils/index.js';
+import type { TTSBackendLocalConfig } from '../../config/config-types.js';
 
 // Lazy require sherpa-onnx to avoid hard dependency issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,7 +37,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
     private ttsEngine: any;
     private modelPath: string | undefined;
 
-    constructor(config?: TTSEngineConfig) {
+    constructor(config?: TTSBackendLocalConfig) {
         super(config);
     }
 

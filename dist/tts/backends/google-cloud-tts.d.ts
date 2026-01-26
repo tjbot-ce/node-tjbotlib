@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
+import type { TTSBackendGoogleCloudConfig } from '../../config/config-types.js';
 /**
  * Google Cloud Text-to-Speech Engine
  *
@@ -24,7 +24,7 @@ import { TTSEngineConfig } from '../../config/index.js';
  */
 export declare class GoogleCloudTTSEngine extends TTSEngine {
     private client;
-    constructor(config?: TTSEngineConfig);
+    constructor(config?: TTSBackendGoogleCloudConfig);
     initialize(): Promise<void>;
     private resolveCredentialsPath;
     synthesize(text: string): Promise<Buffer>;

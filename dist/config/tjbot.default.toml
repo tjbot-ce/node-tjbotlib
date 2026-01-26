@@ -31,10 +31,10 @@ microphoneChannels = 2
 
 [listen.backend]
 # 'type' chooses the STT provider:
-#   'local'  -> sherpa-onnx on-device (OFFLINE by default, can also do streaming models)
-#   'ibm-watson-stt' -> IBM Cloud STT (STREAMING)
+#   'local'            -> sherpa-onnx on-device (OFFLINE by default, can also do streaming models)
+#   'ibm-watson-stt'   -> IBM Cloud STT (STREAMING)
 #   'google-cloud-stt' -> Google Cloud STT (STREAMING)
-#   'azure-stt' -> Microsoft Azure STT (single-shot, treated as OFFLINE for API usage)
+#   'azure-stt'        -> Microsoft Azure STT (single-shot, treated as OFFLINE for API usage)
 # If you add a callback for an offline model or omit it for a streaming model, TJBot will throw a TJBotError.
 type = 'local'
 
@@ -93,6 +93,29 @@ verticalFlip = false
 
 # If true, flips the camera image horizontally
 horizontalFlip = false
+
+[see.backend]
+# 'type' chooses the CV provider:
+#   'local'               -> on-device ONNX (OFFLINE)
+#   'google-cloud-vision' -> Google Cloud Vision (CLOUD)
+#   'azure-vision'        -> Microsoft Azure Vision (CLOUD)
+type = 'local'
+
+[see.backend.local]
+# DEFAULT MODEL (OFFLINE): yolov8n.onnx (small, fast, general purpose)
+# See cv-models.yaml for other available models and their URLs.
+model = 'yolov8n.onnx'
+modelUrl = 'https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.onnx'
+
+[see.backend.google-cloud-vision]
+# Google Cloud Vision API credentials and model
+credentialsPath = ''
+model = ''
+
+[see.backend.azure-vision]
+# Microsoft Azure Vision API credentials and model
+credentialsPath = ''
+model = ''
 
 [shine.neopixel]
 # NeoPixel LED Pin Configuration

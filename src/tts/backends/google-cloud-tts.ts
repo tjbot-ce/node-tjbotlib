@@ -20,8 +20,8 @@ import path from 'path';
 import { TextToSpeechClient, protos as ttsProtos } from '@google-cloud/text-to-speech';
 import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
 import { TJBotError } from '../../utils/index.js';
+import type { TTSBackendGoogleCloudConfig } from '../../config/config-types.js';
 
 /**
  * Google Cloud Text-to-Speech Engine
@@ -33,14 +33,14 @@ import { TJBotError } from '../../utils/index.js';
 export class GoogleCloudTTSEngine extends TTSEngine {
     private client: TextToSpeechClient | undefined;
 
-    constructor(config?: TTSEngineConfig) {
+    constructor(config?: TTSBackendGoogleCloudConfig) {
         super(config);
     }
 
     async initialize(): Promise<void> {
         try {
             const credentialsPath = this.resolveCredentialsPath(
-                (this.config as Record<string, unknown>)?.credentialsPath as string | undefined
+                (this.config as TTSBackendGoogleCloudConfig)?.credentialsPath
             );
 
             // Set credentials path in environment variable

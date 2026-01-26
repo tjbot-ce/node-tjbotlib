@@ -21,8 +21,8 @@ import path from 'path';
 import TextToSpeechV1 from 'ibm-watson/text-to-speech/v1.js';
 import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
 import { TJBotError } from '../../utils/index.js';
+import type { TTSBackendIBMWatsonConfig } from '../../config/config-types.js';
 
 /**
  * IBM Watson Text-to-Speech Engine
@@ -34,7 +34,7 @@ import { TJBotError } from '../../utils/index.js';
 export class IBMTTSEngine extends TTSEngine {
     private ttsService: TextToSpeechV1 | undefined;
 
-    constructor(config?: TTSEngineConfig) {
+    constructor(config?: TTSBackendIBMWatsonConfig) {
         super(config);
     }
 
@@ -44,7 +44,7 @@ export class IBMTTSEngine extends TTSEngine {
      */
     async initialize(): Promise<void> {
         try {
-            const credentialsPath = (this.config as Record<string, unknown>)?.credentialsPath as string | undefined;
+            const credentialsPath = (this.config as TTSBackendIBMWatsonConfig)?.credentialsPath;
             this.loadCredentials(credentialsPath);
             this.ttsService = new TextToSpeechV1({});
             winston.info('🔈 IBM Watson TTS engine initialized');

@@ -20,8 +20,8 @@ import path from 'path';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
 import { TJBotError } from '../../utils/index.js';
+import type { TTSBackendAzureConfig } from '../../config/config-types.js';
 
 /**
  * Azure Cognitive Services Text-to-Speech Engine
@@ -34,7 +34,7 @@ export class AzureTTSEngine extends TTSEngine {
     private subscriptionKey: string | undefined;
     private region: string | undefined;
 
-    constructor(config?: TTSEngineConfig) {
+    constructor(config?: TTSBackendAzureConfig) {
         super(config);
     }
 
@@ -54,7 +54,7 @@ export class AzureTTSEngine extends TTSEngine {
     }
 
     private loadCredentials(): void {
-        const config = this.config as Record<string, unknown>;
+        const config = this.config as TTSBackendAzureConfig;
 
         // First try environment variables
         if (process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION) {

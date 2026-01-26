@@ -24,7 +24,7 @@ const logConfigSchema = z
     .object({
         level: z.string().optional(),
     })
-    .passthrough();
+    .loose();
 export type LogConfig = z.infer<typeof logConfigSchema>;
 
 /**
@@ -41,7 +41,7 @@ export const vadConfigSchema = z
         /** Optional URL for the VAD model download */
         modelUrl: z.string().optional(),
     })
-    .passthrough();
+    .loose();
 export type VADConfig = z.infer<typeof vadConfigSchema>;
 
 export const sttBackendLocalConfigSchema = z
@@ -50,7 +50,7 @@ export const sttBackendLocalConfigSchema = z
         modelUrl: z.string().optional(),
         vad: vadConfigSchema.optional(),
     })
-    .passthrough();
+    .loose();
 export type STTBackendLocalConfig = z.infer<typeof sttBackendLocalConfigSchema>;
 
 export const sttBackendIBMWatsonConfigSchema = z
@@ -61,7 +61,7 @@ export const sttBackendIBMWatsonConfigSchema = z
         interimResults: z.boolean().optional(),
         credentialsPath: z.string().optional(),
     })
-    .passthrough();
+    .loose();
 export type STTBackendIBMWatsonConfig = z.infer<typeof sttBackendIBMWatsonConfigSchema>;
 
 export const sttBackendGoogleCloudConfigSchema = z
@@ -75,7 +75,7 @@ export const sttBackendGoogleCloudConfigSchema = z
         enableAutomaticPunctuation: z.boolean().optional(),
         interimResults: z.boolean().optional(),
     })
-    .passthrough();
+    .loose();
 export type STTBackendGoogleCloudConfig = z.infer<typeof sttBackendGoogleCloudConfigSchema>;
 
 export const sttBackendAzureConfigSchema = z
@@ -83,7 +83,7 @@ export const sttBackendAzureConfigSchema = z
         language: z.string().optional(),
         credentialsPath: z.string().optional(),
     })
-    .passthrough();
+    .loose();
 export type STTBackendAzureConfig = z.infer<typeof sttBackendAzureConfigSchema>;
 
 export const sttBackendConfigSchema = z
@@ -94,7 +94,7 @@ export const sttBackendConfigSchema = z
         'google-cloud-stt': sttBackendGoogleCloudConfigSchema.optional(),
         'azure-stt': sttBackendAzureConfigSchema.optional(),
     })
-    .passthrough();
+    .loose();
 export type STTBackendConfig = z.infer<typeof sttBackendConfigSchema>;
 
 /**
@@ -109,8 +109,48 @@ export const listenConfigSchema = z
         /** Optional URL for the STT model download */
         backend: sttBackendConfigSchema.optional(),
     })
-    .passthrough();
+    .loose();
 export type ListenConfig = z.infer<typeof listenConfigSchema>;
+
+/**
+ * SEE (CV) Backend configuration
+ */
+export const seeBackendTypeSchema = z.enum(['local', 'google-cloud-vision', 'azure-vision']);
+export type SeeBackendType = z.infer<typeof seeBackendTypeSchema>;
+
+export const seeBackendLocalConfigSchema = z
+    .object({
+        model: z.string().optional(),
+        modelUrl: z.string().optional(),
+    })
+    .loose();
+export type SeeBackendLocalConfig = z.infer<typeof seeBackendLocalConfigSchema>;
+
+export const seeBackendGoogleCloudConfigSchema = z
+    .object({
+        credentialsPath: z.string().optional(),
+        model: z.string().optional(),
+    })
+    .loose();
+export type SeeBackendGoogleCloudConfig = z.infer<typeof seeBackendGoogleCloudConfigSchema>;
+
+export const seeBackendAzureConfigSchema = z
+    .object({
+        credentialsPath: z.string().optional(),
+        model: z.string().optional(),
+    })
+    .loose();
+export type SeeBackendAzureConfig = z.infer<typeof seeBackendAzureConfigSchema>;
+
+export const seeBackendConfigSchema = z
+    .object({
+        type: seeBackendTypeSchema.optional(),
+        local: seeBackendLocalConfigSchema.optional(),
+        'google-cloud-vision': seeBackendGoogleCloudConfigSchema.optional(),
+        'azure-vision': seeBackendAzureConfigSchema.optional(),
+    })
+    .loose();
+export type SeeBackendConfig = z.infer<typeof seeBackendConfigSchema>;
 
 /**
  * Camera (See) configuration
@@ -120,8 +160,9 @@ export const seeConfigSchema = z
         cameraResolution: z.tuple([z.number(), z.number()]).optional(),
         verticalFlip: z.boolean().optional(),
         horizontalFlip: z.boolean().optional(),
+        backend: seeBackendConfigSchema.optional(),
     })
-    .passthrough();
+    .loose();
 export type SeeConfig = z.infer<typeof seeConfigSchema>;
 
 /**
@@ -133,7 +174,7 @@ export const ledNeopixelConfigSchema = z
         spiInterface: z.string().optional(),
         useGRBFormat: z.boolean().optional(),
     })
-    .passthrough();
+    .loose();
 export type LEDNeopixelConfig = z.infer<typeof ledNeopixelConfigSchema>;
 
 export const ledCommonAnodeConfigSchema = z
@@ -142,7 +183,7 @@ export const ledCommonAnodeConfigSchema = z
         greenPin: z.number().optional(),
         bluePin: z.number().optional(),
     })
-    .passthrough();
+    .loose();
 export type LEDCommonAnodeConfig = z.infer<typeof ledCommonAnodeConfigSchema>;
 
 export const shineConfigSchema = z
@@ -150,7 +191,7 @@ export const shineConfigSchema = z
         neopixel: ledNeopixelConfigSchema.optional(),
         commonanode: ledCommonAnodeConfigSchema.optional(),
     })
-    .passthrough();
+    .loose();
 export type ShineConfig = z.infer<typeof shineConfigSchema>;
 
 /**
@@ -160,28 +201,28 @@ export const ttsBackendTypeSchema = z.enum(['local', 'ibm-watson-tts', 'google-c
 export type TTSBackendType = z.infer<typeof ttsBackendTypeSchema>;
 
 export const ttsBackendLocalConfigSchema = z
+
     .object({
         model: z.string().optional(),
         modelUrl: z.string().optional(),
     })
-    .passthrough();
+    .loose();
 export type TTSBackendLocalConfig = z.infer<typeof ttsBackendLocalConfigSchema>;
 
 export const ttsBackendIBMWatsonConfigSchema = z
     .object({
-        voice: z.string().optional(),
         credentialsPath: z.string().optional(),
+        voice: z.string().optional(),
     })
-    .passthrough();
+    .loose();
 export type TTSBackendIBMWatsonConfig = z.infer<typeof ttsBackendIBMWatsonConfigSchema>;
 
 export const ttsBackendGoogleCloudConfigSchema = z
     .object({
-        voice: z.string().optional(),
         languageCode: z.string().optional(),
         credentialsPath: z.string().optional(),
     })
-    .passthrough();
+    .loose();
 export type TTSBackendGoogleCloudConfig = z.infer<typeof ttsBackendGoogleCloudConfigSchema>;
 
 export const ttsBackendAzureConfigSchema = z
@@ -189,7 +230,7 @@ export const ttsBackendAzureConfigSchema = z
         voice: z.string().optional(),
         credentialsPath: z.string().optional(),
     })
-    .passthrough();
+    .loose();
 export type TTSBackendAzureConfig = z.infer<typeof ttsBackendAzureConfigSchema>;
 
 export const ttsBackendConfigSchema = z
@@ -200,7 +241,7 @@ export const ttsBackendConfigSchema = z
         'google-cloud-tts': ttsBackendGoogleCloudConfigSchema.optional(),
         'azure-tts': ttsBackendAzureConfigSchema.optional(),
     })
-    .passthrough();
+    .loose();
 export type TTSBackendConfig = z.infer<typeof ttsBackendConfigSchema>;
 
 /**
@@ -211,7 +252,7 @@ export const speakConfigSchema = z
         device: z.string().optional(),
         backend: ttsBackendConfigSchema.optional(),
     })
-    .passthrough();
+    .loose();
 export type SpeakConfig = z.infer<typeof speakConfigSchema>;
 
 /**
@@ -222,7 +263,7 @@ export const waveConfigSchema = z
         gpioChip: z.number().optional(),
         servoPin: z.number().optional(),
     })
-    .passthrough();
+    .loose();
 export type WaveConfig = z.infer<typeof waveConfigSchema>;
 
 /**
@@ -237,7 +278,7 @@ export const hardwareConfigSchema = z
         servo: z.boolean().optional(),
         camera: z.boolean().optional(),
     })
-    .passthrough();
+    .loose();
 export type HardwareConfig = z.infer<typeof hardwareConfigSchema>;
 
 /**
@@ -262,5 +303,5 @@ export const tjbotConfigSchema = z
         // Use explicit key schema to satisfy TS signature for z.record
         recipe: z.record(z.string(), z.any()).optional(),
     })
-    .passthrough();
+    .loose();
 export type TJBotConfigSchema = z.infer<typeof tjbotConfigSchema>;

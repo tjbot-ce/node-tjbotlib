@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
+import type { STTBackendIBMWatsonConfig } from '../../config/config-types.js';
 /**
  * IBM Watson Speech-to-Text Engine
  *
@@ -24,7 +25,7 @@ import { STTEngine, STTRequestOptions } from '../stt-engine.js';
  */
 export declare class IBMWatsonSTTEngine extends STTEngine {
     private sttService;
-    constructor(config?: Record<string, unknown>);
+    constructor(config?: STTBackendIBMWatsonConfig);
     initialize(): Promise<void>;
     private loadCredentials;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;

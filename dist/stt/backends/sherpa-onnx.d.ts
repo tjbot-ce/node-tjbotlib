@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
+import type { STTBackendLocalConfig } from '../../config/config-types.js';
 /**
  * Sherpa-ONNX Speech-to-Text Engine
  *
@@ -31,7 +32,7 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
     private vadPath?;
     private recognizer;
     private vad;
-    constructor(config?: Record<string, unknown>);
+    constructor(config?: STTBackendLocalConfig);
     initialize(): Promise<void>;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
     /**

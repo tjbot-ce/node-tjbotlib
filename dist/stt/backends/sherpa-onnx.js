@@ -120,7 +120,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Get VAD configuration from config
      */
     getVadConfig() {
-        const localConfig = this.config.backend?.local;
+        const localConfig = this.config;
         const vadConfig = (localConfig?.vad ?? {});
         return {
             enabled: vadConfig.enabled ?? true,

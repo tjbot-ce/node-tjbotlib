@@ -160,12 +160,75 @@ export declare const listenConfigSchema: z.ZodObject<{
 }, z.core.$loose>;
 export type ListenConfig = z.infer<typeof listenConfigSchema>;
 /**
+ * SEE (CV) Backend configuration
+ */
+export declare const seeBackendTypeSchema: z.ZodEnum<{
+    local: "local";
+    "google-cloud-vision": "google-cloud-vision";
+    "azure-vision": "azure-vision";
+}>;
+export type SeeBackendType = z.infer<typeof seeBackendTypeSchema>;
+export declare const seeBackendLocalConfigSchema: z.ZodObject<{
+    model: z.ZodOptional<z.ZodString>;
+    modelUrl: z.ZodOptional<z.ZodString>;
+}, z.core.$loose>;
+export type SeeBackendLocalConfig = z.infer<typeof seeBackendLocalConfigSchema>;
+export declare const seeBackendGoogleCloudConfigSchema: z.ZodObject<{
+    credentialsPath: z.ZodOptional<z.ZodString>;
+    model: z.ZodOptional<z.ZodString>;
+}, z.core.$loose>;
+export type SeeBackendGoogleCloudConfig = z.infer<typeof seeBackendGoogleCloudConfigSchema>;
+export declare const seeBackendAzureConfigSchema: z.ZodObject<{
+    credentialsPath: z.ZodOptional<z.ZodString>;
+    model: z.ZodOptional<z.ZodString>;
+}, z.core.$loose>;
+export type SeeBackendAzureConfig = z.infer<typeof seeBackendAzureConfigSchema>;
+export declare const seeBackendConfigSchema: z.ZodObject<{
+    type: z.ZodOptional<z.ZodEnum<{
+        local: "local";
+        "google-cloud-vision": "google-cloud-vision";
+        "azure-vision": "azure-vision";
+    }>>;
+    local: z.ZodOptional<z.ZodObject<{
+        model: z.ZodOptional<z.ZodString>;
+        modelUrl: z.ZodOptional<z.ZodString>;
+    }, z.core.$loose>>;
+    'google-cloud-vision': z.ZodOptional<z.ZodObject<{
+        credentialsPath: z.ZodOptional<z.ZodString>;
+        model: z.ZodOptional<z.ZodString>;
+    }, z.core.$loose>>;
+    'azure-vision': z.ZodOptional<z.ZodObject<{
+        credentialsPath: z.ZodOptional<z.ZodString>;
+        model: z.ZodOptional<z.ZodString>;
+    }, z.core.$loose>>;
+}, z.core.$loose>;
+export type SeeBackendConfig = z.infer<typeof seeBackendConfigSchema>;
+/**
  * Camera (See) configuration
  */
 export declare const seeConfigSchema: z.ZodObject<{
     cameraResolution: z.ZodOptional<z.ZodTuple<[z.ZodNumber, z.ZodNumber], null>>;
     verticalFlip: z.ZodOptional<z.ZodBoolean>;
     horizontalFlip: z.ZodOptional<z.ZodBoolean>;
+    backend: z.ZodOptional<z.ZodObject<{
+        type: z.ZodOptional<z.ZodEnum<{
+            local: "local";
+            "google-cloud-vision": "google-cloud-vision";
+            "azure-vision": "azure-vision";
+        }>>;
+        local: z.ZodOptional<z.ZodObject<{
+            model: z.ZodOptional<z.ZodString>;
+            modelUrl: z.ZodOptional<z.ZodString>;
+        }, z.core.$loose>>;
+        'google-cloud-vision': z.ZodOptional<z.ZodObject<{
+            credentialsPath: z.ZodOptional<z.ZodString>;
+            model: z.ZodOptional<z.ZodString>;
+        }, z.core.$loose>>;
+        'azure-vision': z.ZodOptional<z.ZodObject<{
+            credentialsPath: z.ZodOptional<z.ZodString>;
+            model: z.ZodOptional<z.ZodString>;
+        }, z.core.$loose>>;
+    }, z.core.$loose>>;
 }, z.core.$loose>;
 export type SeeConfig = z.infer<typeof seeConfigSchema>;
 /**
@@ -212,12 +275,11 @@ export declare const ttsBackendLocalConfigSchema: z.ZodObject<{
 }, z.core.$loose>;
 export type TTSBackendLocalConfig = z.infer<typeof ttsBackendLocalConfigSchema>;
 export declare const ttsBackendIBMWatsonConfigSchema: z.ZodObject<{
-    voice: z.ZodOptional<z.ZodString>;
     credentialsPath: z.ZodOptional<z.ZodString>;
+    voice: z.ZodOptional<z.ZodString>;
 }, z.core.$loose>;
 export type TTSBackendIBMWatsonConfig = z.infer<typeof ttsBackendIBMWatsonConfigSchema>;
 export declare const ttsBackendGoogleCloudConfigSchema: z.ZodObject<{
-    voice: z.ZodOptional<z.ZodString>;
     languageCode: z.ZodOptional<z.ZodString>;
     credentialsPath: z.ZodOptional<z.ZodString>;
 }, z.core.$loose>;
@@ -239,11 +301,10 @@ export declare const ttsBackendConfigSchema: z.ZodObject<{
         modelUrl: z.ZodOptional<z.ZodString>;
     }, z.core.$loose>>;
     'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
-        voice: z.ZodOptional<z.ZodString>;
         credentialsPath: z.ZodOptional<z.ZodString>;
+        voice: z.ZodOptional<z.ZodString>;
     }, z.core.$loose>>;
     'google-cloud-tts': z.ZodOptional<z.ZodObject<{
-        voice: z.ZodOptional<z.ZodString>;
         languageCode: z.ZodOptional<z.ZodString>;
         credentialsPath: z.ZodOptional<z.ZodString>;
     }, z.core.$loose>>;
@@ -270,11 +331,10 @@ export declare const speakConfigSchema: z.ZodObject<{
             modelUrl: z.ZodOptional<z.ZodString>;
         }, z.core.$loose>>;
         'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
-            voice: z.ZodOptional<z.ZodString>;
             credentialsPath: z.ZodOptional<z.ZodString>;
+            voice: z.ZodOptional<z.ZodString>;
         }, z.core.$loose>>;
         'google-cloud-tts': z.ZodOptional<z.ZodObject<{
-            voice: z.ZodOptional<z.ZodString>;
             languageCode: z.ZodOptional<z.ZodString>;
             credentialsPath: z.ZodOptional<z.ZodString>;
         }, z.core.$loose>>;
@@ -373,6 +433,25 @@ export declare const tjbotConfigSchema: z.ZodObject<{
         cameraResolution: z.ZodOptional<z.ZodTuple<[z.ZodNumber, z.ZodNumber], null>>;
         verticalFlip: z.ZodOptional<z.ZodBoolean>;
         horizontalFlip: z.ZodOptional<z.ZodBoolean>;
+        backend: z.ZodOptional<z.ZodObject<{
+            type: z.ZodOptional<z.ZodEnum<{
+                local: "local";
+                "google-cloud-vision": "google-cloud-vision";
+                "azure-vision": "azure-vision";
+            }>>;
+            local: z.ZodOptional<z.ZodObject<{
+                model: z.ZodOptional<z.ZodString>;
+                modelUrl: z.ZodOptional<z.ZodString>;
+            }, z.core.$loose>>;
+            'google-cloud-vision': z.ZodOptional<z.ZodObject<{
+                credentialsPath: z.ZodOptional<z.ZodString>;
+                model: z.ZodOptional<z.ZodString>;
+            }, z.core.$loose>>;
+            'azure-vision': z.ZodOptional<z.ZodObject<{
+                credentialsPath: z.ZodOptional<z.ZodString>;
+                model: z.ZodOptional<z.ZodString>;
+            }, z.core.$loose>>;
+        }, z.core.$loose>>;
     }, z.core.$loose>>;
     shine: z.ZodOptional<z.ZodObject<{
         neopixel: z.ZodOptional<z.ZodObject<{
@@ -400,11 +479,10 @@ export declare const tjbotConfigSchema: z.ZodObject<{
                 modelUrl: z.ZodOptional<z.ZodString>;
             }, z.core.$loose>>;
             'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
-                voice: z.ZodOptional<z.ZodString>;
                 credentialsPath: z.ZodOptional<z.ZodString>;
+                voice: z.ZodOptional<z.ZodString>;
             }, z.core.$loose>>;
             'google-cloud-tts': z.ZodOptional<z.ZodObject<{
-                voice: z.ZodOptional<z.ZodString>;
                 languageCode: z.ZodOptional<z.ZodString>;
                 credentialsPath: z.ZodOptional<z.ZodString>;
             }, z.core.$loose>>;

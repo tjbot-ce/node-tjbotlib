@@ -22,11 +22,7 @@ import winston from 'winston';
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
 import { ListenConfig } from '../../config/index.js';
 import { TJBotError } from '../../utils/index.js';
-
-interface AzureSTTConfig {
-    language?: string;
-    credentialsPath?: string;
-}
+import type { STTBackendAzureConfig } from '../../config/config-types.js';
 
 /**
  * Azure Cognitive Services Speech-to-Text Engine
@@ -39,13 +35,13 @@ export class AzureSTTEngine extends STTEngine {
     private subscriptionKey: string | undefined;
     private region: string | undefined;
 
-    constructor(config?: Record<string, unknown>) {
+    constructor(config?: STTBackendAzureConfig) {
         super(config);
     }
 
     async initialize(): Promise<void> {
         try {
-            const config = this.config as AzureSTTConfig | undefined;
+            const config = this.config as STTBackendAzureConfig | undefined;
             this.loadCredentials(config);
 
             if (!this.subscriptionKey || !this.region) {
@@ -59,7 +55,7 @@ export class AzureSTTEngine extends STTEngine {
         }
     }
 
-    private loadCredentials(config?: AzureSTTConfig): void {
+    private loadCredentials(config?: STTBackendAzureConfig): void {
         // First try environment variables
         if (process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION) {
             this.subscriptionKey = process.env.AZURE_SPEECH_KEY;
@@ -132,7 +128,7 @@ export class AzureSTTEngine extends STTEngine {
         }
 
         const listenConfig: ListenConfig = options.listenConfig ?? {};
-        const backendConfig = (listenConfig.backend?.['azure-stt'] ?? {}) as AzureSTTConfig;
+        const backendConfig = (listenConfig.backend?.['azure-stt'] ?? {}) as STTBackendAzureConfig;
 
         const language = backendConfig.language;
         if (!language) {

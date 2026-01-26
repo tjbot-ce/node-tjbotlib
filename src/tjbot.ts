@@ -22,6 +22,7 @@ import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect, RPiHardwareDriver } from
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
 import { Capability, Hardware, normalizeColor, SherpaModelManager, sleep, TJBotError } from './utils/index.js';
+import { ObjectDetectionResult, ImageClassificationResult, ImageSegmentationResult } from './vision/index.js';
 
 // node modules
 import cm from 'color-model';
@@ -391,6 +392,33 @@ class TJBot {
 
         const path = await this.rpiDriver.capturePhoto(filePath);
         return path;
+    }
+
+    /**
+     * Detect objects in an image using the configured CV engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ObjectDetectionResult[]>}
+     */
+    async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
+        return this.rpiDriver.detectObjects(image);
+    }
+
+    /**
+     * Classify an image using the configured CV engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageClassificationResult[]>}
+     */
+    async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
+        return this.rpiDriver.classifyImage(image);
+    }
+
+    /**
+     * Segment an image using the configured CV engine (if supported).
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageSegmentationResult>}
+     */
+    async segmentImage(image: Buffer | string): Promise<ImageSegmentationResult> {
+        return this.rpiDriver.segmentImage(image);
     }
 
     /** ------------------------------------------------------------------------ */

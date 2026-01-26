@@ -18,6 +18,7 @@ import type { TJBotConfigSchema } from './config/config-types.js';
 import { TJBotConfig } from './config/tjbot-config.js';
 import { RPiHardwareDriver } from './rpi-drivers/index.js';
 import { Capability, Hardware } from './utils/index.js';
+import { ObjectDetectionResult, ImageClassificationResult, ImageSegmentationResult } from './vision/index.js';
 /**
  * Class representing a TJBot
  */
@@ -116,6 +117,24 @@ declare class TJBot {
      * @public
      */
     look(filePath?: string): Promise<string>;
+    /**
+     * Detect objects in an image using the configured CV engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ObjectDetectionResult[]>}
+     */
+    detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    /**
+     * Classify an image using the configured CV engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageClassificationResult[]>}
+     */
+    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    /**
+     * Segment an image using the configured CV engine (if supported).
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageSegmentationResult>}
+     */
+    segmentImage(image: Buffer | string): Promise<ImageSegmentationResult>;
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */
     /** ------------------------------------------------------------------------ */

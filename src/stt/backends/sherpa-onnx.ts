@@ -20,6 +20,7 @@ import winston from 'winston';
 import type { CircularBuffer } from 'sherpa-onnx-node';
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
 import { ListenConfig } from '../../config/index.js';
+import type { STTBackendLocalConfig } from '../../config/config-types.js';
 import { TJBotError, SherpaSTTModelMetadata, SherpaModelManager } from '../../utils/index.js';
 
 // Lazy require sherpa-onnx to avoid hard dependency issues
@@ -56,7 +57,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private vad: any;
 
-    constructor(config?: Record<string, unknown>) {
+    constructor(config?: STTBackendLocalConfig) {
         super(config);
     }
 
@@ -162,12 +163,10 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Get VAD configuration from config
      */
     private getVadConfig(): { enabled: boolean } {
-        const localConfig = (this.config.backend as Record<string, unknown> | undefined)?.local as
-            | Record<string, unknown>
-            | undefined;
-        const vadConfig = (localConfig?.vad ?? {}) as Record<string, unknown>;
+        const localConfig = this.config;
+        const vadConfig = (localConfig?.vad ?? {}) as { enabled?: boolean };
         return {
-            enabled: (vadConfig.enabled as boolean) ?? true,
+            enabled: vadConfig.enabled ?? true,
         };
     }
 
@@ -175,9 +174,9 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Determine if VAD should be used
      */
     private shouldUseVad(listenConfig: ListenConfig, modelKey: string): boolean {
-        const localConfig = (listenConfig.backend?.local ?? {}) as Record<string, unknown>;
-        const vadConfig = (localConfig.vad ?? {}) as Record<string, unknown>;
-        const vadEnabled = (vadConfig.enabled as boolean) ?? true;
+        const localConfig = (listenConfig.backend?.local ?? {}) as STTBackendLocalConfig;
+        const vadConfig = (localConfig.vad ?? {}) as { enabled?: boolean };
+        const vadEnabled = vadConfig.enabled ?? true;
 
         const modelInfo = this.getModelInfo(modelKey);
         const isOffline = modelInfo.kind.startsWith('offline');
