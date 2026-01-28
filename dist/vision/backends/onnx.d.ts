@@ -21,7 +21,6 @@ export declare class ONNXVisionEngine extends VisionEngine {
     constructor(config?: SeeBackendConfig);
     /**
      * Initialize the ONNX vision engine.
-     * Does not load models here - models are loaded lazily when needed.
      */
     initialize(): Promise<void>;
     /**

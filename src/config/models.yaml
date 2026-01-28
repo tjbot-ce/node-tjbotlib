@@ -251,13 +251,13 @@ models:
       - 224
     labelUrl: "https://raw.githubusercontent.com/pytorch/hub/master/imagenet_classes.txt"
     required:
-      - mobilenetv3_small_075_opset16.onnx
+      - mobilenet_v3_small_Opset17.onnx
       - imagenet_classes.txt
 
   - type: vision
     key: yunet
     label: "YuNet (Face Detection, ~230KB)"
-    url: "https://huggingface.co/opencv/face_detection_yunet/blob/main/face_detection_yunet_2023mar.onnx"
+    url: "https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx"
     folder: "yunet"
     kind: face-detection
     inputShape:

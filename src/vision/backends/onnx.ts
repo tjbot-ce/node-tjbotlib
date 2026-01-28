@@ -48,7 +48,6 @@ export class ONNXVisionEngine extends VisionEngine {
 
     /**
      * Initialize the ONNX vision engine.
-     * Does not load models here - models are loaded lazily when needed.
      */
     async initialize(): Promise<void> {
         try {
@@ -65,7 +64,12 @@ export class ONNXVisionEngine extends VisionEngine {
                 );
             }
 
-            winston.info('👁️ ONNX vision engine initialized (lazy loading enabled)');
+            // Eagerly load all models
+            await this.loadModel(detectionModelName);
+            await this.loadModel(classificationModelName);
+            await this.loadModel(faceDetectionModelName);
+
+            winston.info('👁️ ONNX vision engine initialized');
         } catch (error) {
             winston.error('Failed to initialize ONNX vision engine:', error);
             throw new TJBotError('Failed to initialize ONNX vision engine', { cause: error as Error });
@@ -131,11 +135,13 @@ export class ONNXVisionEngine extends VisionEngine {
             // Try common label file names based on model kind
             let labelFile: string | undefined;
             if (metadata.kind === 'detection') {
-                // Look for coco.yaml or coco.names
-                if (fs.existsSync(path.join(modelDir, 'coco.yaml'))) {
-                    labelFile = path.join(modelDir, 'coco.yaml');
-                } else if (fs.existsSync(path.join(modelDir, 'coco.names'))) {
-                    labelFile = path.join(modelDir, 'coco.names');
+                // Look for classes.txt, coco.yaml or coco.names
+                const possibleNames = ['classes.txt', 'coco.yaml', 'coco.names'];
+                for (const name of possibleNames) {
+                    if (fs.existsSync(path.join(modelDir, name))) {
+                        labelFile = path.join(modelDir, name);
+                        break;
+                    }
                 }
             } else if (metadata.kind === 'classification') {
                 // Look for imagenet_classes.txt or similar
@@ -186,14 +192,14 @@ export class ONNXVisionEngine extends VisionEngine {
                 }
             }
 
-            // For non-YAML files, split by newlines
+            // For non-YAML files (txt), split by newlines
             let labels = content
                 .split('\n')
                 .map((line) => line.trim())
                 .filter((line) => line.length > 0);
 
             // Remove numeric prefixes if present (e.g., "67: cell phone" -> "cell phone")
-            if (metadata.kind === 'detection' && labels.length > 0 && labels[0].includes(':')) {
+            if (labels.length > 0 && labels[0].includes(':')) {
                 labels = labels.map((line) => {
                     const match = line.match(/^\d+:\s*(.+)$/);
                     return match ? match[1].trim() : line;
@@ -234,8 +240,9 @@ export class ONNXVisionEngine extends VisionEngine {
         const model = await this.getOrLoadModel(detectionModelName);
 
         try {
-            // Preprocess image for YOLO detection (640x640)
-            const input = await this.preprocessImage(image, [640, 640]);
+            // Preprocess image using model's expected input size
+            const [, , height, width] = model.inputShape;
+            const input = await this.preprocessImage(image, [width, height]);
 
             // Run inference
             const feeds: Record<string, ort.Tensor> = {};
@@ -264,9 +271,9 @@ export class ONNXVisionEngine extends VisionEngine {
         const model = await this.getOrLoadModel(classificationModelName);
 
         try {
-            // Preprocess image for classification (224x224 for MobileNet, variable for others)
-            const preprocessSize = model.kind === 'classification' ? [224, 224] : [640, 640];
-            const input = await this.preprocessImage(image, preprocessSize as [number, number]);
+            // Preprocess image using model's expected input size
+            const [, , height, width] = model.inputShape;
+            const input = await this.preprocessImage(image, [width, height]);
 
             // Run inference
             const feeds: Record<string, ort.Tensor> = {};
@@ -297,8 +304,9 @@ export class ONNXVisionEngine extends VisionEngine {
         const model = await this.getOrLoadModel(faceDetectionModelName);
 
         try {
-            // Preprocess image for face detection (320x320 for YuNet)
-            const input = await this.preprocessImage(image, [320, 320]);
+            // Preprocess image using model's expected input size
+            const [, , height, width] = model.inputShape;
+            const input = await this.preprocessImage(image, [width, height]);
 
             // Run inference
             const feeds: Record<string, ort.Tensor> = {};

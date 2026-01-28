@@ -40,7 +40,7 @@ async function runTest() {
     await promptBackendSpecificOptions(selectedBackend, task);
 
     // Build see config from user choices
-    const seeConfig = buildSeeConfig(selectedBackend);
+    const seeConfig = buildSeeConfig(selectedBackend, task);
 
     console.log(
         formatSection(`Initializing TJBot with Vision (${BACKENDS.find((b) => b.id === selectedBackend).label})`)
@@ -160,17 +160,25 @@ async function promptTaskChoice(selectedBackend) {
         }
     });
 
+    // Validate that required model kinds are defined
+    const requiredKinds = ['detection', 'classification', 'face-detection'];
+    for (const kind of requiredKinds) {
+        if (!modelByKind[kind]) {
+            throw new Error(`Required vision model kind not found: ${kind}`);
+        }
+    }
+
     const tasks = [
         {
-            name: `Object detection (${modelByKind['detection'] || 'yolov8n'})`,
+            name: `Object detection (${modelByKind['detection']})`,
             value: 'detectObjects',
         },
         {
-            name: `Image classification (${modelByKind['classification'] || 'mobilenetv3'})`,
+            name: `Image classification (${modelByKind['classification']})`,
             value: 'classifyImage',
         },
         {
-            name: `Face detection (${modelByKind['face-detection'] || 'yunet'})`,
+            name: `Face detection (${modelByKind['face-detection']})`,
             value: 'detectFaces',
         },
     ];
@@ -197,8 +205,25 @@ function buildSeeConfig(selectedBackend) {
 
     // Build backend-specific configuration
     if (selectedBackend === 'local') {
-        // For local backend, use default models from config
-        baseConfig.backend.local = {};
+        // For local backend, configure all required models with defaults
+        const tjbot = TJBot.getInstance();
+        const allModels = tjbot.supportedVisionModels();
+
+        const kindMap = {
+            detectionModel: 'detection',
+            classificationModel: 'classification',
+            faceDetectionModel: 'face-detection',
+        };
+
+        const localConfig = {};
+        for (const [modelKey, modelKind] of Object.entries(kindMap)) {
+            const defaultModel = allModels.find((m) => m.kind === modelKind);
+            if (defaultModel) {
+                localConfig[modelKey] = defaultModel.model;
+            }
+        }
+
+        baseConfig.backend.local = localConfig;
     } else if (selectedBackend === 'google-cloud-vision') {
         // Google Cloud Vision will use credentials from environment
         baseConfig.backend['google-cloud-vision'] = {};
