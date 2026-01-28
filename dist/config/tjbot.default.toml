@@ -48,10 +48,12 @@ model = 'sherpa-onnx-whisper-base.en'
 # When specified, this takes priority over the default model above IF the custom
 # model name matches the 'model' field in [listen.backend.local]
 # Both 'model' and 'url' must be specified together - providing only one is an error
-# Example:
-#   model = 'my-custom-whisper'
-#   url = 'https://example.com/models/my-custom-whisper.tar.bz2'
 # If not using a custom model, leave this section empty or commented out
+# Additional STT models may be found at:
+#   https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+
+# model = 'whisper-large-v3'
+# url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-large-v3.tar.bz2'
 
 [listen.backend.local.vad]
 # Voice activity detection (VAD) is used for local OFFLINE models (e.g. whisper, moonshine).
@@ -69,10 +71,12 @@ model = 'silero_vad.onnx'
 # When specified, this takes priority over the default model above IF the custom
 # model name matches the 'model' field in [listen.backend.local.vad]
 # Both 'model' and 'url' must be specified together - providing only one is an error
-# Example:
-#   model = 'my-custom-vad'
-#   url = 'https://example.com/models/my-custom-vad.onnx'
 # If not using a custom model, leave this section empty or commented out
+# Additional VAD models may be found at:
+#   https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+
+# model = 'silero_vad_v5'
+# url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad_v5.onnx'
 
 [listen.backend.ibm-watson-stt]
 # Specify the STT model to use.
@@ -119,19 +123,12 @@ horizontalFlip = false
 type = 'local'
 
 [see.backend.local]
-# DEFAULT MODEL (OFFLINE): yolov8n.onnx (small, fast, general purpose)
-# See models.yaml for other available models.
-model = 'yolov8n.onnx'
-
-[see.backend.local.custom-model]
-# OPTIONAL: Override the model with a custom model from a custom URL
-# When specified, this takes priority over the default model above IF the custom
-# model name matches the 'model' field in [see.backend.local]
-# Both 'model' and 'url' must be specified together - providing only one is an error
-# Example:
-#   model = 'my-custom-yolo'
-#   url = 'https://example.com/models/my-custom-yolo.onnx'
-# If not using a custom model, leave this section empty or commented out
+# DEFAULT MODELS (OFFLINE): Specialized quantized models for each vision task
+# All models are downloaded and cached automatically when using local backend
+# See models.yaml for available models for each task
+detectionModel = 'yolov8n'
+classificationModel = 'mobilenetv3'
+faceDetectionModel = 'yunet'
 
 [see.backend.google-cloud-vision]
 # Google Cloud Vision API credentials and model
@@ -212,10 +209,12 @@ model = 'vits-piper-en_US-ryan-medium'
 # When specified, this takes priority over the default model above IF the custom
 # model name matches the 'model' field in [speak.backend.local]
 # Both 'model' and 'url' must be specified together - providing only one is an error
-# Example:
-#   model = 'my-custom-tts'
-#   url = 'https://example.com/models/my-custom-tts.tar.bz2'
 # If not using a custom model, leave this section empty or commented out
+# Additional TTS models may be found at:
+#  https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+
+# model = 'vits-piper-en_US-glados'
+# url = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-glados.tar.bz2'
 
 [speak.backend.ibm-watson-tts]
 # 'voice' specifies the IBM Watson Text-to-Speech voice to use.

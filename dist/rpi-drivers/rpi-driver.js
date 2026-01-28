@@ -61,7 +61,7 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const verticalFlip = config.verticalFlip ?? false;
         const horizontalFlip = config.horizontalFlip ?? false;
         this.cameraController.initialize([width, height], verticalFlip, horizontalFlip);
-        this.visionController = new VisionController(config);
+        this.visionController = new VisionController(config.backend ?? {});
         this.initializedHardware.add(Hardware.CAMERA);
     }
     setupMicrophone(config) {
@@ -144,19 +144,28 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         return this.cameraController.capturePhoto(atPath);
     }
     async detectObjects(image) {
-        if (!this.visionController)
+        if (!this.visionController) {
             throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        }
         return this.visionController.detectObjects(image);
     }
     async classifyImage(image) {
-        if (!this.visionController)
+        if (!this.visionController) {
             throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        }
         return this.visionController.classifyImage(image);
     }
-    async segmentImage(image) {
-        if (!this.visionController)
+    async describeImage(image) {
+        if (!this.visionController) {
             throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
-        return this.visionController.segmentImage(image);
+        }
+        return this.visionController.describeImage(image);
+    }
+    async detectFaces(image) {
+        if (!this.visionController) {
+            throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        }
+        return this.visionController.detectFaces(image);
     }
     async renderLED(hexColor) {
         if (this.hasHardware(Hardware.LED_COMMON_ANODE)) {

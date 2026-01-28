@@ -75,7 +75,10 @@ export class SherpaONNXSTTEngine extends STTEngine {
                     const vadConfigWithCustom = vadConfig;
                     const customVadModel = vadConfigWithCustom['custom-model'];
                     const vadModelName = vadConfig.model;
-                    if (customVadModel && customVadModel.model && customVadModel.url && customVadModel.model === vadModelName) {
+                    if (customVadModel &&
+                        customVadModel.model &&
+                        customVadModel.url &&
+                        customVadModel.model === vadModelName) {
                         // Use custom VAD model
                         winston.info(`🎤 Loading custom VAD model: ${customVadModel.model}`);
                         const customVadInfo = await this.manager.downloadAndCacheCustomModel(customVadModel.model, customVadModel.url, 'vad');

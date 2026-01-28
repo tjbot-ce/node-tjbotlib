@@ -84,7 +84,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
             const configWithCustom = this.config as any;
             const customModel = configWithCustom['custom-model'];
             const modelName = this.config.model as string;
-            
+
             if (customModel && customModel.model && customModel.url && customModel.model === modelName) {
                 // Use custom model
                 winston.info(`🎤 Loading custom STT model: ${customModel.model}`);
@@ -112,7 +112,12 @@ export class SherpaONNXSTTEngine extends STTEngine {
                     const customVadModel = vadConfigWithCustom['custom-model'];
                     const vadModelName = vadConfig.model as string;
 
-                    if (customVadModel && customVadModel.model && customVadModel.url && customVadModel.model === vadModelName) {
+                    if (
+                        customVadModel &&
+                        customVadModel.model &&
+                        customVadModel.url &&
+                        customVadModel.model === vadModelName
+                    ) {
                         // Use custom VAD model
                         winston.info(`🎤 Loading custom VAD model: ${customVadModel.model}`);
                         const customVadInfo = await this.manager.downloadAndCacheCustomModel<VADModelMetadata>(
@@ -300,10 +305,16 @@ export class SherpaONNXSTTEngine extends STTEngine {
     private createOfflineRecognizer(modelPaths: STTModelPaths): unknown {
         // Verify model files exist
         winston.debug('🗣️ Moonshine model paths:');
-        winston.debug(`  preprocessor: ${modelPaths.preprocessor} (exists: ${fs.existsSync(modelPaths.preprocessor ?? '')})`);
+        winston.debug(
+            `  preprocessor: ${modelPaths.preprocessor} (exists: ${fs.existsSync(modelPaths.preprocessor ?? '')})`
+        );
         winston.debug(`  encoder: ${modelPaths.encoder} (exists: ${fs.existsSync(modelPaths.encoder)})`);
-        winston.debug(`  uncachedDecoder: ${modelPaths.uncachedDecoder} (exists: ${fs.existsSync(modelPaths.uncachedDecoder ?? '')})`);
-        winston.debug(`  cachedDecoder: ${modelPaths.cachedDecoder} (exists: ${fs.existsSync(modelPaths.cachedDecoder ?? '')})`);
+        winston.debug(
+            `  uncachedDecoder: ${modelPaths.uncachedDecoder} (exists: ${fs.existsSync(modelPaths.uncachedDecoder ?? '')})`
+        );
+        winston.debug(
+            `  cachedDecoder: ${modelPaths.cachedDecoder} (exists: ${fs.existsSync(modelPaths.cachedDecoder ?? '')})`
+        );
         winston.debug(`  tokens: ${modelPaths.tokens} (exists: ${fs.existsSync(modelPaths.tokens)})`);
 
         const config = {

@@ -54,4 +54,9 @@ export declare class TJBotConfig {
      * Get raw configuration value by path (for backward compatibility)
      */
     get(key: string): unknown;
+    /**
+     * Validate vision local backend models are properly configured
+     * @private
+     */
+    private validateVisionLocalModels;
 }

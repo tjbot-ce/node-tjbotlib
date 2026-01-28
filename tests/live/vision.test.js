@@ -20,9 +20,10 @@ import { select } from '@inquirer/prompts';
 import { TJBot } from '../../dist/tjbot.js';
 import fs from 'fs';
 import path from 'path';
-import { formatTitle, formatSection } from './utils.js';
+import { initWinston, formatTitle, formatSection } from './utils.js';
 
-// Supported CV backends for testing
+const LOG_LEVEL = 'info';
+
 const BACKENDS = [
     { id: 'local', label: 'Local (ONNX)' },
     { id: 'google-cloud-vision', label: 'Google Cloud Vision' },
@@ -30,20 +31,19 @@ const BACKENDS = [
 ];
 
 async function runTest() {
+    initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot Vision Test'));
 
     // Get user configuration choices
     const selectedBackend = await promptBackendChoice();
-    const backendConfig = await promptBackendSpecificOptions(selectedBackend);
-    const task = await promptTaskChoice();
+    const task = await promptTaskChoice(selectedBackend);
+    await promptBackendSpecificOptions(selectedBackend, task);
 
     // Build see config from user choices
-    const seeConfig = buildSeeConfig(selectedBackend, backendConfig);
+    const seeConfig = buildSeeConfig(selectedBackend);
 
     console.log(
-        formatSection(
-            `Initializing TJBot with Vision (${selectedBackend}${backendConfig.model ? `: ${backendConfig.model}` : ''})`
-        )
+        formatSection(`Initializing TJBot with Vision (${BACKENDS.find((b) => b.id === selectedBackend).label})`)
     );
 
     const tj = new TJBot({
@@ -54,7 +54,7 @@ async function runTest() {
 
     // Capture image from camera
     const imgPath = path.join('/tmp', `tjbot-cvtest-${Date.now()}.jpg`);
-    console.log(formatSection('Capturing image and running CV task'));
+    console.log(formatSection('Capturing image and running vision task'));
     console.log('Capturing image from camera...');
     await tj.look(imgPath);
     const imgBuf = fs.readFileSync(imgPath);
@@ -65,8 +65,10 @@ async function runTest() {
         result = await tj.detectObjects(imgBuf);
     } else if (task === 'classifyImage') {
         result = await tj.classifyImage(imgBuf);
-    } else if (task === 'segmentImage') {
-        result = await tj.segmentImage(imgBuf);
+    } else if (task === 'detectFaces') {
+        result = await tj.detectFaces(imgBuf);
+    } else if (task === 'describeImage') {
+        result = await tj.describeImage(imgBuf);
     }
     console.log('\nCV result:');
     console.log(JSON.stringify(result, null, 2));
@@ -82,11 +84,11 @@ async function promptBackendChoice() {
     return backendId;
 }
 
-async function promptBackendSpecificOptions(selectedBackend, manager) {
+async function promptBackendSpecificOptions(selectedBackend, task) {
     const config = {};
 
     if (selectedBackend === 'local') {
-        return await promptONNXVisionOptions(manager);
+        return await promptONNXVisionOptions(task);
     } else if (selectedBackend === 'google-cloud-vision') {
         return await promptGoogleCloudVisionOptions();
     } else if (selectedBackend === 'azure-vision') {
@@ -96,78 +98,94 @@ async function promptBackendSpecificOptions(selectedBackend, manager) {
     return config;
 }
 
-async function promptONNXVisionOptions() {
-    // Get available models from metadata
-    const models = await TJBot.supportedVisionModels();
-    const choices = await Promise.all(
-        models.map(async (m) => {
-            const installedModels = new Set(TJBot.installedVisionModels().map((mm) => mm.key));
-            const downloaded = installedModels.has(m.key);
-            const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
-            return {
-                name: `${m.label || m.model} ${status}`,
-                value: m.model,
-                short: m.label || m.model,
-            };
-        })
-    );
+async function promptONNXVisionOptions(task) {
+    // Map task to model type
+    const modelTypeMap = {
+        detectObjects: 'detection',
+        classifyImage: 'classification',
+        detectFaces: 'face-detection',
+    };
 
-    const modelKey = await select({
-        message: 'Select a ONNX vision model:',
-        choices,
-        default: models[0].model,
+    const modelType = modelTypeMap[task];
+    if (!modelType) {
+        return {};
+    }
+
+    // Get available models from metadata
+    const allModels = TJBot.supportedVisionModels();
+    const models = allModels.filter((m) => {
+        // Get model metadata to check kind
+        const metadata = allModels.find((mm) => mm.model === m.model);
+        return metadata && metadata.kind === modelType;
     });
 
-    const selectedModel = models.find((m) => m.model === modelKey);
-    return {
-        model: selectedModel.model,
-    };
+    if (models.length === 0) {
+        console.log(`\nNo models available for task: ${task}`);
+        return {};
+    }
+
+    // Since we now have task-specific models in the config, just show which model will be used
+    const defaultModel = models[0];
+    const installedModels = new Set(TJBot.installedVisionModels());
+    const downloaded = installedModels.has(defaultModel.model);
+    const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
+
+    console.log(`\nUsing ${modelType} model: ${defaultModel.label || defaultModel.model} ${status}`);
+
+    return {};
 }
 
 async function promptGoogleCloudVisionOptions() {
-    // TODO: look up what the actual options are for Google Cloud Vision
-    const vision = await select({
-        message: 'Select Google Cloud vision model:',
-        choices: [
-            { name: 'Standard', value: 'standard' },
-            { name: 'Enhanced', value: 'enhanced' },
-        ],
-        default: 'standard',
-    });
-
-    return { vision };
+    // Google Cloud Vision uses credentials from environment or config file
+    console.log('\nUsing Google Cloud Vision with default credentials');
+    return {};
 }
 
 async function promptAzureVisionOptions() {
-    // TODO: look up what the actual options are for Azure Vision
-    const vision = await select({
-        message: 'Select Azure vision model:',
-        choices: [
-            { name: 'Standard', value: 'standard' },
-            { name: 'Enhanced', value: 'enhanced' },
-        ],
-        default: 'standard',
-    });
-
-    return { vision };
+    // Azure Vision uses credentials from environment or config file
+    console.log('\nUsing Azure Computer Vision with default credentials');
+    return {};
 }
 
-async function promptTaskChoice() {
+async function promptTaskChoice(selectedBackend) {
+    // Get model information for display
+    const allModels = TJBot.supportedVisionModels();
+    const modelByKind = {};
+    allModels.forEach((m) => {
+        if (!modelByKind[m.kind]) {
+            modelByKind[m.kind] = m.label || m.model;
+        }
+    });
+
     const tasks = [
-        { name: 'Detect Objects', value: 'detectObjects' },
-        { name: 'Classify Image', value: 'classifyImage' },
-        { name: 'Segment Image', value: 'segmentImage' },
+        {
+            name: `Object detection (${modelByKind['detection'] || 'yolov8n'})`,
+            value: 'detectObjects',
+        },
+        {
+            name: `Image classification (${modelByKind['classification'] || 'mobilenetv3'})`,
+            value: 'classifyImage',
+        },
+        {
+            name: `Face detection (${modelByKind['face-detection'] || 'yunet'})`,
+            value: 'detectFaces',
+        },
     ];
 
+    // Add image description only for Azure backend
+    if (selectedBackend === 'azure-vision') {
+        tasks.push({ name: 'Image description', value: 'describeImage' });
+    }
+
     const task = await select({
-        message: 'Choose a CV task:',
+        message: 'Choose a vision task:',
         choices: tasks,
     });
 
     return task;
 }
 
-function buildSeeConfig(selectedBackend, backendConfig) {
+function buildSeeConfig(selectedBackend) {
     const baseConfig = {
         backend: {
             type: selectedBackend,
@@ -176,18 +194,14 @@ function buildSeeConfig(selectedBackend, backendConfig) {
 
     // Build backend-specific configuration
     if (selectedBackend === 'local') {
-        baseConfig.backend.local = {
-            model: backendConfig.model,
-        };
+        // For local backend, use default models from config
+        baseConfig.backend.local = {};
     } else if (selectedBackend === 'google-cloud-vision') {
-        baseConfig.backend['google-cloud-vision'] = {
-            apiKey: backendConfig.apiKey,
-        };
+        // Google Cloud Vision will use credentials from environment
+        baseConfig.backend['google-cloud-vision'] = {};
     } else if (selectedBackend === 'azure-vision') {
-        baseConfig.backend['azure-vision'] = {
-            apiKey: backendConfig.apiKey,
-            endpoint: backendConfig.endpoint,
-        };
+        // Azure will use credentials from environment or tjbot.toml
+        baseConfig.backend['azure-vision'] = {};
     }
 
     return baseConfig;

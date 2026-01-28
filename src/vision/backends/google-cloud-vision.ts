@@ -21,7 +21,9 @@ import {
     VisionEngine,
     type ObjectDetectionResult,
     type ImageClassificationResult,
-    type ImageSegmentationResult,
+    type FaceDetectionResult,
+    type ImageDescriptionResult,
+    type Landmark,
 } from '../vision-engine.js';
 import type { SeeBackendGoogleCloudConfig } from '../../config/config-types.js';
 
@@ -111,7 +113,10 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         return results;
     }
 
-    async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
+    async classifyImage(
+        image: Buffer | string,
+        confidenceThreshold: number = 0.5
+    ): Promise<ImageClassificationResult[]> {
         // Prepare image as base64
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -140,17 +145,105 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         const results: ImageClassificationResult[] = [];
         if (data.responses && data.responses[0] && data.responses[0].labelAnnotations) {
             for (const label of data.responses[0].labelAnnotations) {
-                results.push({
-                    label: label.description,
-                    confidence: label.score,
-                });
+                if (label.score >= confidenceThreshold) {
+                    results.push({
+                        label: label.description,
+                        confidence: label.score,
+                    });
+                }
             }
         }
+        // Sort by confidence descending
+        results.sort((a, b) => b.confidence - a.confidence);
         return results;
     }
 
-    async segmentImage(_image: Buffer | string): Promise<ImageSegmentationResult> {
-        // Not supported by Google Cloud Vision, or implement if available
-        throw new Error('Segmentation not supported by Google Cloud Vision');
+    async detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]> {
+        // Prepare image as base64
+        let imgBuf: Buffer;
+        if (typeof image === 'string') {
+            imgBuf = fs.readFileSync(image);
+        } else {
+            imgBuf = image;
+        }
+        const base64 = imgBuf.toString('base64');
+
+        const body = {
+            requests: [
+                {
+                    image: { content: base64 },
+                    features: [{ type: 'FACE_DETECTION' }],
+                },
+            ],
+        };
+
+        const res = await fetch(this.endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+
+        if (!res.ok) throw new Error(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = (await res.json()) as any;
+
+        const results: FaceDetectionResult[] = [];
+
+        if (data.responses && data.responses[0] && data.responses[0].faceAnnotations) {
+            for (const face of data.responses[0].faceAnnotations) {
+                // Extract bounding box from boundingPoly
+                const vertices = face.boundingPoly?.vertices || [];
+                let x = Infinity,
+                    y = Infinity,
+                    maxX = -Infinity,
+                    maxY = -Infinity;
+                for (const vertex of vertices) {
+                    x = Math.min(x, vertex.x || 0);
+                    y = Math.min(y, vertex.y || 0);
+                    maxX = Math.max(maxX, vertex.x || 0);
+                    maxY = Math.max(maxY, vertex.y || 0);
+                }
+                const w = maxX - x;
+                const h = maxY - y;
+
+                // Extract landmarks - Google returns 27 points
+                const landmarks: Landmark[] = [];
+                if (face.landmarks && Array.isArray(face.landmarks)) {
+                    for (const landmark of face.landmarks) {
+                        landmarks.push({
+                            x: landmark.position?.x || 0,
+                            y: landmark.position?.y || 0,
+                            type: landmark.type,
+                        });
+                    }
+                }
+
+                // Map head pose angles to Azure terminology
+                let headPose;
+                if (face.headPose) {
+                    headPose = {
+                        roll: face.headPose.rollAngle || 0,
+                        yaw: face.headPose.panAngle || 0,
+                        pitch: face.headPose.tiltAngle || 0,
+                    };
+                }
+
+                results.push({
+                    boundingBox: [x, y, w, h],
+                    confidence: face.detectionConfidence || 0,
+                    landmarks,
+                    headPose,
+                });
+            }
+        }
+
+        return results;
+    }
+
+    async describeImage(_image: Buffer | string): Promise<ImageDescriptionResult> {
+        throw new Error(
+            'Image description is only available with Azure Vision backend. Configure see.backend.type to "azure-vision".'
+        );
     }
 }

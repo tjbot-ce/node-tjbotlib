@@ -410,7 +410,7 @@ export class ModelManager {
         if (model.type === 'vision') {
             const visionModel = model;
             if (visionModel.labelUrl) {
-                const labelsFileName = 'labels.txt';
+                const labelsFileName = path.basename(visionModel.labelUrl).split('?')[0]; // Extract filename, remove query params
                 const labelsFilePath = path.join(modelPath, labelsFileName);
                 await this.downloadFile(visionModel.labelUrl, labelsFilePath);
             }

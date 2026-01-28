@@ -18,7 +18,7 @@ import type { TJBotConfigSchema } from './config/config-types.js';
 import { TJBotConfig } from './config/tjbot-config.js';
 import { RPiHardwareDriver } from './rpi-drivers/index.js';
 import { Hardware } from './utils/index.js';
-import { ObjectDetectionResult, ImageClassificationResult, ImageSegmentationResult } from './vision/index.js';
+import { ObjectDetectionResult, ImageClassificationResult, FaceDetectionResult, ImageDescriptionResult } from './vision/index.js';
 /**
  * Class representing a TJBot
  */
@@ -130,11 +130,17 @@ declare class TJBot {
      */
     classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
     /**
-     * Segment an image using the configured vision engine.
+     * Detect faces in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
-     * @returns {Promise<ImageSegmentationResult>}
+     * @returns {Promise<FaceDetectionResult[]>}
      */
-    segmentImage(image: Buffer | string): Promise<ImageSegmentationResult>;
+    detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    /**
+     * Describe an image using the configured vision engine (Azure only).
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageDescriptionResult>}
+     */
+    describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
     /**
      * List all installed ONNX vision models on this device.
      * @returns {string[]} Array of installed vision model keys
@@ -142,11 +148,12 @@ declare class TJBot {
     static installedVisionModels(): string[];
     /**
      * List supported ONNX vision models for this device.
-     * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
+     * @returns {Array<{ model: string, label?: string, kind: string }>} Array of supported vision model info
      */
     static supportedVisionModels(): Array<{
         model: string;
         label?: string;
+        kind: string;
     }>;
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */

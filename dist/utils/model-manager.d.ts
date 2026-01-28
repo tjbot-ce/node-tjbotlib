@@ -48,7 +48,7 @@ export type VADModelMetadata = BaseModelMetadata;
  * Vision model metadata
  */
 export interface VisionModelMetadata extends BaseModelMetadata {
-    kind: 'detection' | 'classification' | 'segmentation';
+    kind: 'detection' | 'classification' | 'face-detection';
     labelUrl?: string;
     inputShape?: number[];
 }

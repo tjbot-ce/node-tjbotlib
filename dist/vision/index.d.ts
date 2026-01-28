@@ -15,4 +15,4 @@
  */
 export { VisionController } from './vision.js';
 export { createVisionEngine } from './vision-engine.js';
-export type { ObjectDetectionResult, ImageClassificationResult, ImageSegmentationResult, VisionEngine, } from './vision-engine.js';
+export type { ObjectDetectionResult, Landmark, FaceDetectionResult, ImageClassificationResult, ImageDescriptionResult, VisionEngine, } from './vision-engine.js';

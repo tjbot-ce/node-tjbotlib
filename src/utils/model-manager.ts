@@ -68,7 +68,7 @@ export type VADModelMetadata = BaseModelMetadata;
  * Vision model metadata
  */
 export interface VisionModelMetadata extends BaseModelMetadata {
-    kind: 'detection' | 'classification' | 'segmentation';
+    kind: 'detection' | 'classification' | 'face-detection';
     labelUrl?: string;
     inputShape?: number[];
 }
@@ -522,7 +522,7 @@ export class ModelManager {
         if (model.type === 'vision') {
             const visionModel = model as VisionModelMetadata;
             if (visionModel.labelUrl) {
-                const labelsFileName = 'labels.txt';
+                const labelsFileName = path.basename(visionModel.labelUrl).split('?')[0]; // Extract filename, remove query params
                 const labelsFilePath = path.join(modelPath, labelsFileName);
                 await this.downloadFile(visionModel.labelUrl, labelsFilePath);
             }

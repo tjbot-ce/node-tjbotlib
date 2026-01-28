@@ -48,21 +48,32 @@ export class VisionController {
     /**
      * Classify an image using the configured Vision engine.
      * @param image Image buffer or file path
+     * @param confidenceThreshold Optional confidence threshold (default 0.5). Only return labels above this threshold.
      */
-    async classifyImage(image: Buffer | string) {
+    async classifyImage(image: Buffer | string, confidenceThreshold?: number) {
         await this._initializeVisionEngineIfNeeded();
         if (!this.visionEngine) throw new Error('Vision engine is not initialized.');
-        return this.visionEngine.classifyImage(image);
+        return this.visionEngine.classifyImage(image, confidenceThreshold);
     }
 
     /**
-     * Segment an image using the configured Vision engine (if supported).
+     * Detect faces in an image using the configured Vision engine.
      * @param image Image buffer or file path
      */
-    async segmentImage(image: Buffer | string) {
+    async detectFaces(image: Buffer | string) {
         await this._initializeVisionEngineIfNeeded();
         if (!this.visionEngine) throw new Error('Vision engine is not initialized.');
-        if (!this.visionEngine.segmentImage) throw new Error('Segmentation not supported by this Vision engine.');
-        return this.visionEngine.segmentImage(image);
+        return this.visionEngine.detectFaces(image);
+    }
+
+    /**
+     * Describe an image using the configured Vision engine (if supported).
+     * Note: This method is only supported by Azure Vision backend.
+     * @param image Image buffer or file path
+     */
+    async describeImage(image: Buffer | string) {
+        await this._initializeVisionEngineIfNeeded();
+        if (!this.visionEngine) throw new Error('Vision engine is not initialized.');
+        return this.visionEngine.describeImage(image);
     }
 }

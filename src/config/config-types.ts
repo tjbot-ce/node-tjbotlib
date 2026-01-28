@@ -143,8 +143,9 @@ export type SeeBackendType = z.infer<typeof seeBackendTypeSchema>;
 
 export const seeBackendLocalConfigSchema = z
     .object({
-        model: z.string().optional(),
-        'custom-model': customModelConfigSchema.optional(),
+        detectionModel: z.string().optional(),
+        classificationModel: z.string().optional(),
+        faceDetectionModel: z.string().optional(),
     })
     .loose();
 export type SeeBackendLocalConfig = z.infer<typeof seeBackendLocalConfigSchema>;

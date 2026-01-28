@@ -67,7 +67,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             const configWithCustom = this.config as any;
             const customModel = configWithCustom['custom-model'];
             const modelName = this.config.model as string;
-            
+
             if (customModel && customModel.model && customModel.url && customModel.model === modelName) {
                 // Use custom model
                 winston.info(`💬 Loading custom TTS model: ${customModel.model}`);

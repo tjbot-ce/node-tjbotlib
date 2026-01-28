@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 import type { SeeBackendAzureConfig } from '../../config/config-types.js';
-import { VisionEngine, type ImageClassificationResult, type ImageSegmentationResult, type ObjectDetectionResult } from '../vision-engine.js';
+import { VisionEngine, type ImageClassificationResult, type ObjectDetectionResult, type FaceDetectionResult, type ImageDescriptionResult } from '../vision-engine.js';
 export declare class AzureVisionEngine extends VisionEngine {
     private apiKey?;
     private url?;
     constructor(config: SeeBackendAzureConfig);
     initialize(): Promise<void>;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
-    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
-    segmentImage(_image: Buffer | string): Promise<ImageSegmentationResult>;
+    classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
+    detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
 }

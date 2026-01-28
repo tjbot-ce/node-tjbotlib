@@ -31,11 +31,18 @@ export declare class VisionController {
     /**
      * Classify an image using the configured Vision engine.
      * @param image Image buffer or file path
+     * @param confidenceThreshold Optional confidence threshold (default 0.5). Only return labels above this threshold.
      */
-    classifyImage(image: Buffer | string): Promise<import("./vision-engine.js").ImageClassificationResult[]>;
+    classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<import("./vision-engine.js").ImageClassificationResult[]>;
     /**
-     * Segment an image using the configured Vision engine (if supported).
+     * Detect faces in an image using the configured Vision engine.
      * @param image Image buffer or file path
      */
-    segmentImage(image: Buffer | string): Promise<import("./vision-engine.js").ImageSegmentationResult>;
+    detectFaces(image: Buffer | string): Promise<import("./vision-engine.js").FaceDetectionResult[]>;
+    /**
+     * Describe an image using the configured Vision engine (if supported).
+     * Note: This method is only supported by Azure Vision backend.
+     * @param image Image buffer or file path
+     */
+    describeImage(image: Buffer | string): Promise<import("./vision-engine.js").ImageDescriptionResult>;
 }

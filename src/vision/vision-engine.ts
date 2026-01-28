@@ -23,16 +23,44 @@ export interface ObjectDetectionResult {
     bbox: [number, number, number, number]; // [x, y, width, height]
 }
 
+export interface Landmark {
+    x: number;
+    y: number;
+    type?: string; // e.g., 'eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'
+}
+
+export interface FaceDetectionResult {
+    // Required fields
+    boundingBox: [number, number, number, number]; // [x, y, width, height]
+    confidence: number;
+    landmarks: Landmark[]; // Array of face landmarks with types
+
+    // Optional fields (populated by cloud backends)
+    headPose?: {
+        roll: number; // -180 to 180 degrees
+        yaw: number; // -180 to 180 degrees (pan angle)
+        pitch: number; // -180 to 180 degrees (tilt angle)
+    };
+    qualityMetrics?: {
+        blurValue?: number; // 0-1
+        exposure?: 'underExposed' | 'goodExposure' | 'overExposed';
+        noise?: number; // 0-1
+    };
+    occlusion?: {
+        eyeOccluded: boolean;
+        foreheadOccluded: boolean;
+        mouthOccluded: boolean;
+    };
+}
+
 export interface ImageClassificationResult {
     label: string;
     confidence: number;
 }
 
-export interface ImageSegmentationResult {
-    mask: Uint8Array | Buffer;
-    width: number;
-    height: number;
-    labels: string[];
+export interface ImageDescriptionResult {
+    description: string;
+    confidence: number;
 }
 
 /**
@@ -73,21 +101,33 @@ export abstract class VisionEngine {
      * Classify an image.
      *
      * @param image - Image buffer or file path
-     * @returns Array of classification results with labels and confidence scores
+     * @param confidenceThreshold - Optional confidence threshold (default 0.5). Only return labels with confidence >= threshold.
+     * @returns Array of classification results with labels and confidence scores, sorted by confidence descending
      * @throws {TJBotError} if classification fails
      * @public
      */
-    abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    abstract classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
 
     /**
-     * Segment an image (optional - not all backends support this).
+     * Detect faces in an image.
      *
      * @param image - Image buffer or file path
-     * @returns Segmentation result with mask and labels
-     * @throws {TJBotError} if segmentation fails or is not supported
+     * @returns Array of detected faces with bounding boxes, confidence scores, and landmarks
+     * @throws {TJBotError} if detection fails
      * @public
      */
-    abstract segmentImage?(image: Buffer | string): Promise<ImageSegmentationResult>;
+    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+
+    /**
+     * Describe an image with natural language caption.
+     * Note: This method is only supported by Azure Vision backend.
+     *
+     * @param image - Image buffer or file path
+     * @returns Image description with confidence score
+     * @throws {TJBotError} if description fails or backend does not support this operation
+     * @public
+     */
+    abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
 }
 
 export async function createVisionEngine(config: SeeBackendConfig): Promise<VisionEngine> {

@@ -123,21 +123,12 @@ horizontalFlip = false
 type = 'local'
 
 [see.backend.local]
-# DEFAULT MODEL (OFFLINE): yolov8n.onnx (small, fast, general purpose)
-# See models.yaml for other available models.
-model = 'yolov8n.onnx'
-
-[see.backend.local.custom-model]
-# OPTIONAL: Override the model with a custom model from a custom URL
-# When specified, this takes priority over the default model above IF the custom
-# model name matches the 'model' field in [see.backend.local]
-# Both 'model' and 'url' must be specified together - providing only one is an error
-# If not using a custom model, leave this section empty or commented out
-# Additional vision models may be found at:
-#   https://huggingface.co/onnxmodelzoo/models
-
-# model = 'my-custom-yolo'
-# url = 'https://example.com/models/my-custom-yolo.onnx'
+# DEFAULT MODELS (OFFLINE): Specialized quantized models for each vision task
+# All models are downloaded and cached automatically when using local backend
+# See models.yaml for available models for each task
+detectionModel = 'yolov8n'
+classificationModel = 'mobilenetv3'
+faceDetectionModel = 'yunet'
 
 [see.backend.google-cloud-vision]
 # Google Cloud Vision API credentials and model

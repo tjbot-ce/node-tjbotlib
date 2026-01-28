@@ -22,7 +22,12 @@ import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect, RPiHardwareDriver } from
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
 import { Capability, Hardware, normalizeColor, ModelManager, sleep, TJBotError } from './utils/index.js';
-import { ObjectDetectionResult, ImageClassificationResult, ImageSegmentationResult } from './vision/index.js';
+import {
+    ObjectDetectionResult,
+    ImageClassificationResult,
+    FaceDetectionResult,
+    ImageDescriptionResult,
+} from './vision/index.js';
 
 // node modules
 import cm from 'color-model';
@@ -412,12 +417,21 @@ class TJBot {
     }
 
     /**
-     * Segment an image using the configured vision engine.
+     * Detect faces in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
-     * @returns {Promise<ImageSegmentationResult>}
+     * @returns {Promise<FaceDetectionResult[]>}
      */
-    async segmentImage(image: Buffer | string): Promise<ImageSegmentationResult> {
-        return this.rpiDriver.segmentImage(image);
+    async detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]> {
+        return this.rpiDriver.detectFaces(image);
+    }
+
+    /**
+     * Describe an image using the configured vision engine (Azure only).
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageDescriptionResult>}
+     */
+    async describeImage(image: Buffer | string): Promise<ImageDescriptionResult> {
+        return this.rpiDriver.describeImage(image);
     }
 
     /**
@@ -431,11 +445,11 @@ class TJBot {
 
     /**
      * List supported ONNX vision models for this device.
-     * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
+     * @returns {Array<{ model: string, label?: string, kind: string }>} Array of supported vision model info
      */
-    static supportedVisionModels(): Array<{ model: string; label?: string }> {
+    static supportedVisionModels(): Array<{ model: string; label?: string; kind: string }> {
         const manager = ModelManager.getInstance();
-        return manager.getSupportedVisionModels().map((m) => ({ model: m.key, label: m.label }));
+        return manager.getSupportedVisionModels().map((m) => ({ model: m.key, label: m.label, kind: m.kind }));
     }
 
     /** ------------------------------------------------------------------------ */

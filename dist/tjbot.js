@@ -319,12 +319,20 @@ class TJBot {
         return this.rpiDriver.classifyImage(image);
     }
     /**
-     * Segment an image using the configured vision engine.
+     * Detect faces in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
-     * @returns {Promise<ImageSegmentationResult>}
+     * @returns {Promise<FaceDetectionResult[]>}
      */
-    async segmentImage(image) {
-        return this.rpiDriver.segmentImage(image);
+    async detectFaces(image) {
+        return this.rpiDriver.detectFaces(image);
+    }
+    /**
+     * Describe an image using the configured vision engine (Azure only).
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageDescriptionResult>}
+     */
+    async describeImage(image) {
+        return this.rpiDriver.describeImage(image);
     }
     /**
      * List all installed ONNX vision models on this device.
@@ -336,11 +344,11 @@ class TJBot {
     }
     /**
      * List supported ONNX vision models for this device.
-     * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
+     * @returns {Array<{ model: string, label?: string, kind: string }>} Array of supported vision model info
      */
     static supportedVisionModels() {
         const manager = ModelManager.getInstance();
-        return manager.getSupportedVisionModels().map((m) => ({ model: m.key, label: m.label }));
+        return manager.getSupportedVisionModels().map((m) => ({ model: m.key, label: m.label, kind: m.kind }));
     }
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */

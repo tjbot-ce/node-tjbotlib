@@ -27,7 +27,12 @@ import { SpeakerController } from '../speaker/index.js';
 import { STTController } from '../stt/stt.js';
 import { TTSController } from '../tts/tts.js';
 import { Capability, convertHexToRgbColor, Hardware, isCommandAvailable, TJBotError } from '../utils/index.js';
-import { ImageClassificationResult, ImageSegmentationResult, ObjectDetectionResult } from '../vision/index.js';
+import {
+    ImageClassificationResult,
+    ObjectDetectionResult,
+    FaceDetectionResult,
+    ImageDescriptionResult,
+} from '../vision/index.js';
 import { VisionController } from '../vision/vision.js';
 
 export abstract class RPiHardwareDriver {
@@ -60,7 +65,8 @@ export abstract class RPiHardwareDriver {
     abstract capturePhoto(atPath?: string): Promise<string>;
     abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
-    abstract segmentImage(image: Buffer | string): Promise<ImageSegmentationResult>;
+    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
 
     // SHINE
     abstract renderLED(hexColor: string): Promise<void>;
@@ -129,7 +135,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const verticalFlip = config.verticalFlip ?? false;
         const horizontalFlip = config.horizontalFlip ?? false;
         this.cameraController.initialize([width, height], verticalFlip, horizontalFlip);
-        this.visionController = new VisionController(config);
+        this.visionController = new VisionController(config.backend ?? {});
         this.initializedHardware.add(Hardware.CAMERA);
     }
 
@@ -243,27 +249,39 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     }
 
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
-        if (!this.visionController)
+        if (!this.visionController) {
             throw new TJBotError(
                 'Vision controller is not initialized. Make sure to call setupCamera() before using Vision.'
             );
+        }
         return this.visionController.detectObjects(image);
     }
 
     async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
-        if (!this.visionController)
+        if (!this.visionController) {
             throw new TJBotError(
                 'Vision controller is not initialized. Make sure to call setupCamera() before using Vision.'
             );
+        }
         return this.visionController.classifyImage(image);
     }
 
-    async segmentImage(image: Buffer | string): Promise<ImageSegmentationResult> {
-        if (!this.visionController)
+    async describeImage(image: Buffer | string): Promise<ImageDescriptionResult> {
+        if (!this.visionController) {
             throw new TJBotError(
                 'Vision controller is not initialized. Make sure to call setupCamera() before using Vision.'
             );
-        return this.visionController.segmentImage(image);
+        }
+        return this.visionController.describeImage(image);
+    }
+
+    async detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]> {
+        if (!this.visionController) {
+            throw new TJBotError(
+                'Vision controller is not initialized. Make sure to call setupCamera() before using Vision.'
+            );
+        }
+        return this.visionController.detectFaces(image);
     }
 
     async renderLED(hexColor: string): Promise<void> {

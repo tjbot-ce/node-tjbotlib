@@ -14,31 +14,75 @@
  * limitations under the License.
  */
 import type { SeeBackendConfig } from '../../config/config-types.js';
-import { ImageClassificationResult, ImageSegmentationResult, ObjectDetectionResult, VisionEngine } from '../vision-engine.js';
+import { ImageClassificationResult, ObjectDetectionResult, VisionEngine, FaceDetectionResult, ImageDescriptionResult } from '../vision-engine.js';
 export declare class ONNXVisionEngine extends VisionEngine {
     private manager;
-    private modelPath;
-    private modelLabels;
-    private session?;
+    private models;
     constructor(config?: SeeBackendConfig);
     /**
      * Initialize the ONNX vision engine.
-     * Pre-downloads the configured model.
+     * Does not load models here - models are loaded lazily when needed.
      */
     initialize(): Promise<void>;
     /**
-     * Ensure the vision model is downloaded and return its local path.
-     * @returns Path to the vision model file.
-     * @throws {TJBotError} if model download fails
+     * Load a model and cache it
      */
-    private ensureModelIsDownloaded;
+    private loadModel;
+    /**
+     * Load label file for a model
+     */
+    private loadLabels;
+    /**
+     * Get a model, loading it if necessary
+     */
+    private getOrLoadModel;
+    /**
+     * Detect objects in an image.
+     */
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
-    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
-    segmentImage(image: Buffer | string): Promise<ImageSegmentationResult>;
+    /**
+     * Classify an image.
+     */
+    classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
+    /**
+     * Detect faces in an image.
+     */
+    detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    /**
+     * Describe an image - not supported by ONNX backend.
+     */
+    describeImage(_image: Buffer | string): Promise<ImageDescriptionResult>;
+    /**
+     * Postprocess YOLO object detection output
+     */
+    /**
+     * Sigmoid function to normalize logits to 0-1 range
+     */
+    private sigmoid;
+    /**
+     * Postprocess YOLO object detection output
+     */
+    private postprocessDetection;
+    /**
+     * Apply Non-Maximum Suppression to remove overlapping detections
+     */
+    private nonMaxSuppression;
+    /**
+     * Calculate Intersection over Union (IoU) between two bounding boxes
+     * bbox format: [x, y, w, h]
+     */
+    private calculateIoU;
+    /**
+     * Postprocess classification output
+     */
+    private postprocessClassification;
+    /**
+     * Postprocess face detection output from YuNet
+     * YuNet outputs: [n_faces, 15] where each face has [x, y, w, h, confidence, landmarks_x, landmarks_y, ...]
+     */
+    private postprocessFaceDetection;
     /**
      * Preprocess image to Float32 tensor for ONNX model
-     * @param image Buffer or file path
-     * @param size [width, height]
      */
     private preprocessImage;
 }

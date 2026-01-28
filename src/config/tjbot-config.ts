@@ -86,6 +86,11 @@ export class TJBotConfig {
             throw new TJBotError('invalid TJBot configuration', { cause: err as Error });
         }
 
+        // Validate vision backend models if local backend is configured
+        if (this.config.see?.backend?.type === 'local' && this.config.see?.backend?.local) {
+            this.validateVisionLocalModels(this.config.see.backend.local);
+        }
+
         this.log = this.config.log ?? {};
         this.hardware = this.config.hardware ?? {};
         this.listen = this.config.listen ?? {};
@@ -155,5 +160,31 @@ export class TJBotConfig {
      */
     get(key: string): unknown {
         return (this.config as Record<string, unknown>)[key];
+    }
+
+    /**
+     * Validate vision local backend models are properly configured
+     * @private
+     */
+    private validateVisionLocalModels(localConfig: Record<string, unknown>): void {
+        const { detectionModel, classificationModel, faceDetectionModel } = localConfig as {
+            detectionModel?: string;
+            classificationModel?: string;
+            faceDetectionModel?: string;
+        };
+
+        // Models are validated at runtime when engine initializes
+        // This is a basic validation that models are specified
+        const models = [
+            { field: 'detectionModel', value: detectionModel, expectedKind: 'detection' },
+            { field: 'classificationModel', value: classificationModel, expectedKind: 'classification' },
+            { field: 'faceDetectionModel', value: faceDetectionModel, expectedKind: 'face-detection' },
+        ];
+
+        for (const model of models) {
+            if (!model.value) {
+                throw new TJBotError(`Vision local backend: ${model.field} is required but not configured`);
+            }
+        }
     }
 }

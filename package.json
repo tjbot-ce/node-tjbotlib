@@ -87,6 +87,7 @@
     "test-camera": "node tests/live/camera.test.js",
     "test-led": "node tests/live/led.test.js",
     "test-microphone": "node tests/live/microphone.test.js",
+    "test-models": "node tests/models/model-manager.test.ts",
     "test-servo": "node tests/live/servo.test.js",
     "test-speaker": "node tests/live/speaker.test.js",
     "test-stt": "node tests/live/stt.test.js",
