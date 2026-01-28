@@ -60,7 +60,7 @@ export class TJBotConfig {
      */
     constructor(overrideConfig?: Partial<TJBotConfigSchema>) {
         // Load default config
-        const defaultConfig = this._loadInternalConfig(this.defaultConfigPath);
+        const defaultConfig = this.loadInternalConfig(this.defaultConfigPath);
         let userConfig: TOML.JsonMap = {};
 
         // Load local tjbot.toml if it exists
@@ -70,7 +70,7 @@ export class TJBotConfig {
                 winston.debug(`loading local TJBot configuration from ${localConfigPath}`);
                 const configData = fs.readFileSync(localConfigPath, 'utf8');
                 userConfig = TOML.parse(configData);
-                userConfig = this._cleanConfig(userConfig) as TOML.JsonMap;
+                userConfig = this.cleanConfig(userConfig) as TOML.JsonMap;
             } else {
                 winston.debug(`local configuration file ${localConfigPath} not found, using defaults`);
             }
@@ -100,7 +100,7 @@ export class TJBotConfig {
      * Load internal default TOML configuration
      * @private
      */
-    private _loadInternalConfig(configFile: string): TJBotConfigSchema {
+    private loadInternalConfig(configFile: string): TJBotConfigSchema {
         const configPath = resolve(configFile, import.meta.url);
         winston.debug(`loading default TJBot configuration TOML from ${configPath}`);
 
@@ -109,7 +109,7 @@ export class TJBotConfig {
             const configData = fs.readFileSync(new URL(configPath), 'utf8');
             config = TOML.parse(configData);
             // Clean up the config to remove any Symbol keys
-            config = this._cleanConfig(config) as TOML.JsonMap;
+            config = this.cleanConfig(config) as TOML.JsonMap;
         } catch (err) {
             throw new TJBotError(`unable to read TOML from ${configFile}: ${err}`);
         }
@@ -121,13 +121,13 @@ export class TJBotConfig {
      * Clean configuration object to remove Symbol keys and non-string properties
      * @private
      */
-    private _cleanConfig(obj: unknown): unknown {
+    private cleanConfig(obj: unknown): unknown {
         if (obj === null || obj === undefined) {
             return obj;
         }
 
         if (Array.isArray(obj)) {
-            return obj.map((item) => this._cleanConfig(item));
+            return obj.map((item) => this.cleanConfig(item));
         }
 
         if (typeof obj === 'object') {
@@ -136,7 +136,7 @@ export class TJBotConfig {
                 // Only include string keys
                 if (typeof key === 'string' && Object.prototype.hasOwnProperty.call(obj, key)) {
                     const value = (obj as Record<string, unknown>)[key];
-                    cleaned[key] = this._cleanConfig(value);
+                    cleaned[key] = this.cleanConfig(value);
                 } else {
                     // Warn about non-string keys being removed
                     winston.warn(

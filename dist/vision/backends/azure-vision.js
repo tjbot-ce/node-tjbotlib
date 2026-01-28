@@ -15,9 +15,10 @@
  */
 import fs from 'fs';
 import fetch from 'node-fetch';
-export class AzureVisionEngine {
+import { VisionEngine, } from '../vision-engine.js';
+export class AzureVisionEngine extends VisionEngine {
     constructor(config) {
-        this.config = config;
+        super(config);
         this.apiKey = typeof config.apiKey === 'string' ? config.apiKey : undefined;
         this.url =
             typeof config.url === 'string'

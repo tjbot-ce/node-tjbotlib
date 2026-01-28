@@ -16,6 +16,12 @@
  */
 
 export { Capability, Hardware } from './constants.js';
-export { sleep, convertHexToRgbColor, normalizeColor, isCommandAvailable } from './utils.js';
 export { TJBotError } from './errors.js';
-export { SherpaModelManager, SherpaModel, SherpaSTTModelMetadata, VADModelConfig } from './sherpa-utils.js';
+export {
+    ModelManager,
+    STTModelMetadata,
+    TTSModelMetadata,
+    VADModelMetadata,
+    VisionModelMetadata,
+} from './model-manager.js';
+export { convertHexToRgbColor, isCommandAvailable, normalizeColor, sleep } from './utils.js';

@@ -187,7 +187,7 @@ type = 'local'
 
 [listen.backend.local]
 # DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
-# See sherpa-models.yaml for other available models and their URLs.
+# See src/config/models.yaml for other available models and their URLs.
 # More STT models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
 model = 'sherpa-onnx-whisper-base.en'
 modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.en.tar.bz2'
@@ -302,7 +302,7 @@ type = 'local'
 
 [speak.backend.local]
 # DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
-# See sherpa-models.yaml for other available models and their URLs.
+# See src/config/models.yaml for other available models and their URLs.
 # More TTS models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
 model = 'vits-piper-en_US-ryan-medium'
 modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2'

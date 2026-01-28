@@ -13,9 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { VisionEngine } from './vision-engine.js';
+import { type VisionEngine } from './vision-engine.js';
 import type { SeeBackendConfig } from '../config/config-types.js';
-export declare function createVisionEngine(config: SeeBackendConfig): VisionEngine;
 export declare class VisionController {
     visionEngine?: VisionEngine;
     visionConfig: SeeBackendConfig;

@@ -20,7 +20,6 @@
 import { select } from '@inquirer/prompts';
 import { execSync } from 'child_process';
 import { TJBot } from '../../dist/tjbot.js';
-import { SherpaModelManager } from '../../dist/utils/sherpa-utils.js';
 import { initWinston, formatTitle, formatSection } from './utils.js';
 import { inferSTTMode } from '../../dist/stt/stt-utils.js';
 
@@ -48,13 +47,9 @@ async function runTest() {
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot STT Test'));
 
-    // Load Sherpa model metadata for local backend
-    const manager = SherpaModelManager.getInstance();
-    manager.loadMetadata();
-
     // Get user configuration choices
     const selectedBackend = await promptBackendChoice();
-    const backendConfig = await promptBackendSpecificOptions(selectedBackend, manager);
+    const backendConfig = await promptBackendSpecificOptions(selectedBackend);
     const selectedDevice = await promptDeviceChoice();
 
     // Build listen config from user choices
@@ -206,23 +201,26 @@ async function promptBackendSpecificOptions(selectedBackend, manager) {
     return config;
 }
 
-async function promptSherpaONNXOptions(manager) {
+async function promptSherpaONNXOptions() {
     // Get available models from metadata
-    const models = await manager.getSTTModelMetadata();
-    const choices = await Promise.all(
-        models.map(async (m) => {
-            const downloaded = await manager.isSTTModelDownloaded(m.folder);
-            const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
-            return {
-                name: `${m.label} [${m.kind}] ${status}`,
-                value: m.key,
-                short: m.label,
-            };
-        })
-    );
+    const models = await TJBot.supportedSTTModels();
+
+    // Get installed models once (outside the loop for efficiency)
+    // Note: installedSTTModels() returns an array of model keys (strings), not full model objects
+    const installedModelKeys = TJBot.installedSTTModels();
+    const installedModels = new Set(installedModelKeys);
+    const choices = models.map((m) => {
+        const downloaded = installedModels.has(m.key);
+        const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
+        return {
+            name: `${m.label || m.key} ${status}`,
+            value: m.key,
+            short: m.label || m.key,
+        };
+    });
 
     const modelKey = await select({
-        message: 'Select a Sherpa-ONNX model:',
+        message: 'Select a Sherpa-ONNX STT model:',
         choices,
         default: models[0].key,
     });
@@ -230,7 +228,6 @@ async function promptSherpaONNXOptions(manager) {
     const selectedModel = models.find((m) => m.key === modelKey);
     const config = {
         model: selectedModel.key,
-        modelUrl: selectedModel.url,
     };
 
     // For offline models, ask about VAD
@@ -351,7 +348,6 @@ function buildListenConfig(selectedBackend, backendConfig, device) {
     if (selectedBackend === 'local') {
         baseConfig.backend.local = {
             model: backendConfig.model,
-            modelUrl: backendConfig.modelUrl,
         };
         if (backendConfig.vad !== undefined) {
             baseConfig.backend.local.vad = backendConfig.vad;

@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { TTSEngine, createTTSEngine } from './tts-engine.js';
+// TTS controller
 export { TTSController } from './tts.js';
+// TTS engine factory (async)
+export { createTTSEngine } from './tts-engine.js';
 //# sourceMappingURL=index.js.map

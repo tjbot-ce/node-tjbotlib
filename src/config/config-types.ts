@@ -38,8 +38,6 @@ export const vadConfigSchema = z
         enabled: z.boolean().optional(),
         /** Optional model filename (e.g., silero_vad.onnx) */
         model: z.string().optional(),
-        /** Optional URL for the VAD model download */
-        modelUrl: z.string().optional(),
     })
     .loose();
 export type VADConfig = z.infer<typeof vadConfigSchema>;
@@ -47,7 +45,6 @@ export type VADConfig = z.infer<typeof vadConfigSchema>;
 export const sttBackendLocalConfigSchema = z
     .object({
         model: z.string().optional(),
-        modelUrl: z.string().optional(),
         vad: vadConfigSchema.optional(),
     })
     .loose();
@@ -121,7 +118,6 @@ export type SeeBackendType = z.infer<typeof seeBackendTypeSchema>;
 export const seeBackendLocalConfigSchema = z
     .object({
         model: z.string().optional(),
-        modelUrl: z.string().optional(),
     })
     .loose();
 export type SeeBackendLocalConfig = z.infer<typeof seeBackendLocalConfigSchema>;
@@ -201,10 +197,8 @@ export const ttsBackendTypeSchema = z.enum(['local', 'ibm-watson-tts', 'google-c
 export type TTSBackendType = z.infer<typeof ttsBackendTypeSchema>;
 
 export const ttsBackendLocalConfigSchema = z
-
     .object({
         model: z.string().optional(),
-        modelUrl: z.string().optional(),
     })
     .loose();
 export type TTSBackendLocalConfig = z.infer<typeof ttsBackendLocalConfigSchema>;

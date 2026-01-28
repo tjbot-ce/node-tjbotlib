@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { SeeBackendConfig } from '../config/config-types.js';
 export interface ObjectDetectionResult {
     label: string;
     confidence: number;
@@ -28,9 +29,51 @@ export interface ImageSegmentationResult {
     height: number;
     labels: string[];
 }
-export interface VisionEngine {
-    initialize(): Promise<void>;
-    detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
-    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
-    segmentImage?(image: Buffer | string): Promise<ImageSegmentationResult>;
+/**
+ * Abstract Vision Engine Base Class
+ *
+ * Defines the interface for Vision backends (ONNX, Google Cloud Vision, Azure Vision, etc.)
+ * All implementations must extend this class and implement the required methods.
+ * @public
+ */
+export declare abstract class VisionEngine {
+    protected config: SeeBackendConfig;
+    constructor(config?: SeeBackendConfig);
+    /**
+     * Initialize the Vision engine.
+     * This method may perform setup tasks such as loading models or authenticating with services.
+     * Should be called before the first call to detectObjects(), classifyImage(), or segmentImage().
+     *
+     * @throws {TJBotError} if initialization fails
+     * @public
+     */
+    abstract initialize(): Promise<void>;
+    /**
+     * Detect objects in an image.
+     *
+     * @param image - Image buffer or file path
+     * @returns Array of detected objects with labels, confidence scores, and bounding boxes
+     * @throws {TJBotError} if detection fails
+     * @public
+     */
+    abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    /**
+     * Classify an image.
+     *
+     * @param image - Image buffer or file path
+     * @returns Array of classification results with labels and confidence scores
+     * @throws {TJBotError} if classification fails
+     * @public
+     */
+    abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    /**
+     * Segment an image (optional - not all backends support this).
+     *
+     * @param image - Image buffer or file path
+     * @returns Segmentation result with mask and labels
+     * @throws {TJBotError} if segmentation fails or is not supported
+     * @public
+     */
+    abstract segmentImage?(image: Buffer | string): Promise<ImageSegmentationResult>;
 }
+export declare function createVisionEngine(config: SeeBackendConfig): Promise<VisionEngine>;

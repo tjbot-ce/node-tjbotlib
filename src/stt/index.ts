@@ -15,6 +15,11 @@
  * limitations under the License.
  */
 
-export { STTEngine, STTRequestOptions, createSTTEngine } from './stt-engine.js';
-
+// STT controller
 export { STTController } from './stt.js';
+
+// STT engine factory (async)
+export { createSTTEngine } from './stt-engine.js';
+
+// STT types
+export type { STTEngine, STTRequestOptions } from './stt-engine.js';

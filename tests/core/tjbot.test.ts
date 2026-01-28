@@ -184,52 +184,52 @@ describe('TJBot - Capability Assertions', () => {
         tj = new TJBot();
     });
 
-    test('_assertCapability throws when LISTEN capability missing', () => {
+    test('assertCapability throws when LISTEN capability missing', () => {
         // Mock that driver doesn't have LISTEN capability
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         expect(() => {
-            tj['_assertCapability'](Capability.LISTEN);
+            tj['assertCapability'](Capability.LISTEN);
         }).toThrow(TJBotError);
     });
 
-    test('_assertCapability throws when LOOK capability missing', () => {
+    test('assertCapability throws when LOOK capability missing', () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         expect(() => {
-            tj['_assertCapability'](Capability.LOOK);
+            tj['assertCapability'](Capability.LOOK);
         }).toThrow(TJBotError);
     });
 
-    test('_assertCapability throws when SHINE capability missing', () => {
+    test('assertCapability throws when SHINE capability missing', () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         expect(() => {
-            tj['_assertCapability'](Capability.SHINE);
+            tj['assertCapability'](Capability.SHINE);
         }).toThrow(TJBotError);
     });
 
-    test('_assertCapability throws when SPEAK capability missing', () => {
+    test('assertCapability throws when SPEAK capability missing', () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         expect(() => {
-            tj['_assertCapability'](Capability.SPEAK);
+            tj['assertCapability'](Capability.SPEAK);
         }).toThrow(TJBotError);
     });
 
-    test('_assertCapability throws when WAVE capability missing', () => {
+    test('assertCapability throws when WAVE capability missing', () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         expect(() => {
-            tj['_assertCapability'](Capability.WAVE);
+            tj['assertCapability'](Capability.WAVE);
         }).toThrow(TJBotError);
     });
 
-    test('_assertCapability does not throw when capability is available', () => {
+    test('assertCapability does not throw when capability is available', () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
 
         expect(() => {
-            tj['_assertCapability'](Capability.SHINE);
+            tj['assertCapability'](Capability.SHINE);
         }).not.toThrow();
     });
 
@@ -237,7 +237,7 @@ describe('TJBot - Capability Assertions', () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         try {
-            tj['_assertCapability'](Capability.LISTEN);
+            tj['assertCapability'](Capability.LISTEN);
         } catch (error) {
             if (error instanceof TJBotError) {
                 expect(error.message).toContain(Hardware.MICROPHONE);
@@ -513,30 +513,24 @@ describe('TJBot - Configuration Access', () => {
 });
 
 describe('TJBot - Model Listing Methods', () => {
-    let tj: TJBot;
-
-    beforeEach(() => {
-        tj = new TJBot();
-    });
-
     test('installedSTTModels returns an array', () => {
-        const result = tj.installedSTTModels();
+        const result = TJBot.installedSTTModels();
         expect(Array.isArray(result)).toBe(true);
     });
 
     test('recommendedSTTModels returns a non-empty array', () => {
-        const result = tj.recommendedSTTModels();
+        const result = TJBot.supportedSTTModels();
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBeGreaterThan(0);
     });
 
     test('installedTTSModels returns an array', () => {
-        const result = tj.installedTTSModels();
+        const result = TJBot.installedTTSModels();
         expect(Array.isArray(result)).toBe(true);
     });
 
     test('recommendedTTSModels returns a non-empty array', () => {
-        const result = tj.recommendedTTSModels();
+        const result = TJBot.supportedTTSModels();
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBeGreaterThan(0);
     });

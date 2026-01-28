@@ -13,8 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { STTEngine, STTRequestOptions } from '../stt-engine.js';
 import type { STTBackendLocalConfig } from '../../config/config-types.js';
+import { STTEngine, STTRequestOptions } from '../stt-engine.js';
 /**
  * Sherpa-ONNX Speech-to-Text Engine
  *
@@ -27,23 +27,21 @@ import type { STTBackendLocalConfig } from '../../config/config-types.js';
  * @public
  */
 export declare class SherpaONNXSTTEngine extends STTEngine {
-    private modelKey?;
+    private manager;
+    private modelInfo?;
     private modelPaths?;
     private vadPath?;
-    private recognizer;
+    private recognizer?;
     private vad;
     constructor(config?: STTBackendLocalConfig);
     initialize(): Promise<void>;
+    /**
+     * Ensure the STT model is downloaded and return its local path.
+     * @returns Path to the STT model files.
+     * @throws {TJBotError} if model download fails
+     */
+    private ensureModelIsDownloaded;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
-    /**
-     * Validate model configuration and resolve to model key
-     * Accepts either short key (e.g., 'whisper-base') or full folder name
-     */
-    private validateModel;
-    /**
-     * Get VAD configuration from config
-     */
-    private getVadConfig;
     /**
      * Determine if VAD should be used
      */
@@ -88,10 +86,6 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
      * Transcribe offline with simple energy-based silence detection
      */
     private transcribeOfflineEnergy;
-    /**
-     * Get model info by key
-     */
-    private getModelInfo;
     /**
      * Build model file paths based on model key
      */

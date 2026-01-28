@@ -17,11 +17,11 @@
 import fetch from 'node-fetch';
 import fs from 'fs';
 
-import type {
+import {
     VisionEngine,
-    ObjectDetectionResult,
-    ImageClassificationResult,
-    ImageSegmentationResult,
+    type ObjectDetectionResult,
+    type ImageClassificationResult,
+    type ImageSegmentationResult,
 } from '../vision-engine.js';
 import type { SeeBackendGoogleCloudConfig } from '../../config/config-types.js';
 
@@ -40,15 +40,14 @@ type GoogleCloudVisionAPIResponse = {
     }>;
 };
 
-export class GoogleCloudVisionEngine implements VisionEngine {
-    private config: SeeBackendGoogleCloudConfig;
+export class GoogleCloudVisionEngine extends VisionEngine {
     private credentialsPath?: string;
     private model?: string;
     private endpoint: string;
     private apiKey?: string; // Only for legacy fallback, not used if credentialsPath is set
 
     constructor(config: SeeBackendGoogleCloudConfig) {
-        this.config = config;
+        super(config);
         this.credentialsPath = config.credentialsPath as string | undefined;
         this.model = config.model as string | undefined;
         this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';

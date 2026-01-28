@@ -44,12 +44,12 @@ export declare class TJBotConfig {
      * Load internal default TOML configuration
      * @private
      */
-    private _loadInternalConfig;
+    private loadInternalConfig;
     /**
      * Clean configuration object to remove Symbol keys and non-string properties
      * @private
      */
-    private _cleanConfig;
+    private cleanConfig;
     /**
      * Get raw configuration value by path (for backward compatibility)
      */

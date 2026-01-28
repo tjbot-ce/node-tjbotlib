@@ -32,14 +32,11 @@ export const vadConfigSchema = z
     enabled: z.boolean().optional(),
     /** Optional model filename (e.g., silero_vad.onnx) */
     model: z.string().optional(),
-    /** Optional URL for the VAD model download */
-    modelUrl: z.string().optional(),
 })
     .loose();
 export const sttBackendLocalConfigSchema = z
     .object({
     model: z.string().optional(),
-    modelUrl: z.string().optional(),
     vad: vadConfigSchema.optional(),
 })
     .loose();
@@ -99,7 +96,6 @@ export const seeBackendTypeSchema = z.enum(['local', 'google-cloud-vision', 'azu
 export const seeBackendLocalConfigSchema = z
     .object({
     model: z.string().optional(),
-    modelUrl: z.string().optional(),
 })
     .loose();
 export const seeBackendGoogleCloudConfigSchema = z
@@ -163,7 +159,6 @@ export const ttsBackendTypeSchema = z.enum(['local', 'ibm-watson-tts', 'google-c
 export const ttsBackendLocalConfigSchema = z
     .object({
     model: z.string().optional(),
-    modelUrl: z.string().optional(),
 })
     .loose();
 export const ttsBackendIBMWatsonConfigSchema = z

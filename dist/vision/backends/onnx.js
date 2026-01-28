@@ -13,45 +13,51 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { VisionModelManager } from '../../utils/vision-utils.js';
-import { TJBotError } from '../../utils/index.js';
-import * as ort from 'onnxruntime-node';
 import fs from 'fs';
-import path from 'path';
+import * as ort from 'onnxruntime-node';
 import sharp from 'sharp';
-export class ONNXVisionEngine {
+import winston from 'winston';
+import { TJBotError } from '../../utils/index.js';
+import { ModelManager } from '../../utils/model-manager.js';
+import { VisionEngine, } from '../vision-engine.js';
+import path from 'path';
+export class ONNXVisionEngine extends VisionEngine {
     constructor(config) {
+        super(config);
+        this.manager = ModelManager.getInstance();
         this.modelLabels = [];
-        this.config = config;
-        if (!config.model) {
-            throw new TJBotError('CV model not specified. Provide model in see config.');
-        }
-        this.modelKey = config.model;
     }
+    /**
+     * Initialize the ONNX vision engine.
+     * Pre-downloads the configured model.
+     */
     async initialize() {
-        // Load model metadata
-        const modelManager = VisionModelManager.getInstance();
-        const meta = modelManager.getModelMetadata().find((m) => m.key === this.modelKey);
-        if (!meta)
-            throw new Error(`Model metadata not found for key: ${this.modelKey}`);
-        this.modelLabels = meta.labels || [];
-        // Download/copy model to cache dir if needed
-        const cacheDir = modelManager.getModelCacheDir();
-        if (!fs.existsSync(cacheDir))
-            fs.mkdirSync(cacheDir, { recursive: true });
-        const modelFilename = path.basename(meta.url);
-        const modelPath = path.join(cacheDir, modelFilename);
-        this.modelPath = modelPath;
-        if (!fs.existsSync(modelPath)) {
-            // Download model
-            const res = await fetch(meta.url);
-            if (!res.ok)
-                throw new Error(`Failed to download model: ${meta.url}`);
-            const arrayBuffer = await res.arrayBuffer();
-            fs.writeFileSync(modelPath, Buffer.from(arrayBuffer));
+        try {
+            // Front-load model download during initialization
+            this.modelPath = await this.ensureModelIsDownloaded();
+            // Initialize ONNX session
+            this.session = await ort.InferenceSession.create(this.modelPath);
+            winston.info('👁️ ONNX vision engine initialized');
         }
-        // Initialize ONNX session
-        this.session = await ort.InferenceSession.create(modelPath);
+        catch (error) {
+            winston.error('Failed to initialize ONNX vision engine:', error);
+            throw new TJBotError('Failed to initialize ONNX vision engine', { cause: error });
+        }
+    }
+    /**
+     * Ensure the vision model is downloaded and return its local path.
+     * @returns Path to the vision model file.
+     * @throws {TJBotError} if model download fails
+     */
+    async ensureModelIsDownloaded() {
+        try {
+            const model = await this.manager.loadModel(this.config.model);
+            const cacheDir = this.manager.getTTSModelCacheDir();
+            return path.join(cacheDir, model.folder, model.required[0]);
+        }
+        catch (error) {
+            throw new TJBotError('Failed to load TTS model path', { cause: error });
+        }
     }
     async detectObjects(image) {
         if (!this.session)

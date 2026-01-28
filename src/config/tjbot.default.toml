@@ -40,10 +40,8 @@ type = 'local'
 
 [listen.backend.local]
 # DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
-# See sherpa-models.yaml for other available models and their URLs.
-# More STT models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+# See models.yaml for other available models.
 model = 'sherpa-onnx-whisper-base.en'
-modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.en.tar.bz2'
 
 [listen.backend.local.vad]
 # Voice activity detection (VAD) is used for local OFFLINE models (e.g. whisper, moonshine).
@@ -53,9 +51,8 @@ modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/s
 enabled = true
 
 # DEFAULT MODEL: Silero VAD (~350KB)
-# More VAD models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+# See models.yaml for other available models.
 model = 'silero_vad.onnx'
-modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx'
 
 [listen.backend.ibm-watson-stt]
 # Specify the STT model to use.
@@ -103,9 +100,8 @@ type = 'local'
 
 [see.backend.local]
 # DEFAULT MODEL (OFFLINE): yolov8n.onnx (small, fast, general purpose)
-# See cv-models.yaml for other available models and their URLs.
+# See models.yaml for other available models.
 model = 'yolov8n.onnx'
-modelUrl = 'https://github.com/ultralytics/assets/releases/download/v0.0.0/yolov8n.onnx'
 
 [see.backend.google-cloud-vision]
 # Google Cloud Vision API credentials and model
@@ -177,11 +173,9 @@ device = ''
 type = 'local'
 
 [speak.backend.local]
-# DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
-# See sherpa-models.yaml for other available models and their URLs.
-# More TTS models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+# DEFAULT MODEL: Whisper base.en (good accuracy, English-only, ~140MB)
+# See models.yaml for other available models.
 model = 'vits-piper-en_US-ryan-medium'
-modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2'
 
 [speak.backend.ibm-watson-tts]
 # 'voice' specifies the IBM Watson Text-to-Speech voice to use.

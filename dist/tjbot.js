@@ -18,7 +18,7 @@ import { TJBotConfig } from './config/tjbot-config.js';
 import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
-import { Capability, Hardware, normalizeColor, SherpaModelManager, sleep, TJBotError } from './utils/index.js';
+import { Capability, Hardware, normalizeColor, ModelManager, sleep, TJBotError } from './utils/index.js';
 // node modules
 import cm from 'color-model';
 import colorToHex from 'colornames';
@@ -103,13 +103,13 @@ class TJBot {
         winston.verbose(`🤖 TJBot library version ${TJBot.VERSION}`);
         winston.debug(`🛠️ TJBot configuration:\n${JSON.stringify(this.config, null, 2)}`);
         // Auto-initialize hardware from configuration
-        this._initializeHardwareFromConfig();
+        this.initializeHardwareFromConfig();
     }
     /**
      * Auto-initialize hardware devices based on configuration
      * @private
      */
-    _initializeHardwareFromConfig() {
+    initializeHardwareFromConfig() {
         const hwConfig = this.config.hardware;
         if (!hwConfig || Object.keys(hwConfig).length === 0) {
             winston.debug('No hardware configured in config file');
@@ -191,7 +191,7 @@ class TJBot {
      * @private
      * @param {string} capability The capability assert (see TJBot.prototype.capabilities).
      */
-    _assertCapability(capability) {
+    assertCapability(capability) {
         switch (capability) {
             case Capability.LISTEN:
                 if (!this.rpiDriver.hasCapability(Capability.LISTEN)) {
@@ -245,7 +245,7 @@ class TJBot {
      */
     async listen(callback) {
         // make sure we can listen
-        this._assertCapability(Capability.LISTEN);
+        this.assertCapability(Capability.LISTEN);
         const listenConfig = this.config.listen ?? {};
         const mode = inferSTTMode(listenConfig);
         const modelName = listenConfig.backend?.local?.model ?? listenConfig.model ?? '<unknown>';
@@ -266,21 +266,20 @@ class TJBot {
         return await this.rpiDriver.listenForTranscript();
     }
     /**
-     * List all installed (downloaded) Sherpa-ONNX STT models on this device.
+     * List all downloaded Sherpa-ONNX STT models on this device.
      * @returns {string[]} Array of installed model keys
      */
-    installedSTTModels() {
-        const manager = SherpaModelManager.getInstance();
-        const allModels = manager.getSTTModelMetadata();
-        return allModels.filter((m) => manager.isSTTModelDownloaded(m.key)).map((m) => m.key);
+    static installedSTTModels() {
+        const manager = ModelManager.getInstance();
+        return manager.getInstalledSTTModels().map((m) => m.key);
     }
     /**
-     * List recommended Sherpa-ONNX STT models for this device.
-     * @returns {Array<{ key: string, label: string, kind: string }>} Array of recommended model info
+     * List supported Sherpa-ONNX STT models for this device.
+     * @returns {Array<{ key: string, label: string, kind: string }>} Array of supported model info
      */
-    recommendedSTTModels() {
-        const manager = SherpaModelManager.getInstance();
-        return manager.getSTTModelMetadata().map((m) => ({
+    static supportedSTTModels() {
+        const manager = ModelManager.getInstance();
+        return manager.getSupportedSTTModels().map((m) => ({
             key: m.key,
             label: m.label,
             kind: m.kind,
@@ -299,12 +298,12 @@ class TJBot {
      * @public
      */
     async look(filePath) {
-        this._assertCapability(Capability.LOOK);
+        this.assertCapability(Capability.LOOK);
         const path = await this.rpiDriver.capturePhoto(filePath);
         return path;
     }
     /**
-     * Detect objects in an image using the configured CV engine.
+     * Detect objects in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
      * @returns {Promise<ObjectDetectionResult[]>}
      */
@@ -312,7 +311,7 @@ class TJBot {
         return this.rpiDriver.detectObjects(image);
     }
     /**
-     * Classify an image using the configured CV engine.
+     * Classify an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
      * @returns {Promise<ImageClassificationResult[]>}
      */
@@ -320,12 +319,28 @@ class TJBot {
         return this.rpiDriver.classifyImage(image);
     }
     /**
-     * Segment an image using the configured CV engine (if supported).
+     * Segment an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
      * @returns {Promise<ImageSegmentationResult>}
      */
     async segmentImage(image) {
         return this.rpiDriver.segmentImage(image);
+    }
+    /**
+     * List all installed ONNX vision models on this device.
+     * @returns {string[]} Array of installed vision model keys
+     */
+    static installedVisionModels() {
+        const manager = ModelManager.getInstance();
+        return manager.getInstalledVisionModels().map((m) => m.key);
+    }
+    /**
+     * List supported ONNX vision models for this device.
+     * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
+     */
+    static supportedVisionModels() {
+        const manager = ModelManager.getInstance();
+        return manager.getSupportedVisionModels().map((m) => ({ model: m.key, label: m.label }));
     }
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */
@@ -342,7 +357,7 @@ class TJBot {
      * @public
      */
     async shine(color) {
-        this._assertCapability(Capability.SHINE);
+        this.assertCapability(Capability.SHINE);
         // normalize the color
         let c = normalizeColor(color);
         // remove leading '#' if present
@@ -366,7 +381,7 @@ class TJBot {
      * @public
      */
     async pulse(color, duration = 1.0) {
-        this._assertCapability(Capability.SHINE);
+        this.assertCapability(Capability.SHINE);
         if (duration < 0.5) {
             winston.warn('TJBot cannot pulse for less than 0.5 seconds, using duration of 0.5 seconds');
             duration = 0.5;
@@ -441,7 +456,7 @@ class TJBot {
      * @public
      */
     async speak(message) {
-        this._assertCapability(Capability.SPEAK);
+        this.assertCapability(Capability.SPEAK);
         winston.info(`💬 TJBot speaking: "${message}"`);
         // Delegate to the SpeakerController which handles TTS synthesis and audio playback
         await this.rpiDriver.speak(message);
@@ -456,22 +471,21 @@ class TJBot {
         await this.rpiDriver.playAudio(soundFile);
     }
     /**
-     * List all installed (downloaded) Sherpa-ONNX TTS models on this device.
+     * List all installed Sherpa-ONNX TTS models on this device.
      * @returns {string[]} Array of installed TTS model keys
      */
-    installedTTSModels() {
-        const manager = SherpaModelManager.getInstance();
-        const allModels = manager.getTTSModels();
-        return allModels.filter((m) => manager.isTTSModelDownloaded(m.model)).map((m) => m.model);
+    static installedTTSModels() {
+        const manager = ModelManager.getInstance();
+        return manager.getInstalledTTSModels().map((m) => m.key);
     }
     /**
-     * List recommended Sherpa-ONNX TTS models for this device.
-     * @returns {Array<{ model: string, label?: string }>} Array of recommended TTS model info
+     * List supported Sherpa-ONNX TTS models for this device.
+     * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
      */
-    recommendedTTSModels() {
-        const manager = SherpaModelManager.getInstance();
-        return manager.getTTSModels().map((m) => ({
-            model: m.model,
+    static supportedTTSModels() {
+        const manager = ModelManager.getInstance();
+        return manager.getSupportedTTSModels().map((m) => ({
+            model: m.key,
             label: m.label,
         }));
     }
@@ -486,7 +500,7 @@ class TJBot {
      */
     armBack() {
         // make sure we have an arm
-        this._assertCapability(Capability.WAVE);
+        this.assertCapability(Capability.WAVE);
         winston.verbose("🦾 Moving TJBot's arm back");
         this.rpiDriver.renderServoPosition(ServoPosition.ARM_BACK);
     }
@@ -498,7 +512,7 @@ class TJBot {
      */
     raiseArm() {
         // make sure we have an arm
-        this._assertCapability(Capability.WAVE);
+        this.assertCapability(Capability.WAVE);
         winston.verbose("🦾 Raising TJBot's arm");
         this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
     }
@@ -510,7 +524,7 @@ class TJBot {
      */
     lowerArm() {
         // make sure we have an arm
-        this._assertCapability(Capability.WAVE);
+        this.assertCapability(Capability.WAVE);
         winston.verbose("🦾 Lowering TJBot's arm");
         this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
     }
@@ -520,7 +534,7 @@ class TJBot {
      * @public
      */
     wave() {
-        this._assertCapability(Capability.WAVE);
+        this.assertCapability(Capability.WAVE);
         winston.verbose("🦾 Waving TJBot's arm");
         const delay = 0.2;
         this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);

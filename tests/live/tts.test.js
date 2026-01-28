@@ -20,7 +20,6 @@
 import { execSync } from 'node:child_process';
 import { select } from '@inquirer/prompts';
 import { TJBot } from '../../dist/tjbot.js';
-import { SherpaModelManager } from '../../dist/utils/sherpa-utils.js';
 import { initWinston } from './utils.js';
 import { isCommandAvailable, formatTitle, formatSection } from './utils.js';
 
@@ -46,10 +45,6 @@ async function runTest() {
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot TTS Test'));
 
-    // Load Sherpa model metadata for local backend
-    const manager = SherpaModelManager.getInstance();
-    manager.loadMetadata();
-
     // Check for required dependencies
     console.log(formatSection('Checking audio playback tools'));
     const hasAplay = isCommandAvailable('aplay');
@@ -63,7 +58,7 @@ async function runTest() {
 
     // Get user configuration choices
     const selectedBackend = await promptBackendChoice();
-    const backendConfig = await promptBackendSpecificOptions(selectedBackend, manager);
+    const backendConfig = await promptBackendSpecificOptions(selectedBackend);
     const selectedOutputDevice = await promptOutputDeviceChoice();
 
     // Build speak config from user choices
@@ -195,23 +190,26 @@ async function promptBackendSpecificOptions(selectedBackend, manager) {
     return config;
 }
 
-async function promptSherpaONNXTTSOptions(manager) {
+async function promptSherpaONNXTTSOptions() {
     // Get available models from metadata
-    const models = await manager.getTTSModels();
-    const choices = await Promise.all(
-        models.map(async (m) => {
-            const downloaded = await manager.isTTSModelDownloaded(m.model);
-            const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
-            return {
-                name: `${m.label || m.model} ${status}`,
-                value: m.model,
-                short: m.label || m.model,
-            };
-        })
-    );
+    const models = await TJBot.supportedTTSModels();
+
+    // Get installed models once (outside the loop for efficiency)
+    // Note: installedTTSModels() returns an array of model keys (strings), not full model objects
+    const installedModelKeys = TJBot.installedTTSModels();
+    const installedModels = new Set(installedModelKeys);
+    const choices = models.map((m) => {
+        const downloaded = installedModels.has(m.model);
+        const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
+        return {
+            name: `${m.label || m.model} ${status}`,
+            value: m.model,
+            short: m.label || m.model,
+        };
+    });
 
     const modelKey = await select({
-        message: 'Select a Sherpa-ONNX TTS model (voice):',
+        message: 'Select a Sherpa-ONNX TTS model:',
         choices,
         default: models[0].model,
     });
@@ -219,7 +217,6 @@ async function promptSherpaONNXTTSOptions(manager) {
     const selectedModel = models.find((m) => m.model === modelKey);
     return {
         model: selectedModel.model,
-        modelUrl: selectedModel.modelUrl,
     };
 }
 
@@ -297,7 +294,6 @@ function buildSpeakConfig(selectedBackend, backendConfig, outputDevice) {
     if (selectedBackend === 'local') {
         baseConfig.backend.local = {
             model: backendConfig.model,
-            modelUrl: backendConfig.modelUrl,
         };
     } else if (selectedBackend === 'ibm-watson-tts') {
         baseConfig.backend['ibm-watson-tts'] = {

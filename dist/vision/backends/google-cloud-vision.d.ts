@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { VisionEngine, ObjectDetectionResult, ImageClassificationResult, ImageSegmentationResult } from '../vision-engine.js';
+import { VisionEngine, type ObjectDetectionResult, type ImageClassificationResult, type ImageSegmentationResult } from '../vision-engine.js';
 import type { SeeBackendGoogleCloudConfig } from '../../config/config-types.js';
-export declare class GoogleCloudVisionEngine implements VisionEngine {
-    private config;
+export declare class GoogleCloudVisionEngine extends VisionEngine {
     private credentialsPath?;
     private model?;
     private endpoint;

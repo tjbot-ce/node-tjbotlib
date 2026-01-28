@@ -14,5 +14,11 @@
  * limitations under the License.
  */
 
-export { TTSEngine, createTTSEngine } from './tts-engine.js';
+// TTS controller
 export { TTSController } from './tts.js';
+
+// TTS engine factory (async)
+export { createTTSEngine } from './tts-engine.js';
+
+// TTS types
+export type { TTSEngine } from './tts-engine.js';

@@ -35,16 +35,13 @@ export type STTBackendType = z.infer<typeof sttBackendTypeSchema>;
 export declare const vadConfigSchema: z.ZodObject<{
     enabled: z.ZodOptional<z.ZodBoolean>;
     model: z.ZodOptional<z.ZodString>;
-    modelUrl: z.ZodOptional<z.ZodString>;
 }, z.core.$loose>;
 export type VADConfig = z.infer<typeof vadConfigSchema>;
 export declare const sttBackendLocalConfigSchema: z.ZodObject<{
     model: z.ZodOptional<z.ZodString>;
-    modelUrl: z.ZodOptional<z.ZodString>;
     vad: z.ZodOptional<z.ZodObject<{
         enabled: z.ZodOptional<z.ZodBoolean>;
         model: z.ZodOptional<z.ZodString>;
-        modelUrl: z.ZodOptional<z.ZodString>;
     }, z.core.$loose>>;
 }, z.core.$loose>;
 export type STTBackendLocalConfig = z.infer<typeof sttBackendLocalConfigSchema>;
@@ -81,11 +78,9 @@ export declare const sttBackendConfigSchema: z.ZodObject<{
     }>>;
     local: z.ZodOptional<z.ZodObject<{
         model: z.ZodOptional<z.ZodString>;
-        modelUrl: z.ZodOptional<z.ZodString>;
         vad: z.ZodOptional<z.ZodObject<{
             enabled: z.ZodOptional<z.ZodBoolean>;
             model: z.ZodOptional<z.ZodString>;
-            modelUrl: z.ZodOptional<z.ZodString>;
         }, z.core.$loose>>;
     }, z.core.$loose>>;
     'ibm-watson-stt': z.ZodOptional<z.ZodObject<{
@@ -128,11 +123,9 @@ export declare const listenConfigSchema: z.ZodObject<{
         }>>;
         local: z.ZodOptional<z.ZodObject<{
             model: z.ZodOptional<z.ZodString>;
-            modelUrl: z.ZodOptional<z.ZodString>;
             vad: z.ZodOptional<z.ZodObject<{
                 enabled: z.ZodOptional<z.ZodBoolean>;
                 model: z.ZodOptional<z.ZodString>;
-                modelUrl: z.ZodOptional<z.ZodString>;
             }, z.core.$loose>>;
         }, z.core.$loose>>;
         'ibm-watson-stt': z.ZodOptional<z.ZodObject<{
@@ -170,7 +163,6 @@ export declare const seeBackendTypeSchema: z.ZodEnum<{
 export type SeeBackendType = z.infer<typeof seeBackendTypeSchema>;
 export declare const seeBackendLocalConfigSchema: z.ZodObject<{
     model: z.ZodOptional<z.ZodString>;
-    modelUrl: z.ZodOptional<z.ZodString>;
 }, z.core.$loose>;
 export type SeeBackendLocalConfig = z.infer<typeof seeBackendLocalConfigSchema>;
 export declare const seeBackendGoogleCloudConfigSchema: z.ZodObject<{
@@ -191,7 +183,6 @@ export declare const seeBackendConfigSchema: z.ZodObject<{
     }>>;
     local: z.ZodOptional<z.ZodObject<{
         model: z.ZodOptional<z.ZodString>;
-        modelUrl: z.ZodOptional<z.ZodString>;
     }, z.core.$loose>>;
     'google-cloud-vision': z.ZodOptional<z.ZodObject<{
         credentialsPath: z.ZodOptional<z.ZodString>;
@@ -218,7 +209,6 @@ export declare const seeConfigSchema: z.ZodObject<{
         }>>;
         local: z.ZodOptional<z.ZodObject<{
             model: z.ZodOptional<z.ZodString>;
-            modelUrl: z.ZodOptional<z.ZodString>;
         }, z.core.$loose>>;
         'google-cloud-vision': z.ZodOptional<z.ZodObject<{
             credentialsPath: z.ZodOptional<z.ZodString>;
@@ -271,7 +261,6 @@ export declare const ttsBackendTypeSchema: z.ZodEnum<{
 export type TTSBackendType = z.infer<typeof ttsBackendTypeSchema>;
 export declare const ttsBackendLocalConfigSchema: z.ZodObject<{
     model: z.ZodOptional<z.ZodString>;
-    modelUrl: z.ZodOptional<z.ZodString>;
 }, z.core.$loose>;
 export type TTSBackendLocalConfig = z.infer<typeof ttsBackendLocalConfigSchema>;
 export declare const ttsBackendIBMWatsonConfigSchema: z.ZodObject<{
@@ -298,7 +287,6 @@ export declare const ttsBackendConfigSchema: z.ZodObject<{
     }>>;
     local: z.ZodOptional<z.ZodObject<{
         model: z.ZodOptional<z.ZodString>;
-        modelUrl: z.ZodOptional<z.ZodString>;
     }, z.core.$loose>>;
     'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
         credentialsPath: z.ZodOptional<z.ZodString>;
@@ -328,7 +316,6 @@ export declare const speakConfigSchema: z.ZodObject<{
         }>>;
         local: z.ZodOptional<z.ZodObject<{
             model: z.ZodOptional<z.ZodString>;
-            modelUrl: z.ZodOptional<z.ZodString>;
         }, z.core.$loose>>;
         'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
             credentialsPath: z.ZodOptional<z.ZodString>;
@@ -399,11 +386,9 @@ export declare const tjbotConfigSchema: z.ZodObject<{
             }>>;
             local: z.ZodOptional<z.ZodObject<{
                 model: z.ZodOptional<z.ZodString>;
-                modelUrl: z.ZodOptional<z.ZodString>;
                 vad: z.ZodOptional<z.ZodObject<{
                     enabled: z.ZodOptional<z.ZodBoolean>;
                     model: z.ZodOptional<z.ZodString>;
-                    modelUrl: z.ZodOptional<z.ZodString>;
                 }, z.core.$loose>>;
             }, z.core.$loose>>;
             'ibm-watson-stt': z.ZodOptional<z.ZodObject<{
@@ -441,7 +426,6 @@ export declare const tjbotConfigSchema: z.ZodObject<{
             }>>;
             local: z.ZodOptional<z.ZodObject<{
                 model: z.ZodOptional<z.ZodString>;
-                modelUrl: z.ZodOptional<z.ZodString>;
             }, z.core.$loose>>;
             'google-cloud-vision': z.ZodOptional<z.ZodObject<{
                 credentialsPath: z.ZodOptional<z.ZodString>;
@@ -476,7 +460,6 @@ export declare const tjbotConfigSchema: z.ZodObject<{
             }>>;
             local: z.ZodOptional<z.ZodObject<{
                 model: z.ZodOptional<z.ZodString>;
-                modelUrl: z.ZodOptional<z.ZodString>;
             }, z.core.$loose>>;
             'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
                 credentialsPath: z.ZodOptional<z.ZodString>;

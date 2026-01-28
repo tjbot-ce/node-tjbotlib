@@ -13,5 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { createVisionEngine, VisionController } from './vision.js';
+// Vision controller
+export { VisionController } from './vision.js';
+// Vision engine factory (async)
+export { createVisionEngine } from './vision-engine.js';
 //# sourceMappingURL=index.js.map

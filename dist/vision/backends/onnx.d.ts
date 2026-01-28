@@ -13,16 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { VisionEngine, ObjectDetectionResult, ImageClassificationResult, ImageSegmentationResult } from '../vision-engine.js';
 import type { SeeBackendConfig } from '../../config/config-types.js';
-export declare class ONNXVisionEngine implements VisionEngine {
-    private config;
-    private modelKey;
-    private session?;
-    private modelPath?;
+import { ImageClassificationResult, ImageSegmentationResult, ObjectDetectionResult, VisionEngine } from '../vision-engine.js';
+export declare class ONNXVisionEngine extends VisionEngine {
+    private manager;
+    private modelPath;
     private modelLabels;
-    constructor(config: SeeBackendConfig);
+    private session?;
+    constructor(config?: SeeBackendConfig);
+    /**
+     * Initialize the ONNX vision engine.
+     * Pre-downloads the configured model.
+     */
     initialize(): Promise<void>;
+    /**
+     * Ensure the vision model is downloaded and return its local path.
+     * @returns Path to the vision model file.
+     * @throws {TJBotError} if model download fails
+     */
+    private ensureModelIsDownloaded;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
     segmentImage(image: Buffer | string): Promise<ImageSegmentationResult>;

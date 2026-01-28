@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import path from 'path';
 import fs from 'fs';
-import winston from 'winston';
+import path from 'path';
 import type { CircularBuffer } from 'sherpa-onnx-node';
+import winston from 'winston';
+import type { STTBackendLocalConfig, VADConfig } from '../../config/config-types.js';
+import type { STTModelMetadata, VADModelMetadata } from '../../utils/index.js';
+import { ModelManager, TJBotError } from '../../utils/index.js';
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
-import { ListenConfig } from '../../config/index.js';
-import type { STTBackendLocalConfig } from '../../config/config-types.js';
-import { TJBotError, SherpaSTTModelMetadata, SherpaModelManager } from '../../utils/index.js';
 
 // Lazy require sherpa-onnx to avoid hard dependency issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sherpa: any;
 
-interface ModelPaths {
+interface STTModelPaths {
     encoder: string;
     decoder?: string;
     joiner?: string;
@@ -49,11 +49,14 @@ interface ModelPaths {
  * @public
  */
 export class SherpaONNXSTTEngine extends STTEngine {
-    private modelKey?: string;
-    private modelPaths?: ModelPaths;
+    private manager: ModelManager = ModelManager.getInstance();
+    private modelInfo?: STTModelMetadata;
+    private modelPaths?: STTModelPaths;
     private vadPath?: string;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private recognizer: any;
+    private recognizer?: any;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private vad: any;
 
@@ -63,10 +66,6 @@ export class SherpaONNXSTTEngine extends STTEngine {
 
     async initialize(): Promise<void> {
         try {
-            // Load model metadata from YAML
-            const manager = SherpaModelManager.getInstance();
-            manager.loadMetadata();
-
             // Set environment variables to reduce noisy logging
             if (!process.env.SHERPA_ONNX_LOG_LEVEL) {
                 process.env.SHERPA_ONNX_LOG_LEVEL = 'OFF';
@@ -81,17 +80,24 @@ export class SherpaONNXSTTEngine extends STTEngine {
             }
 
             // Front-load model selection and download during initialization
-            const model = this.validateModel();
-            const modelInfo = this.getModelInfo(model.key);
-            const modelDir = await manager.ensureSTTModelDownloaded(modelInfo.key, modelInfo.url);
-            this.modelKey = model.key;
-            this.modelPaths = this.buildModelPaths(model.key, modelDir);
+            this.modelInfo = await this.manager.loadModel<STTModelMetadata>(this.config.model as string);
+
+            winston.info(`🎤 Loading STT model: ${this.config.model}`);
+            this.modelPaths = await this.ensureModelIsDownloaded();
 
             // Download VAD model if needed for offline recognition
-            const vadConfig = this.getVadConfig();
-            if (modelInfo.kind.startsWith('offline') && vadConfig.enabled) {
-                this.vadPath = await manager.ensureVADModelDownloaded();
+            const vadConfig = this.config.vad as VADConfig;
+
+            if (vadConfig) {
+                if (this.modelInfo.type.startsWith('offline') && vadConfig.enabled) {
+                    winston.info(`🎤 Loading VAD model: ${vadConfig.model as string}`);
+                    const vadInfo = await this.manager.loadModel<VADModelMetadata>(vadConfig.model as string);
+                    this.vadPath = path.join(vadInfo.folder, vadConfig.model as string);
+                }
             }
+
+            // Create the TTS recognizer and VAD as needed
+            await this.setupRecognizer();
 
             winston.info('🗣️ Sherpa-ONNX STT engine initialized');
         } catch (error) {
@@ -100,113 +106,103 @@ export class SherpaONNXSTTEngine extends STTEngine {
         }
     }
 
-    async transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string> {
-        this.ensureStream(micStream);
+    /**
+     * Ensure the STT model is downloaded and return its local path.
+     * @returns Path to the STT model files.
+     * @throws {TJBotError} if model download fails
+     */
+    private async ensureModelIsDownloaded(): Promise<STTModelPaths> {
+        if (!this.modelInfo) {
+            throw new TJBotError('Model info not set. Ensure initialize() was called.');
+        }
 
+        try {
+            // Get the full absolute path to the model cache directory
+            const modelCacheDir = this.manager.getSTTModelCacheDir();
+            const modelDir = path.join(modelCacheDir, this.modelInfo.folder);
+
+            // Build model paths relative to the actual cache directory
+            const paths = this.buildModelPaths(this.modelInfo.key, modelDir);
+            return paths;
+        } catch (error) {
+            throw new TJBotError('Failed to load STT model path', { cause: error as Error });
+        }
+    }
+
+    async transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string> {
         if (!sherpa) {
             throw new TJBotError('Sherpa-ONNX STT service not initialized. Call initialize() first.');
         }
 
-        if (!this.modelKey || !this.modelPaths) {
-            throw new TJBotError('Model not initialized. Ensure initialize() was called.');
+        if (!this.modelInfo) {
+            throw new TJBotError('Model info not set. Ensure initialize() was called.');
         }
 
-        const listenConfig: ListenConfig = options.listenConfig ?? {};
-        const useVad = this.shouldUseVad(listenConfig, this.modelKey);
-
-        winston.debug(`🎤 Transcribing with sherpa-onnx: model=${this.modelKey}, vad=${useVad}`);
-
-        // Use pre-downloaded model paths from initialize()
-        await this.setupRecognizer(this.modelKey, this.modelPaths, this.vadPath);
-
-        const inputRate = (listenConfig.microphoneRate as number) ?? 16000;
-        const modelInfo = this.getModelInfo(this.modelKey);
-
-        // Route to appropriate transcription method based on model type
-        if (modelInfo.kind === 'streaming' || modelInfo.kind === 'streaming-zipformer') {
-            return await this.transcribeStreaming(micStream, inputRate, options);
-        } else {
-            return await this.transcribeOffline(micStream, inputRate, useVad, options);
-        }
-    }
-
-    /**
-     * Validate model configuration and resolve to model key
-     * Accepts either short key (e.g., 'whisper-base') or full folder name
-     */
-    private validateModel(): { key: string } {
-        const modelInput = this.config?.model as string;
-
-        if (!modelInput) {
-            throw new TJBotError('STT model not specified. Provide model in listen config.');
+        if (!this.modelPaths) {
+            throw new TJBotError('Model paths not set. Ensure initialize() was called.');
         }
 
-        const manager = SherpaModelManager.getInstance();
-        const metadata = manager.getSTTModelMetadata();
+        try {
+            winston.debug(`🎤 Transcribing with sherpa-onnx: model=${this.config.model}`);
 
-        // Check if it's already a valid key
-        if (metadata.some((m: SherpaSTTModelMetadata) => m.key === modelInput)) {
-            return { key: modelInput };
+            this.ensureStream(micStream);
+            const inputRate = (this.config.microphoneRate as number) ?? 16000;
+
+            // Route to appropriate transcription method based on model type
+            if (this.modelInfo.kind === 'streaming' || this.modelInfo.kind === 'streaming-zipformer') {
+                return await this.transcribeStreaming(micStream, inputRate, options);
+            } else {
+                const useVad = this.shouldUseVad();
+                return await this.transcribeOffline(micStream, inputRate, useVad, options);
+            }
+        } catch (error) {
+            throw new TJBotError('Transcription failed', { cause: error as Error });
         }
-
-        // Try to find by folder name
-        const byFolder = metadata.find((m: SherpaSTTModelMetadata) => m.folder === modelInput);
-        if (byFolder) {
-            return { key: byFolder.key };
-        }
-
-        // Return as-is and let getModelInfo throw a proper error
-        return { key: modelInput };
-    }
-
-    /**
-     * Get VAD configuration from config
-     */
-    private getVadConfig(): { enabled: boolean } {
-        const localConfig = this.config;
-        const vadConfig = (localConfig?.vad ?? {}) as { enabled?: boolean };
-        return {
-            enabled: vadConfig.enabled ?? true,
-        };
     }
 
     /**
      * Determine if VAD should be used
      */
-    private shouldUseVad(listenConfig: ListenConfig, modelKey: string): boolean {
-        const localConfig = (listenConfig.backend?.local ?? {}) as STTBackendLocalConfig;
-        const vadConfig = (localConfig.vad ?? {}) as { enabled?: boolean };
+    private shouldUseVad(): boolean {
+        if (!this.modelInfo) {
+            throw new TJBotError('Model info not set. Ensure initialize() was called.');
+        }
+
+        const vadConfig = this.config.vad as VADConfig;
         const vadEnabled = vadConfig.enabled ?? true;
-
-        const modelInfo = this.getModelInfo(modelKey);
-        const isOffline = modelInfo.kind.startsWith('offline');
-
+        const isOffline = this.modelInfo.kind.startsWith('offline');
         return isOffline && vadEnabled;
     }
 
     /**
      * Setup recognizer and VAD based on model configuration
      */
-    private async setupRecognizer(modelKey: string, modelPaths: ModelPaths, vadPath?: string): Promise<void> {
-        const modelInfo = this.getModelInfo(modelKey);
+    private async setupRecognizer(): Promise<void> {
+        if (!this.modelInfo) {
+            throw new TJBotError('Model info not set. Ensure initialize() was called.');
+        }
+
+        if (!this.modelPaths) {
+            throw new TJBotError('Model paths not set. Ensure initialize() was called.');
+        }
 
         // Create recognizer once if not already created (model is constant after initialize())
         if (!this.recognizer) {
-            if (modelInfo.kind === 'streaming') {
-                this.recognizer = this.createOnlineRecognizer(modelPaths);
-            } else if (modelInfo.kind === 'streaming-zipformer') {
-                this.recognizer = this.createZipformerRecognizer(modelPaths);
-            } else if (modelInfo.kind === 'offline-whisper') {
-                this.recognizer = this.createWhisperRecognizer(modelPaths);
+            if (this.modelInfo.kind === 'streaming') {
+                this.recognizer = this.createOnlineRecognizer(this.modelPaths);
+            } else if (this.modelInfo.kind === 'streaming-zipformer') {
+                this.recognizer = this.createZipformerRecognizer(this.modelPaths);
+            } else if (this.modelInfo.kind === 'offline-whisper') {
+                this.recognizer = this.createWhisperRecognizer(this.modelPaths);
             } else {
-                this.recognizer = this.createOfflineRecognizer(modelPaths);
+                this.recognizer = this.createOfflineRecognizer(this.modelPaths);
             }
-            winston.debug(`🗣️ Created recognizer for model: ${modelKey} (${modelInfo.kind})`);
+            winston.debug(`🗣️ Created recognizer for model: ${this.modelInfo.key} (${this.modelInfo.kind})`);
         }
 
         // Setup VAD if needed
-        if (vadPath && !this.vad) {
-            this.vad = this.createSileroVad(vadPath);
+        if (this.vadPath && !this.vad) {
+            this.vad = this.createSileroVad(this.vadPath);
             winston.debug('🗣️ Created Silero VAD instance');
         }
     }
@@ -214,7 +210,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
     /**
      * Create online recognizer for streaming Paraformer models
      */
-    private createOnlineRecognizer(modelPaths: ModelPaths): unknown {
+    private createOnlineRecognizer(modelPaths: STTModelPaths): unknown {
         const config = {
             featConfig: { sampleRate: 16000, featureDim: 80 },
             modelConfig: {
@@ -240,7 +236,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
     /**
      * Create Zipformer recognizer for streaming transducer models
      */
-    private createZipformerRecognizer(modelPaths: ModelPaths): unknown {
+    private createZipformerRecognizer(modelPaths: STTModelPaths): unknown {
         const config = {
             featConfig: { sampleRate: 16000, featureDim: 80 },
             modelConfig: {
@@ -267,7 +263,15 @@ export class SherpaONNXSTTEngine extends STTEngine {
     /**
      * Create offline recognizer for Moonshine models
      */
-    private createOfflineRecognizer(modelPaths: ModelPaths): unknown {
+    private createOfflineRecognizer(modelPaths: STTModelPaths): unknown {
+        // Verify model files exist
+        winston.debug('🗣️ Moonshine model paths:');
+        winston.debug(`  preprocessor: ${modelPaths.preprocessor} (exists: ${fs.existsSync(modelPaths.preprocessor ?? '')})`);
+        winston.debug(`  encoder: ${modelPaths.encoder} (exists: ${fs.existsSync(modelPaths.encoder)})`);
+        winston.debug(`  uncachedDecoder: ${modelPaths.uncachedDecoder} (exists: ${fs.existsSync(modelPaths.uncachedDecoder ?? '')})`);
+        winston.debug(`  cachedDecoder: ${modelPaths.cachedDecoder} (exists: ${fs.existsSync(modelPaths.cachedDecoder ?? '')})`);
+        winston.debug(`  tokens: ${modelPaths.tokens} (exists: ${fs.existsSync(modelPaths.tokens)})`);
+
         const config = {
             featConfig: { sampleRate: 16000, featureDim: 80 },
             modelConfig: {
@@ -284,13 +288,23 @@ export class SherpaONNXSTTEngine extends STTEngine {
             },
             decodingMethod: 'greedy_search',
         };
-        return new sherpa.OfflineRecognizer(config);
+
+        winston.debug('🗣️ Creating Moonshine recognizer with config:', JSON.stringify(config, null, 2));
+
+        try {
+            const recognizer = new sherpa.OfflineRecognizer(config);
+            winston.debug('🗣️ Moonshine recognizer created successfully');
+            return recognizer;
+        } catch (error) {
+            winston.error('🗣️ Failed to create Moonshine recognizer:', error);
+            throw new TJBotError(`Failed to create Moonshine recognizer: ${error}`, { cause: error as Error });
+        }
     }
 
     /**
      * Create Whisper offline recognizer
      */
-    private createWhisperRecognizer(modelPaths: ModelPaths): unknown {
+    private createWhisperRecognizer(modelPaths: STTModelPaths): unknown {
         // Verify model files exist
         winston.debug('🗣️ Whisper model paths:');
         winston.debug(`  encoder: ${modelPaths.encoder} (exists: ${fs.existsSync(modelPaths.encoder)})`);
@@ -623,23 +637,11 @@ export class SherpaONNXSTTEngine extends STTEngine {
     }
 
     /**
-     * Get model info by key
-     */
-    private getModelInfo(key: string): SherpaSTTModelMetadata {
-        const manager = SherpaModelManager.getInstance();
-        const metadata = manager.getSTTModelMetadata();
-        const info = metadata.find((m: SherpaSTTModelMetadata) => m.key === key);
-        if (!info) {
-            throw new TJBotError(`Unknown model key: ${key}`);
-        }
-        return info;
-    }
-
-    /**
      * Build model file paths based on model key
      */
-    private buildModelPaths(key: string, baseDir: string): ModelPaths {
-        if (key === 'moonshine' || key === 'moonshine-base') {
+    private buildModelPaths(key: string, baseDir: string): STTModelPaths {
+        // Moonshine models (both tiny and base)
+        if (key.startsWith('moonshine')) {
             return {
                 preprocessor: path.join(baseDir, 'preprocess.onnx'),
                 encoder: path.join(baseDir, 'encode.int8.onnx'),

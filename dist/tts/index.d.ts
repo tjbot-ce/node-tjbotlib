@@ -13,5 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { TTSEngine, createTTSEngine } from './tts-engine.js';
 export { TTSController } from './tts.js';
+export { createTTSEngine } from './tts-engine.js';
+export type { TTSEngine } from './tts-engine.js';

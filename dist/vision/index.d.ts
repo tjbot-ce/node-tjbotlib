@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { createVisionEngine, VisionController } from './vision.js';
-export type { ObjectDetectionResult } from './vision-engine.js';
-export type { ImageClassificationResult } from './vision-engine.js';
-export type { ImageSegmentationResult } from './vision-engine.js';
-export type { VisionEngine } from './vision-engine.js';
+export { VisionController } from './vision.js';
+export { createVisionEngine } from './vision-engine.js';
+export type { ObjectDetectionResult, ImageClassificationResult, ImageSegmentationResult, VisionEngine, } from './vision-engine.js';

@@ -18,8 +18,9 @@ import fs from 'fs';
 import path from 'path';
 import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
-import { TJBotError, SherpaModelManager } from '../../utils/index.js';
+import { TJBotError, ModelManager } from '../../utils/index.js';
 import type { TTSBackendLocalConfig } from '../../config/config-types.js';
+import type { TTSModelMetadata } from '../../utils/model-manager.js';
 
 // Lazy require sherpa-onnx to avoid hard dependency issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,9 +34,10 @@ let sherpa: any;
  * @public
  */
 export class SherpaONNXTTSEngine extends TTSEngine {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private ttsEngine: any;
+    private manager: ModelManager = ModelManager.getInstance();
     private modelPath: string | undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private ttsEngine?: any;
 
     constructor(config?: TTSBackendLocalConfig) {
         super(config);
@@ -47,10 +49,6 @@ export class SherpaONNXTTSEngine extends TTSEngine {
      */
     async initialize(): Promise<void> {
         try {
-            // Load model metadata from YAML
-            const manager = SherpaModelManager.getInstance();
-            manager.loadMetadata();
-
             // Set environment variables to reduce noisy logging
             if (!process.env.SHERPA_ONNX_LOG_LEVEL) {
                 process.env.SHERPA_ONNX_LOG_LEVEL = 'OFF';
@@ -65,12 +63,81 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             }
 
             // Front-load model download during initialization
-            const model = this.validateModel();
-            this.modelPath = await manager.ensureTTSModelDownloaded(model.name, model.modelUrl);
+            winston.info(`💬 Loading TTS model: ${this.config.model}`);
+            this.modelPath = await this.ensureModelIsDownloaded();
+
+            // Load the TTS engine
+            await this.setupTTSEngine();
+
             winston.info('🗣️ Sherpa-ONNX TTS engine initialized');
         } catch (error) {
             winston.error('Failed to initialize Sherpa-ONNX TTS:', error);
             throw new TJBotError('Failed to initialize Sherpa-ONNX TTS engine', { cause: error as Error });
+        }
+    }
+
+    /**
+     * Ensure the TTS model is downloaded and return its local path.
+     * @returns Path to the TTS model file.
+     * @throws {TJBotError} if model download fails
+     */
+    private async ensureModelIsDownloaded(): Promise<string> {
+        try {
+            const model = await this.manager.loadModel<TTSModelMetadata>(this.config.model as string);
+            const cacheDir = this.manager.getTTSModelCacheDir();
+            return path.join(cacheDir, model.folder, model.required[0]);
+        } catch (error) {
+            throw new TJBotError('Failed to load TTS model path', { cause: error as Error });
+        }
+    }
+
+    private async setupTTSEngine(): Promise<void> {
+        if (!this.modelPath) {
+            throw new TJBotError('Model path not set. Ensure initialize() was called.');
+        }
+
+        // Determine the correct dataDir path (should be espeak-ng-data subdirectory if it exists)
+        const espeakDataDir = path.join(path.dirname(this.modelPath), 'espeak-ng-data');
+        const dataDir = fs.existsSync(espeakDataDir) ? espeakDataDir : path.dirname(this.modelPath);
+
+        // Get the actual .onnx file - it's in the same directory as the modelPath
+        const modelDir = path.dirname(this.modelPath);
+        const files = fs.readdirSync(modelDir).filter((f) => f.endsWith('.onnx'));
+        if (files.length === 0) {
+            throw new TJBotError(`No .onnx file found in model directory: ${modelDir}`);
+        }
+        const modelFile = path.join(modelDir, files[0]);
+        winston.debug(`💬 Found model file: ${modelFile}`);
+
+        // Suppress sherpa-onnx console output
+        const originalLog = console.log;
+        const originalError = console.error;
+        console.log = () => {};
+        console.error = () => {};
+
+        try {
+            // Use the camelCase config expected by sherpa-onnx-node bindings
+            const offlineTtsConfig = {
+                model: {
+                    vits: {
+                        model: modelFile,
+                        tokens: path.join(modelDir, 'tokens.txt'),
+                        dataDir,
+                        noiseScale: 0.667,
+                        noiseScaleW: 0.8,
+                        lengthScale: 1.0,
+                    },
+                    numThreads: 1,
+                    provider: 'cpu',
+                    debug: 0,
+                },
+                maxNumSentences: 1,
+            };
+
+            this.ttsEngine = new sherpa.OfflineTts(offlineTtsConfig);
+        } finally {
+            console.log = originalLog;
+            console.error = originalError;
         }
     }
 
@@ -83,71 +150,21 @@ export class SherpaONNXTTSEngine extends TTSEngine {
      * @throws Error if not initialized or synthesis fails
      */
     async synthesize(text: string): Promise<Buffer> {
-        this.validateText(text);
-
         if (!sherpa) {
             throw new TJBotError('Sherpa-ONNX TTS service not initialized. Call initialize() first.');
         }
 
+        if (!this.modelPath) {
+            throw new TJBotError('Model path not set. Ensure initialize() was called.');
+        }
+
+        if (!this.ttsEngine) {
+            throw new TJBotError('TTS engine not initialized. Call initialize() first.');
+        }
+
         try {
-            // Validate and get model configuration
-            const model = this.validateModel();
-            winston.debug(`💬 Synthesizing with sherpa-onnx: model=${model.name}`);
-
-            // Model is already downloaded in initialize(); use the cached path
-            if (!this.modelPath) {
-                throw new TJBotError('Model path not set. Ensure initialize() was called.');
-            }
-
-            // Create TTS engine instance if we don't have one
-            if (!this.ttsEngine) {
-                winston.info(`💬 Loading TTS model: ${model.name}`);
-
-                // Determine the correct dataDir path (should be espeak-ng-data subdirectory if it exists)
-                const espeakDataDir = path.join(path.dirname(this.modelPath), 'espeak-ng-data');
-                const dataDir = fs.existsSync(espeakDataDir) ? espeakDataDir : path.dirname(this.modelPath);
-
-                // Get the actual .onnx file - it's in the same directory as the modelPath
-                const modelDir = path.dirname(this.modelPath);
-                const files = fs.readdirSync(modelDir).filter((f) => f.endsWith('.onnx'));
-                if (files.length === 0) {
-                    throw new TJBotError(`No .onnx file found in model directory: ${modelDir}`);
-                }
-                const modelFile = path.join(modelDir, files[0]);
-                winston.debug(`💬 Found model file: ${modelFile}`);
-
-                // Suppress sherpa-onnx console output
-                const originalLog = console.log;
-                const originalError = console.error;
-                console.log = () => {};
-                console.error = () => {};
-
-                try {
-                    // Use the camelCase config expected by sherpa-onnx-node bindings
-                    const offlineTtsConfig = {
-                        model: {
-                            vits: {
-                                model: modelFile,
-                                tokens: path.join(modelDir, 'tokens.txt'),
-                                dataDir,
-                                noiseScale: 0.667,
-                                noiseScaleW: 0.8,
-                                lengthScale: 1.0,
-                            },
-                            numThreads: 1,
-                            provider: 'cpu',
-                            debug: 0,
-                        },
-                        maxNumSentences: 1,
-                    };
-
-                    this.ttsEngine = new sherpa.OfflineTts(offlineTtsConfig);
-                } finally {
-                    console.log = originalLog;
-                    console.error = originalError;
-                }
-                winston.info('💬 TTS model loaded successfully');
-            }
+            winston.debug(`💬 Synthesizing with sherpa-onnx: model=${this.config.model}`);
+            this.validateText(text);
 
             // Perform synthesis
             const audio = this.ttsEngine.generate({
@@ -165,25 +182,6 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             winston.error('Sherpa-ONNX TTS synthesis failed:', error);
             throw error;
         }
-    }
-
-    /**
-     * Validate that model and modelUrl are configured.
-     * @returns Object with model name and URL
-     * @throws Error if model or modelUrl is not configured
-     */
-    private validateModel(): { name: string; modelUrl: string } {
-        const model = this.config.model as string;
-        const modelUrl = this.config.modelUrl as string;
-
-        if (!model || !modelUrl) {
-            throw new TJBotError(
-                'Model not configured for local TTS. ' +
-                    'Please set speak.backend.local.model and speak.backend.local.modelUrl in your tjbot.toml config.'
-            );
-        }
-
-        return { name: model, modelUrl };
     }
 
     /**

@@ -1,0 +1,239 @@
+#
+# Copyright 2026-present TJBot Contributors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+models:
+  # ============================================================================
+  # STT Models
+  # Source: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+  # ============================================================================
+
+  - type: stt
+    key: moonshine-tiny
+    label: moonshine-tiny (STT, English, ~103MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-moonshine-tiny-en-int8.tar.bz2
+    folder: sherpa-onnx-moonshine-tiny-en-int8
+    kind: offline
+    required:
+      - cached_decode.int8.onnx
+      - encode.int8.onnx
+      - preprocess.onnx
+      - tokens.txt
+      - uncached_decode.int8.onnx
+
+  - type: stt
+    key: moonshine-base
+    label: moonshine-base (STT, English, ~239MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-moonshine-base-en-int8.tar.bz2
+    folder: sherpa-onnx-moonshine-base-en-int8
+    kind: offline
+    required:
+      - cached_decode.int8.onnx
+      - encode.int8.onnx
+      - preprocess.onnx
+      - tokens.txt
+      - uncached_decode.int8.onnx
+
+  - type: stt
+    key: whisper-tiny
+    label: whisper-tiny [Tiny] (STT, English, ~113MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2
+    folder: sherpa-onnx-whisper-tiny.en
+    kind: offline-whisper
+    required:
+      - tiny.en-decoder.int8.onnx
+      - tiny.en-decoder.onnx
+      - tiny.en-encoder.int8.onnx
+      - tiny.en-encoder.onnx
+      - tiny.en-tokens.txt
+
+  - type: stt
+    key: whisper-base
+    label: whisper-base (STT, English, ~199MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.en.tar.bz2
+    folder: sherpa-onnx-whisper-base.en
+    kind: offline-whisper
+    required:
+      - base.en-decoder.int8.onnx
+      - base.en-decoder.onnx
+      - base.en-encoder.int8.onnx
+      - base.en-encoder.onnx
+      - base.en-tokens.txt
+
+  - type: stt
+    key: zipformer-en
+    label: zipformer-en (STT, English, ~296MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-zipformer-en-2023-06-26.tar.bz2
+    folder: sherpa-onnx-streaming-zipformer-en-2023-06-26
+    kind: streaming-zipformer
+    required:
+      - decoder-epoch-99-avg-1-chunk-16-left-128.int8.onnx
+      - decoder-epoch-99-avg-1-chunk-16-left-128.onnx
+      - encoder-epoch-99-avg-1-chunk-16-left-128.int8.onnx
+      - encoder-epoch-99-avg-1-chunk-16-left-128.onnx
+      - joiner-epoch-99-avg-1-chunk-16-left-128.int8.onnx
+      - joiner-epoch-99-avg-1-chunk-16-left-128.onnx
+      - tokens.txt
+
+  - type: stt
+    key: paraformer
+    label: paraformer (STT, ~999MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-streaming-paraformer-bilingual-zh-en.tar.bz2
+    folder: sherpa-onnx-streaming-paraformer-bilingual-zh-en
+    kind: streaming
+    required:
+      - decoder.int8.onnx
+      - decoder.onnx
+      - encoder.int8.onnx
+      - encoder.onnx
+      - tokens.txt
+
+    # ============================================================================
+    # VAD Models
+    # Source: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+    # ============================================================================
+
+  - type: vad
+    key: silero-vad
+    label: silero-vad (VAD, English, ~629KB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx
+    folder: silero_vad
+    required:
+      - silero_vad.onnx
+
+    # ============================================================================
+    # TTS Models
+    # Source: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+    # ============================================================================
+
+  - type: tts
+    key: vits-piper-en_US-ryan-medium
+    label: Ryan [Medium] (TTS, US English, ~64MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2
+    folder: vits-piper-en_US-ryan-medium
+    kind: vits-piper
+    required:
+      - en_US-ryan-medium.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_US-ryan-low
+    label: Ryan [Low] (TTS, US English, ~64MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-low.tar.bz2
+    folder: vits-piper-en_US-ryan-low
+    kind: vits-piper
+    required:
+      - en_US-ryan-low.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_US-lessac-low
+    label: Lessac [Low] (TTS, US English, ~64MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-low.tar.bz2
+    folder: vits-piper-en_US-lessac-low
+    kind: vits-piper
+    required:
+      - en_US-lessac-low.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_US-danny-low
+    label: Danny [Low] (TTS, US English, ~64MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-danny-low.tar.bz2
+    folder: vits-piper-en_US-danny-low
+    kind: vits-piper
+    required:
+      - en_US-danny-low.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_US-kathleen-low
+    label: Kathleen [Low] (TTS, US English, ~64MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-kathleen-low.tar.bz2
+    folder: vits-piper-en_US-kathleen-low
+    kind: vits-piper
+    required:
+      - en_US-kathleen-low.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_US-amy-low
+    label: Amy [Low] (TTS, US English, ~64MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-amy-low.tar.bz2
+    folder: vits-piper-en_US-amy-low
+    kind: vits-piper
+    required:
+      - en_US-amy-low.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_GB-alan-low
+    label: Alan [Low] (TTS, UK English, ~64MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_GB-alan-low.tar.bz2
+    folder: vits-piper-en_GB-alan-low
+    kind: vits-piper
+    required:
+      - en_GB-alan-low.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_US-joe-medium
+    label: Joe [Medium] (TTS, US English, ~64MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-joe-medium.tar.bz2
+    folder: vits-piper-en_US-joe-medium
+    kind: vits-piper
+    required:
+      - en_US-joe-medium.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_US-libritts_r-medium
+    label: LibriTTS [Medium] (TTS, US English, ~78MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-libritts_r-medium.tar.bz2
+    folder: vits-piper-en_US-libritts_r-medium
+    kind: vits-piper
+    required:
+      - en_US-libritts_r-medium.onnx
+      - tokens.txt
+
+  - type: tts
+    key: vits-piper-en_US-arctic-medium
+    label: Arctic [Medium] (TTS, US English, ~77MB)
+    url: https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-arctic-medium.tar.bz2
+    folder: vits-piper-en_US-arctic-medium
+    kind: vits-piper
+    required:
+      - en_US-arctic-medium.onnx
+      - tokens.txt
+
+  # ============================================================================
+  # Vision Models
+  # ============================================================================
+
+  - type: vision
+    key: yolov5-nano
+    label: "YOLOv5 Nano (~14MB)"
+    url: "https://github.com/ultralytics/yolov5/releases/download/v6.0/yolov5n.onnx"
+    folder: "yolov5-nano"
+    kind: detection
+    inputShape:
+      - 1
+      - 3
+      - 640
+      - 640
+    labelUrl: "https://raw.githubusercontent.com/ultralytics/yolov5/master/data/coco.names"
+    required:
+      - yolov5n.onnx
+      - coco.names

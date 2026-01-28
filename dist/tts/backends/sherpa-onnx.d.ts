@@ -23,14 +23,22 @@ import type { TTSBackendLocalConfig } from '../../config/config-types.js';
  * @public
  */
 export declare class SherpaONNXTTSEngine extends TTSEngine {
-    private ttsEngine;
+    private manager;
     private modelPath;
+    private ttsEngine?;
     constructor(config?: TTSBackendLocalConfig);
     /**
      * Initialize the sherpa-onnx TTS engine.
      * Pre-downloads the configured model.
      */
     initialize(): Promise<void>;
+    /**
+     * Ensure the TTS model is downloaded and return its local path.
+     * @returns Path to the TTS model file.
+     * @throws {TJBotError} if model download fails
+     */
+    private ensureModelIsDownloaded;
+    private setupTTSEngine;
     /**
      * Synthesize text to WAV audio using sherpa-onnx.
      * Voice is configured at engine initialization time via config.
@@ -40,12 +48,6 @@ export declare class SherpaONNXTTSEngine extends TTSEngine {
      * @throws Error if not initialized or synthesis fails
      */
     synthesize(text: string): Promise<Buffer>;
-    /**
-     * Validate that model and modelUrl are configured.
-     * @returns Object with model name and URL
-     * @throws Error if model or modelUrl is not configured
-     */
-    private validateModel;
     /**
      * Convert PCM samples to WAV format.
      * Creates a proper WAV file with header and audio data.

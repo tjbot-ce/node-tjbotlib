@@ -14,5 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { STTEngine, STTRequestOptions, createSTTEngine } from './stt-engine.js';
 export { STTController } from './stt.js';
+export { createSTTEngine } from './stt-engine.js';
+export type { STTEngine, STTRequestOptions } from './stt-engine.js';

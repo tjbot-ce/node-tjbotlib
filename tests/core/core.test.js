@@ -80,8 +80,6 @@ test('TJBot applies configuration overrides', () => {
                 type: 'local',
                 local: {
                     model: 'vits-piper-en_US-lessac-low',
-                    modelUrl:
-                        'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-low/model.onnx',
                 },
             },
         },
@@ -121,9 +119,6 @@ test('TJBot applies configuration overrides', () => {
     expect(speakConfig.backend).toBeDefined();
     expect(speakConfig.backend.type).toBe('local');
     expect(speakConfig.backend.local.model).toBe('vits-piper-en_US-lessac-low');
-    expect(speakConfig.backend.local.modelUrl).toBe(
-        'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-lessac-low/model.onnx'
-    );
 
     const waveConfig = tjbot.config.wave;
     expect(waveConfig).toBeDefined();

@@ -14,6 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { STTEngine, createSTTEngine } from './stt-engine.js';
+// STT controller
 export { STTController } from './stt.js';
+// STT engine factory (async)
+export { createSTTEngine } from './stt-engine.js';
 //# sourceMappingURL=index.js.map

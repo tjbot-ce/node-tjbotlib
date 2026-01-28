@@ -13,29 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ONNXVisionEngine } from './backends/onnx.js';
-import { GoogleCloudVisionEngine } from './backends/google-cloud-vision.js';
-import { AzureVisionEngine } from './backends/azure-vision.js';
-export function createVisionEngine(config) {
-    // Accept both 'backend' and 'type' for compatibility
-    let backend;
-    if (typeof config.backend === 'string') {
-        backend = config.backend;
-    }
-    else if (typeof config.type === 'string') {
-        backend = config.type;
-    }
-    switch (backend) {
-        case 'local':
-            return new ONNXVisionEngine(config);
-        case 'google-cloud-vision':
-            return new GoogleCloudVisionEngine(config);
-        case 'azure-vision':
-            return new AzureVisionEngine(config);
-        default:
-            throw new Error(`Unknown Vision backend: ${backend}`);
-    }
-}
+import { createVisionEngine } from './vision-engine.js';
 export class VisionController {
     constructor(visionConfig) {
         this.visionConfig = visionConfig;
@@ -45,7 +23,7 @@ export class VisionController {
      */
     async _initializeVisionEngineIfNeeded() {
         if (!this.visionEngine) {
-            this.visionEngine = createVisionEngine(this.visionConfig);
+            this.visionEngine = await createVisionEngine(this.visionConfig);
             await this.visionEngine.initialize();
         }
     }

@@ -17,11 +17,11 @@
 import fs from 'fs';
 import fetch from 'node-fetch';
 import type { SeeBackendAzureConfig } from '../../config/config-types.js';
-import type {
+import {
     VisionEngine,
-    ImageClassificationResult,
-    ImageSegmentationResult,
-    ObjectDetectionResult,
+    type ImageClassificationResult,
+    type ImageSegmentationResult,
+    type ObjectDetectionResult,
 } from '../vision-engine.js';
 
 interface AzureVisionObject {
@@ -40,13 +40,12 @@ interface AzureVisionAPIResponse {
     tags?: AzureVisionTag[];
 }
 
-export class AzureVisionEngine implements VisionEngine {
-    private config: SeeBackendAzureConfig;
+export class AzureVisionEngine extends VisionEngine {
     private apiKey?: string;
     private url?: string;
 
     constructor(config: SeeBackendAzureConfig) {
-        this.config = config;
+        super(config);
         this.apiKey = typeof config.apiKey === 'string' ? config.apiKey : undefined;
         this.url =
             typeof config.url === 'string'

@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 import type { SeeBackendAzureConfig } from '../../config/config-types.js';
-import type { VisionEngine, ImageClassificationResult, ImageSegmentationResult, ObjectDetectionResult } from '../vision-engine.js';
-export declare class AzureVisionEngine implements VisionEngine {
-    private config;
+import { VisionEngine, type ImageClassificationResult, type ImageSegmentationResult, type ObjectDetectionResult } from '../vision-engine.js';
+export declare class AzureVisionEngine extends VisionEngine {
     private apiKey?;
     private url?;
     constructor(config: SeeBackendAzureConfig);

@@ -15,9 +15,10 @@
  */
 import fetch from 'node-fetch';
 import fs from 'fs';
-export class GoogleCloudVisionEngine {
+import { VisionEngine, } from '../vision-engine.js';
+export class GoogleCloudVisionEngine extends VisionEngine {
     constructor(config) {
-        this.config = config;
+        super(config);
         this.credentialsPath = config.credentialsPath;
         this.model = config.model;
         this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
