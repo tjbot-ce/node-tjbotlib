@@ -27,17 +27,40 @@ const logConfigSchema = z
  * STT Backend configuration
  */
 export const sttBackendTypeSchema = z.enum(['local', 'ibm-watson-stt', 'google-cloud-stt', 'azure-stt']);
+/**
+ * Custom model configuration for overriding default models from registry
+ * If customModel is specified, both 'model' and 'url' must be provided
+ */
+export const customModelConfigSchema = z
+    .object({
+    model: z.string().optional(),
+    url: z.string().optional(),
+})
+    .superRefine((data, ctx) => {
+    const hasModel = data.model !== undefined && data.model !== '';
+    const hasUrl = data.url !== undefined && data.url !== '';
+    if ((hasModel && !hasUrl) || (!hasModel && hasUrl)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Custom model configuration must have both "model" and "url" specified, or neither',
+            path: hasModel ? ['url'] : ['model'],
+        });
+    }
+})
+    .loose();
 export const vadConfigSchema = z
     .object({
     enabled: z.boolean().optional(),
     /** Optional model filename (e.g., silero_vad.onnx) */
     model: z.string().optional(),
+    'custom-model': customModelConfigSchema.optional(),
 })
     .loose();
 export const sttBackendLocalConfigSchema = z
     .object({
     model: z.string().optional(),
     vad: vadConfigSchema.optional(),
+    'custom-model': customModelConfigSchema.optional(),
 })
     .loose();
 export const sttBackendIBMWatsonConfigSchema = z
@@ -96,6 +119,7 @@ export const seeBackendTypeSchema = z.enum(['local', 'google-cloud-vision', 'azu
 export const seeBackendLocalConfigSchema = z
     .object({
     model: z.string().optional(),
+    'custom-model': customModelConfigSchema.optional(),
 })
     .loose();
 export const seeBackendGoogleCloudConfigSchema = z
@@ -159,6 +183,7 @@ export const ttsBackendTypeSchema = z.enum(['local', 'ibm-watson-tts', 'google-c
 export const ttsBackendLocalConfigSchema = z
     .object({
     model: z.string().optional(),
+    'custom-model': customModelConfigSchema.optional(),
 })
     .loose();
 export const ttsBackendIBMWatsonConfigSchema = z

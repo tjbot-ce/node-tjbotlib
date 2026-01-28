@@ -43,6 +43,16 @@ type = 'local'
 # See models.yaml for other available models.
 model = 'sherpa-onnx-whisper-base.en'
 
+[listen.backend.local.custom-model]
+# OPTIONAL: Override the model with a custom model from a custom URL
+# When specified, this takes priority over the default model above IF the custom
+# model name matches the 'model' field in [listen.backend.local]
+# Both 'model' and 'url' must be specified together - providing only one is an error
+# Example:
+#   model = 'my-custom-whisper'
+#   url = 'https://example.com/models/my-custom-whisper.tar.bz2'
+# If not using a custom model, leave this section empty or commented out
+
 [listen.backend.local.vad]
 # Voice activity detection (VAD) is used for local OFFLINE models (e.g. whisper, moonshine).
 # When enabled, TJBot uses a VAD model to segment speech and stop on silence.
@@ -53,6 +63,16 @@ enabled = true
 # DEFAULT MODEL: Silero VAD (~350KB)
 # See models.yaml for other available models.
 model = 'silero_vad.onnx'
+
+[listen.backend.local.vad.custom-model]
+# OPTIONAL: Override the VAD model with a custom model from a custom URL
+# When specified, this takes priority over the default model above IF the custom
+# model name matches the 'model' field in [listen.backend.local.vad]
+# Both 'model' and 'url' must be specified together - providing only one is an error
+# Example:
+#   model = 'my-custom-vad'
+#   url = 'https://example.com/models/my-custom-vad.onnx'
+# If not using a custom model, leave this section empty or commented out
 
 [listen.backend.ibm-watson-stt]
 # Specify the STT model to use.
@@ -102,6 +122,16 @@ type = 'local'
 # DEFAULT MODEL (OFFLINE): yolov8n.onnx (small, fast, general purpose)
 # See models.yaml for other available models.
 model = 'yolov8n.onnx'
+
+[see.backend.local.custom-model]
+# OPTIONAL: Override the model with a custom model from a custom URL
+# When specified, this takes priority over the default model above IF the custom
+# model name matches the 'model' field in [see.backend.local]
+# Both 'model' and 'url' must be specified together - providing only one is an error
+# Example:
+#   model = 'my-custom-yolo'
+#   url = 'https://example.com/models/my-custom-yolo.onnx'
+# If not using a custom model, leave this section empty or commented out
 
 [see.backend.google-cloud-vision]
 # Google Cloud Vision API credentials and model
@@ -176,6 +206,16 @@ type = 'local'
 # DEFAULT MODEL: Whisper base.en (good accuracy, English-only, ~140MB)
 # See models.yaml for other available models.
 model = 'vits-piper-en_US-ryan-medium'
+
+[speak.backend.local.custom-model]
+# OPTIONAL: Override the model with a custom model from a custom URL
+# When specified, this takes priority over the default model above IF the custom
+# model name matches the 'model' field in [speak.backend.local]
+# Both 'model' and 'url' must be specified together - providing only one is an error
+# Example:
+#   model = 'my-custom-tts'
+#   url = 'https://example.com/models/my-custom-tts.tar.bz2'
+# If not using a custom model, leave this section empty or commented out
 
 [speak.backend.ibm-watson-tts]
 # 'voice' specifies the IBM Watson Text-to-Speech voice to use.

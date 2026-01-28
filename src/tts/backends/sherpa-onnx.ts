@@ -62,6 +62,25 @@ export class SherpaONNXTTSEngine extends TTSEngine {
                 winston.debug('Successfully loaded sherpa-onnx-node module');
             }
 
+            // Check if we should use a custom model
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const configWithCustom = this.config as any;
+            const customModel = configWithCustom['custom-model'];
+            const modelName = this.config.model as string;
+            
+            if (customModel && customModel.model && customModel.url && customModel.model === modelName) {
+                // Use custom model
+                winston.info(`💬 Loading custom TTS model: ${customModel.model}`);
+                await this.manager.downloadAndCacheCustomModel<TTSModelMetadata>(
+                    customModel.model,
+                    customModel.url,
+                    'tts'
+                );
+            } else {
+                // Use default registry model
+                await this.manager.loadModel<TTSModelMetadata>(modelName);
+            }
+
             // Front-load model download during initialization
             winston.info(`💬 Loading TTS model: ${this.config.model}`);
             this.modelPath = await this.ensureModelIsDownloaded();

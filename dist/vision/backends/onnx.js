@@ -33,6 +33,20 @@ export class ONNXVisionEngine extends VisionEngine {
      */
     async initialize() {
         try {
+            // Check if we should use a custom model
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const configWithCustom = this.config;
+            const customModel = configWithCustom['custom-model'];
+            const modelName = this.config.model;
+            if (customModel && customModel.model && customModel.url && customModel.model === modelName) {
+                // Use custom model
+                winston.info(`👁️ Loading custom vision model: ${customModel.model}`);
+                await this.manager.downloadAndCacheCustomModel(customModel.model, customModel.url, 'vision');
+            }
+            else {
+                // Use default registry model
+                await this.manager.loadModel(modelName);
+            }
             // Front-load model download during initialization
             this.modelPath = await this.ensureModelIsDownloaded();
             // Initialize ONNX session
@@ -52,11 +66,11 @@ export class ONNXVisionEngine extends VisionEngine {
     async ensureModelIsDownloaded() {
         try {
             const model = await this.manager.loadModel(this.config.model);
-            const cacheDir = this.manager.getTTSModelCacheDir();
+            const cacheDir = this.manager.getVisionModelCacheDir();
             return path.join(cacheDir, model.folder, model.required[0]);
         }
         catch (error) {
-            throw new TJBotError('Failed to load TTS model path', { cause: error });
+            throw new TJBotError('Failed to load vision model path', { cause: error });
         }
     }
     async detectObjects(image) {

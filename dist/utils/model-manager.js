@@ -438,5 +438,55 @@ export class ModelManager {
         // Return the model metadata
         return model;
     }
+    /**
+     * Download and cache a custom model from a custom URL
+     * Creates synthetic metadata for the custom model and handles download/extraction
+     * @param modelName The custom model name
+     * @param modelUrl The custom model download URL
+     * @param modelType The model type (stt, tts, vad, vision)
+     * @returns The synthetic model metadata
+     * @throws TJBotError if download fails
+     */
+    async downloadAndCacheCustomModel(modelName, modelUrl, modelType) {
+        const cacheDir = this.getModelCacheDirForType(modelType);
+        const modelPath = path.join(cacheDir, modelName);
+        // Ensure cache directory exists
+        await fs.promises.mkdir(cacheDir, { recursive: true });
+        // Create synthetic metadata for custom model
+        const fileName = path.basename(modelUrl).split('?')[0]; // Remove query params
+        const isTarBz2 = modelUrl.endsWith('.tar.bz2');
+        const customModel = {
+            type: modelType,
+            key: modelName,
+            label: `Custom ${modelType} model: ${modelName}`,
+            url: modelUrl,
+            folder: modelName,
+            required: isTarBz2 ? ['model'] : [fileName], // Placeholder for tar.bz2; actual files discovered after extraction
+        };
+        // Check if model already downloaded
+        const modelExists = fs.existsSync(modelPath);
+        if (!modelExists) {
+            // Download to temporary file
+            const tempArchivePath = path.join(os.tmpdir(), `${modelName}-custom-download`);
+            await this.downloadFile(modelUrl, tempArchivePath);
+            if (isTarBz2) {
+                // Extract tar.bz2 archive
+                await this.extractTarBz2(tempArchivePath, cacheDir);
+                // Remove temporary archive file
+                fs.unlinkSync(tempArchivePath);
+            }
+            else {
+                // Single file model - move directly to model path
+                await fs.promises.mkdir(modelPath, { recursive: true });
+                const targetPath = path.join(modelPath, fileName);
+                await fs.promises.rename(tempArchivePath, targetPath);
+            }
+            winston.info(`✅ Custom model "${modelName}" downloaded and cached to ${modelPath}`);
+        }
+        else {
+            winston.debug(`📦 Custom model "${modelName}" already cached at ${modelPath}`);
+        }
+        return customModel;
+    }
 }
 //# sourceMappingURL=model-manager.js.map

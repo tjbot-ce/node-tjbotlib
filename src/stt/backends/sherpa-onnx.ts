@@ -79,8 +79,24 @@ export class SherpaONNXSTTEngine extends STTEngine {
                 winston.debug('Successfully loaded sherpa-onnx-node module');
             }
 
-            // Front-load model selection and download during initialization
-            this.modelInfo = await this.manager.loadModel<STTModelMetadata>(this.config.model as string);
+            // Check if we should use a custom model
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const configWithCustom = this.config as any;
+            const customModel = configWithCustom['custom-model'];
+            const modelName = this.config.model as string;
+            
+            if (customModel && customModel.model && customModel.url && customModel.model === modelName) {
+                // Use custom model
+                winston.info(`🎤 Loading custom STT model: ${customModel.model}`);
+                this.modelInfo = await this.manager.downloadAndCacheCustomModel<STTModelMetadata>(
+                    customModel.model,
+                    customModel.url,
+                    'stt'
+                );
+            } else {
+                // Use default registry model
+                this.modelInfo = await this.manager.loadModel<STTModelMetadata>(modelName);
+            }
 
             winston.info(`🎤 Loading STT model: ${this.config.model}`);
             this.modelPaths = await this.ensureModelIsDownloaded();
@@ -88,11 +104,29 @@ export class SherpaONNXSTTEngine extends STTEngine {
             // Download VAD model if needed for offline recognition
             const vadConfig = this.config.vad as VADConfig;
 
-            if (vadConfig) {
+            if (vadConfig && this.modelInfo) {
                 if (this.modelInfo.type.startsWith('offline') && vadConfig.enabled) {
-                    winston.info(`🎤 Loading VAD model: ${vadConfig.model as string}`);
-                    const vadInfo = await this.manager.loadModel<VADModelMetadata>(vadConfig.model as string);
-                    this.vadPath = path.join(vadInfo.folder, vadConfig.model as string);
+                    // Check if we should use a custom VAD model
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const vadConfigWithCustom = vadConfig as any;
+                    const customVadModel = vadConfigWithCustom['custom-model'];
+                    const vadModelName = vadConfig.model as string;
+
+                    if (customVadModel && customVadModel.model && customVadModel.url && customVadModel.model === vadModelName) {
+                        // Use custom VAD model
+                        winston.info(`🎤 Loading custom VAD model: ${customVadModel.model}`);
+                        const customVadInfo = await this.manager.downloadAndCacheCustomModel<VADModelMetadata>(
+                            customVadModel.model,
+                            customVadModel.url,
+                            'vad'
+                        );
+                        this.vadPath = path.join(customVadInfo.folder, customVadModel.model as string);
+                    } else {
+                        // Use default registry VAD model
+                        winston.info(`🎤 Loading VAD model: ${vadModelName}`);
+                        const vadInfo = await this.manager.loadModel<VADModelMetadata>(vadModelName);
+                        this.vadPath = path.join(vadInfo.folder, vadModelName);
+                    }
                 }
             }
 

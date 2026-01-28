@@ -195,4 +195,14 @@ export declare class ModelManager {
      * @throws TJBotError if model not found or download fails
      */
     loadModel<T extends BaseModelMetadata = BaseModelMetadata>(modelKey: string): Promise<T>;
+    /**
+     * Download and cache a custom model from a custom URL
+     * Creates synthetic metadata for the custom model and handles download/extraction
+     * @param modelName The custom model name
+     * @param modelUrl The custom model download URL
+     * @param modelType The model type (stt, tts, vad, vision)
+     * @returns The synthetic model metadata
+     * @throws TJBotError if download fails
+     */
+    downloadAndCacheCustomModel<T extends BaseModelMetadata = BaseModelMetadata>(modelName: string, modelUrl: string, modelType: ModelType): Promise<T>;
 }
