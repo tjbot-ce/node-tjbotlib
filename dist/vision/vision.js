@@ -69,5 +69,20 @@ export class VisionController {
             throw new Error('Vision engine is not initialized.');
         return this.visionEngine.describeImage(image);
     }
+    /**
+     * Eagerly initialize the Vision engine.
+     */
+    async ensureEngineInitialized() {
+        await this._initializeVisionEngineIfNeeded();
+    }
+    /**
+     * Clean up Vision resources.
+     */
+    async cleanup() {
+        if (this.visionEngine) {
+            await this.visionEngine.cleanup?.();
+            this.visionEngine = undefined;
+        }
+    }
 }
 //# sourceMappingURL=vision.js.map

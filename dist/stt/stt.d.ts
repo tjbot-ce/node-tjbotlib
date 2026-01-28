@@ -38,4 +38,12 @@ export declare class STTController {
         onFinalResult?: (text: string) => void;
         abortSignal?: AbortSignal;
     }): Promise<string>;
+    /**
+     * Eagerly initialize the STT engine.
+     */
+    ensureEngineInitialized(): Promise<void>;
+    /**
+     * Clean up STT resources.
+     */
+    cleanup(): Promise<void>;
 }

@@ -128,4 +128,23 @@ export class TTSController {
             throw error;
         }
     }
+
+    /**
+     * Eagerly initialize the TTS engine.
+     */
+    async ensureEngineInitialized(config: Record<string, unknown>): Promise<void> {
+        if (this.ttsEngine === undefined) {
+            await this.initialize(config);
+        }
+    }
+
+    /**
+     * Clean up TTS resources.
+     */
+    async cleanup(): Promise<void> {
+        if (this.ttsEngine) {
+            await this.ttsEngine.cleanup?.();
+            this.ttsEngine = undefined;
+        }
+    }
 }

@@ -71,7 +71,8 @@ async function runTest() {
     );
 
     // Instantiate TJBot with override configuration
-    const tjbot = new TJBot({ log: { level: LOG_LEVEL }, hardware: { speaker: true }, speak: speakConfig });
+    const tjbot = TJBot.getInstance();
+    await tjbot.initialize({ log: { level: LOG_LEVEL }, hardware: { speaker: true }, speak: speakConfig });
     console.log('✓ TJBot initialized');
 
     console.log(formatSection('Interactive test'));
@@ -192,11 +193,12 @@ async function promptBackendSpecificOptions(selectedBackend, manager) {
 
 async function promptSherpaONNXTTSOptions() {
     // Get available models from metadata
-    const models = await TJBot.supportedTTSModels();
+    const tjbot = TJBot.getInstance();
+    const models = await tjbot.supportedTTSModels();
 
     // Get installed models once (outside the loop for efficiency)
     // Note: installedTTSModels() returns an array of model keys (strings), not full model objects
-    const installedModelKeys = TJBot.installedTTSModels();
+    const installedModelKeys = tjbot.installedTTSModels();
     const installedModels = new Set(installedModelKeys);
     const choices = models.map((m) => {
         const downloaded = installedModels.has(m.model);

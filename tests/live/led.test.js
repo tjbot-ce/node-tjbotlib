@@ -112,7 +112,8 @@ async function runTest() {
         console.log('✓ Common Anode LED config ready\n');
     }
 
-    const tjbot = new TJBot(config);
+    const tjbot = TJBot.getInstance();
+    await tjbot.initialize(config);
     if (config.hardware.led_neopixel) {
         console.log('✓ TJBot initialized with NeoPixel LED\n');
     } else {

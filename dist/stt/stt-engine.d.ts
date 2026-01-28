@@ -39,6 +39,12 @@ export declare abstract class STTEngine {
      */
     abstract initialize(): Promise<void>;
     /**
+     * Clean up resources used by the STT engine.
+     * Optional method for backends that need to release resources.
+     * @public
+     */
+    cleanup?(): Promise<void>;
+    /**
      * Transcribe audio from a microphone stream.
      * @param micStream - The readable stream from the microphone
      * @param options - Configuration options for transcription

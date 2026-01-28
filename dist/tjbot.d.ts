@@ -24,6 +24,11 @@ import { ObjectDetectionResult, ImageClassificationResult, FaceDetectionResult, 
  */
 declare class TJBot {
     /**
+     * Singleton instance
+     * @private
+     */
+    private static instance;
+    /**
      * TJBot library version
      * @readonly
      */
@@ -51,22 +56,50 @@ declare class TJBot {
      */
     _shineColors: string[];
     /**
-     * TJBot constructor. Loads configuration in the following order:
-     * 1. Base config from tjbot.default.toml
-     * 2. Local tjbot.toml (if it exists)
-     * 3. Override config (if provided)
-     * Hardware is automatically initialized based on the [hardware] configuration section.
+     * Flag to track if TJBot has been initialized
+     */
+    private _initialized;
+    /**
+     * Private constructor. Sets up Winston logger configuration.
      * @constructor
-     * @param  {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
-     * @throws {TJBotError} if configuration file cannot be loaded or is invalid
+     * @private
+     */
+    private constructor();
+    /**
+     * Get the singleton instance of TJBot.
+     * @returns {TJBot} The singleton TJBot instance
      * @public
      */
-    constructor(overrideConfig?: Partial<TJBotConfigSchema>);
+    static getInstance(): TJBot;
+    /**
+     * Initialize TJBot with configuration. Can be called multiple times to reconfigure.
+     * Performs cleanup of previous initialization, loads configuration, detects hardware,
+     * initializes all configured hardware and AI models eagerly.
+     * @param {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
+     * @throws {TJBotError} if configuration file cannot be loaded, is invalid, or cleanup fails
+     * @async
+     * @public
+     */
+    initialize(overrideConfig?: Partial<TJBotConfigSchema>): Promise<void>;
+    /**
+     * Clean up all resources. Called automatically before re-initialization.
+     * @throws {TJBotError} if cleanup fails
+     * @private
+     * @async
+     */
+    private cleanup;
     /**
      * Auto-initialize hardware devices based on configuration
      * @private
+     * @async
      */
     private initializeHardwareFromConfig;
+    /**
+     * Eagerly initialize AI models (STT, TTS, Vision) if configured
+     * @private
+     * @async
+     */
+    private initializeAIModels;
     /**
      * Change the level of TJBot's logging.
      * @param {string} level Logging level (see Winston's [list of logging levels](https://github.com/winstonjs/winston?tab=readme-ov-file#using-logging-levels))
@@ -94,12 +127,12 @@ declare class TJBot {
      * List all downloaded Sherpa-ONNX STT models on this device.
      * @returns {string[]} Array of installed model keys
      */
-    static installedSTTModels(): string[];
+    installedSTTModels(): string[];
     /**
      * List supported Sherpa-ONNX STT models for this device.
      * @returns {Array<{ key: string, label: string, kind: string }>} Array of supported model info
      */
-    static supportedSTTModels(): Array<{
+    supportedSTTModels(): Array<{
         key: string;
         label: string;
         kind: string;
@@ -145,12 +178,12 @@ declare class TJBot {
      * List all installed ONNX vision models on this device.
      * @returns {string[]} Array of installed vision model keys
      */
-    static installedVisionModels(): string[];
+    installedVisionModels(): string[];
     /**
      * List supported ONNX vision models for this device.
      * @returns {Array<{ model: string, label?: string, kind: string }>} Array of supported vision model info
      */
-    static supportedVisionModels(): Array<{
+    supportedVisionModels(): Array<{
         model: string;
         label?: string;
         kind: string;
@@ -218,12 +251,12 @@ declare class TJBot {
      * List all installed Sherpa-ONNX TTS models on this device.
      * @returns {string[]} Array of installed TTS model keys
      */
-    static installedTTSModels(): string[];
+    installedTTSModels(): string[];
     /**
      * List supported Sherpa-ONNX TTS models for this device.
      * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
      */
-    static supportedTTSModels(): Array<{
+    supportedTTSModels(): Array<{
         model: string;
         label?: string;
     }>;

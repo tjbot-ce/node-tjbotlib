@@ -188,5 +188,59 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         }
         return this.ttsController.speak(message, this.speakConfig);
     }
+    async cleanup() {
+        winston.verbose('🧹 Cleaning up TJBot resources...');
+        // Clean up controllers
+        if (this.cameraController) {
+            winston.verbose('🧹 Cleaning up camera...');
+            await this.cameraController.cleanup?.();
+        }
+        if (this.microphoneController) {
+            winston.verbose('🧹 Cleaning up microphone...');
+            await this.microphoneController.cleanup?.();
+        }
+        if (this.speakerController) {
+            winston.verbose('🧹 Cleaning up speaker...');
+            await this.speakerController.cleanup?.();
+        }
+        if (this.sttController) {
+            winston.verbose('🧹 Cleaning up STT controller...');
+            await this.sttController.cleanup?.();
+        }
+        if (this.ttsController) {
+            winston.verbose('🧹 Cleaning up TTS controller...');
+            await this.ttsController.cleanup?.();
+        }
+        if (this.visionController) {
+            winston.verbose('🧹 Cleaning up vision controller...');
+            await this.visionController.cleanup?.();
+        }
+        // Clear hardware state
+        this.initializedHardware.clear();
+        this.cameraController = undefined;
+        this.microphoneController = undefined;
+        this.speakerController = undefined;
+        this.sttController = undefined;
+        this.ttsController = undefined;
+        this.visionController = undefined;
+    }
+    async initializeSTTEngine() {
+        if (!this.sttController) {
+            throw new TJBotError('STT controller not initialized. Call setupMicrophone() first.');
+        }
+        await this.sttController.ensureEngineInitialized();
+    }
+    async initializeTTSEngine() {
+        if (!this.ttsController) {
+            throw new TJBotError('TTS controller not initialized. Call setupSpeaker() first.');
+        }
+        await this.ttsController.ensureEngineInitialized(this.speakConfig);
+    }
+    async initializeVisionEngine() {
+        if (!this.visionController) {
+            throw new TJBotError('Vision controller not initialized. Call setupCamera() first.');
+        }
+        await this.visionController.ensureEngineInitialized();
+    }
 }
 //# sourceMappingURL=rpi-driver.js.map

@@ -41,4 +41,12 @@ export declare class TTSController {
      * @param config The speak configuration with TTS backend settings
      */
     speak(text: string, config: Record<string, unknown>): Promise<void>;
+    /**
+     * Eagerly initialize the TTS engine.
+     */
+    ensureEngineInitialized(config: Record<string, unknown>): Promise<void>;
+    /**
+     * Clean up TTS resources.
+     */
+    cleanup(): Promise<void>;
 }

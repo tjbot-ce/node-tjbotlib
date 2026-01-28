@@ -60,7 +60,7 @@ test('make sure TJBot class exports the Hardware list correctly', () => {
     expect(TJBot.Hardware.SPEAKER === Hardware.SPEAKER);
 });
 
-test('TJBot applies configuration overrides', () => {
+test('TJBot applies configuration overrides', async () => {
     // Pass custom config as override
     const customConfig = {
         log: {
@@ -89,8 +89,9 @@ test('TJBot applies configuration overrides', () => {
         },
     };
 
-    // Create TJBot with override config
-    const tjbot = new TJBot(customConfig);
+    // Create TJBot with override config using singleton pattern
+    const tjbot = TJBot.getInstance();
+    await tjbot.initialize(customConfig);
 
     // Verify that the instance was created
     expect(tjbot).toBeDefined();

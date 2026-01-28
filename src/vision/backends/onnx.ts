@@ -154,7 +154,7 @@ export class ONNXVisionEngine extends VisionEngine {
             }
 
             const content = fs.readFileSync(labelFile, 'utf8');
-            
+
             // Parse YAML files for detection models
             if (labelFile.endsWith('.yaml') && metadata.kind === 'detection') {
                 // Extract class names from YAML
@@ -168,7 +168,7 @@ export class ONNXVisionEngine extends VisionEngine {
                         .map((name) => name.trim().replace(/^['"]|['"]$/g, ''))
                         .filter((name) => name.length > 0);
                 }
-                
+
                 // YAML format 2: names: \n  0: person \n  1: bicycle \n ...
                 namesMatch = content.match(/names:\s*\n([\s\S]*?)(?:\n[a-z]|$)/);
                 if (namesMatch) {
@@ -185,13 +185,13 @@ export class ONNXVisionEngine extends VisionEngine {
                     return labels;
                 }
             }
-            
+
             // For non-YAML files, split by newlines
             let labels = content
                 .split('\n')
                 .map((line) => line.trim())
                 .filter((line) => line.length > 0);
-            
+
             // Remove numeric prefixes if present (e.g., "67: cell phone" -> "cell phone")
             if (metadata.kind === 'detection' && labels.length > 0 && labels[0].includes(':')) {
                 labels = labels.map((line) => {
@@ -199,7 +199,7 @@ export class ONNXVisionEngine extends VisionEngine {
                     return match ? match[1].trim() : line;
                 });
             }
-            
+
             return labels;
         } catch (error) {
             winston.warn(`Failed to load labels for ${modelName}:`, error);
@@ -388,7 +388,10 @@ export class ONNXVisionEngine extends VisionEngine {
     /**
      * Apply Non-Maximum Suppression to remove overlapping detections
      */
-    private nonMaxSuppression(detections: ObjectDetectionResult[], iouThreshold: number = 0.5): ObjectDetectionResult[] {
+    private nonMaxSuppression(
+        detections: ObjectDetectionResult[],
+        iouThreshold: number = 0.5
+    ): ObjectDetectionResult[] {
         if (detections.length === 0) return [];
 
         // Sort by confidence descending

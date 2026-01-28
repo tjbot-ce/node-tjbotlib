@@ -103,5 +103,22 @@ export class TTSController {
             throw error;
         }
     }
+    /**
+     * Eagerly initialize the TTS engine.
+     */
+    async ensureEngineInitialized(config) {
+        if (this.ttsEngine === undefined) {
+            await this.initialize(config);
+        }
+    }
+    /**
+     * Clean up TTS resources.
+     */
+    async cleanup() {
+        if (this.ttsEngine) {
+            await this.ttsEngine.cleanup?.();
+            this.ttsEngine = undefined;
+        }
+    }
 }
 //# sourceMappingURL=tts.js.map

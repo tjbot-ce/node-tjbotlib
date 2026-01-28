@@ -72,6 +72,12 @@ export declare abstract class VisionEngine {
      */
     abstract initialize(): Promise<void>;
     /**
+     * Clean up resources used by the Vision engine.
+     * Optional method for backends that need to release resources.
+     * @public
+     */
+    cleanup?(): Promise<void>;
+    /**
      * Detect objects in an image.
      *
      * @param image - Image buffer or file path

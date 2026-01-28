@@ -35,6 +35,10 @@ export declare abstract class RPiHardwareDriver {
     abstract setupMicrophone(config: ListenConfig): void;
     abstract setupServo(config: WaveConfig): void;
     abstract setupSpeaker(config: SpeakConfig): void;
+    abstract cleanup(): Promise<void>;
+    abstract initializeSTTEngine(): Promise<void>;
+    abstract initializeTTSEngine(): Promise<void>;
+    abstract initializeVisionEngine(): Promise<void>;
     abstract startMic(): void;
     abstract pauseMic(): void;
     abstract resumeMic(): void;
@@ -94,4 +98,8 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     renderLED(hexColor: string): Promise<void>;
     playAudio(audioPath: string): Promise<void>;
     speak(message: string): Promise<void>;
+    cleanup(): Promise<void>;
+    initializeSTTEngine(): Promise<void>;
+    initializeTTSEngine(): Promise<void>;
+    initializeVisionEngine(): Promise<void>;
 }

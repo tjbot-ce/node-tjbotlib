@@ -34,6 +34,12 @@ export declare abstract class TTSEngine {
      */
     abstract initialize(): Promise<void>;
     /**
+     * Clean up resources used by the TTS engine.
+     * Optional method for backends that need to release resources.
+     * @public
+     */
+    cleanup?(): Promise<void>;
+    /**
      * Synthesize text to WAV audio.
      * Both backends should validate input text and return audio as a Buffer in WAV format.
      * Voice is configured at engine initialization time and cannot be changed per synthesis call.

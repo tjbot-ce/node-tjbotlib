@@ -36,21 +36,19 @@ const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 
  */
 class TJBot {
     /**
-     * TJBot constructor. Loads configuration in the following order:
-     * 1. Base config from tjbot.default.toml
-     * 2. Local tjbot.toml (if it exists)
-     * 3. Override config (if provided)
-     * Hardware is automatically initialized based on the [hardware] configuration section.
+     * Private constructor. Sets up Winston logger configuration.
      * @constructor
-     * @param  {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
-     * @throws {TJBotError} if configuration file cannot be loaded or is invalid
-     * @public
+     * @private
      */
-    constructor(overrideConfig) {
+    constructor() {
         /**
          * Cache of the colors recognized by TJBot
          */
         this._shineColors = [];
+        /**
+         * Flag to track if TJBot has been initialized
+         */
+        this._initialized = false;
         // set up logging -- start with the 'info' level
         // Custom formatter for pretty-printing error objects with color
         const prettyErrorFormat = winston.format.printf((info) => {
@@ -75,16 +73,46 @@ class TJBot {
             format: winston.format.combine(winston.format.colorize(), prettyErrorFormat),
             transports: [new winston.transports.Console()],
         });
+        // automatically track and clean up temporary files
+        temp.track();
+    }
+    /**
+     * Get the singleton instance of TJBot.
+     * @returns {TJBot} The singleton TJBot instance
+     * @public
+     */
+    static getInstance() {
+        if (!TJBot.instance) {
+            TJBot.instance = new TJBot();
+        }
+        return TJBot.instance;
+    }
+    /**
+     * Initialize TJBot with configuration. Can be called multiple times to reconfigure.
+     * Performs cleanup of previous initialization, loads configuration, detects hardware,
+     * initializes all configured hardware and AI models eagerly.
+     * @param {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
+     * @throws {TJBotError} if configuration file cannot be loaded, is invalid, or cleanup fails
+     * @async
+     * @public
+     */
+    async initialize(overrideConfig) {
+        winston.info('🔄 Initializing TJBot...');
+        // Cleanup previous initialization if any
+        if (this._initialized) {
+            winston.info('🧹 Cleaning up previous initialization...');
+            await this.cleanup();
+        }
+        // Load configuration
         this.config = new TJBotConfig(overrideConfig);
-        // change the level if it was defined differently in the config
+        // Update log level from config
         const logConfig = this.config.log;
         if (logConfig && logConfig.level) {
             winston.level = logConfig.level;
         }
-        // automatically track and clean up temporary files
-        temp.track();
-        // figure out which RPi we're running on
+        // Detect Raspberry Pi model and instantiate driver
         this.rpiModel = RPiDetect.model();
+        winston.info(`🖥️  Detected hardware: ${this.rpiModel}`);
         if (this.rpiModel.startsWith('Raspberry Pi 3')) {
             this.rpiDriver = new RPi3Driver();
         }
@@ -95,21 +123,43 @@ class TJBot {
             this.rpiDriver = new RPi5Driver();
         }
         else {
-            winston.warn('TJBot is running on unsupported Raspberry Pi hardware. Restorting to RPi3 hardware driver, but errors may occur.');
+            winston.warn('TJBot is running on unsupported Raspberry Pi hardware. Resorting to RPi3 hardware driver, but errors may occur.');
             this.rpiDriver = new RPi3Driver();
         }
-        // say hello
-        winston.info(`👋 Hello from TJBot! Running on ${this.rpiModel}`);
         winston.verbose(`🤖 TJBot library version ${TJBot.VERSION}`);
         winston.debug(`🛠️ TJBot configuration:\n${JSON.stringify(this.config, null, 2)}`);
-        // Auto-initialize hardware from configuration
-        this.initializeHardwareFromConfig();
+        // Initialize hardware from configuration
+        await this.initializeHardwareFromConfig();
+        // Eagerly initialize AI models if configured
+        await this.initializeAIModels();
+        this._initialized = true;
+        winston.info('✅ TJBot initialization complete');
+    }
+    /**
+     * Clean up all resources. Called automatically before re-initialization.
+     * @throws {TJBotError} if cleanup fails
+     * @private
+     * @async
+     */
+    async cleanup() {
+        try {
+            if (this.rpiDriver) {
+                await this.rpiDriver.cleanup();
+            }
+            this._initialized = false;
+        }
+        catch (error) {
+            throw new TJBotError('Failed to clean up TJBot resources', {
+                cause: error instanceof Error ? error : new Error(String(error)),
+            });
+        }
     }
     /**
      * Auto-initialize hardware devices based on configuration
      * @private
+     * @async
      */
-    initializeHardwareFromConfig() {
+    async initializeHardwareFromConfig() {
         const hwConfig = this.config.hardware;
         if (!hwConfig || Object.keys(hwConfig).length === 0) {
             winston.debug('No hardware configured in config file');
@@ -138,37 +188,41 @@ class TJBot {
         if (hardwareToInit.length === 0) {
             return;
         }
-        // Set up the hardware
-        const hw = hardwareToInit.join(', ');
-        winston.info(`🤖 Initializing TJBot with ${hw}`);
+        winston.info('🔧 Initializing hardware...');
         hardwareToInit.forEach((device) => {
             switch (device) {
                 case Hardware.CAMERA: {
+                    winston.info('📷 Setting up camera');
                     const config = this.config.see;
                     this.rpiDriver.setupCamera(config);
                     break;
                 }
                 case Hardware.LED_NEOPIXEL: {
+                    winston.info('💡 Setting up NeoPixel LED');
                     const shineConfig = this.config.shine;
                     this.rpiDriver.setupLEDNeopixel(shineConfig.neopixel ?? {});
                     break;
                 }
                 case Hardware.LED_COMMON_ANODE: {
+                    winston.info('💡 Setting up Common Anode LED');
                     const shineConfig = this.config.shine;
                     this.rpiDriver.setupLEDCommonAnode(shineConfig.commonanode ?? {});
                     break;
                 }
                 case Hardware.MICROPHONE: {
+                    winston.info('🎤 Setting up microphone');
                     const config = this.config.listen;
                     this.rpiDriver.setupMicrophone(config);
                     break;
                 }
                 case Hardware.SERVO: {
+                    winston.info('🦾 Setting up servo');
                     const config = this.config.wave;
                     this.rpiDriver.setupServo(config);
                     break;
                 }
                 case Hardware.SPEAKER: {
+                    winston.info('🔊 Setting up speaker');
                     const config = this.config.speak;
                     this.rpiDriver.setupSpeaker(config);
                     break;
@@ -177,6 +231,38 @@ class TJBot {
                     break;
             }
         }, this);
+    }
+    /**
+     * Eagerly initialize AI models (STT, TTS, Vision) if configured
+     * @private
+     * @async
+     */
+    async initializeAIModels() {
+        winston.info('🤖 Initializing AI models...');
+        // Initialize STT engine if microphone is configured
+        if (this.rpiDriver.hasCapability(Capability.LISTEN)) {
+            const listenConfig = this.config.listen;
+            if (listenConfig?.backend?.local) {
+                winston.info('🎙️  Loading STT engine...');
+                await this.rpiDriver.initializeSTTEngine();
+            }
+        }
+        // Initialize TTS engine if speaker is configured
+        if (this.rpiDriver.hasCapability(Capability.SPEAK)) {
+            const speakConfig = this.config.speak;
+            if (speakConfig?.backend?.local) {
+                winston.info('🗣️  Loading TTS engine...');
+                await this.rpiDriver.initializeTTSEngine();
+            }
+        }
+        // Initialize Vision engine if camera is configured
+        if (this.rpiDriver.hasCapability(Capability.LOOK)) {
+            const seeConfig = this.config.see;
+            if (seeConfig?.backend?.local) {
+                winston.info('👁️  Loading Vision engine...');
+                await this.rpiDriver.initializeVisionEngine();
+            }
+        }
     }
     /**
      * Change the level of TJBot's logging.
@@ -192,6 +278,9 @@ class TJBot {
      * @param {string} capability The capability assert (see TJBot.prototype.capabilities).
      */
     assertCapability(capability) {
+        if (!this._initialized) {
+            throw new TJBotError('TJBot has not been initialized. Please call await tj.initialize() before using TJBot.');
+        }
         switch (capability) {
             case Capability.LISTEN:
                 if (!this.rpiDriver.hasCapability(Capability.LISTEN)) {
@@ -269,7 +358,7 @@ class TJBot {
      * List all downloaded Sherpa-ONNX STT models on this device.
      * @returns {string[]} Array of installed model keys
      */
-    static installedSTTModels() {
+    installedSTTModels() {
         const manager = ModelManager.getInstance();
         return manager.getInstalledSTTModels().map((m) => m.key);
     }
@@ -277,7 +366,7 @@ class TJBot {
      * List supported Sherpa-ONNX STT models for this device.
      * @returns {Array<{ key: string, label: string, kind: string }>} Array of supported model info
      */
-    static supportedSTTModels() {
+    supportedSTTModels() {
         const manager = ModelManager.getInstance();
         return manager.getSupportedSTTModels().map((m) => ({
             key: m.key,
@@ -338,7 +427,7 @@ class TJBot {
      * List all installed ONNX vision models on this device.
      * @returns {string[]} Array of installed vision model keys
      */
-    static installedVisionModels() {
+    installedVisionModels() {
         const manager = ModelManager.getInstance();
         return manager.getInstalledVisionModels().map((m) => m.key);
     }
@@ -346,7 +435,7 @@ class TJBot {
      * List supported ONNX vision models for this device.
      * @returns {Array<{ model: string, label?: string, kind: string }>} Array of supported vision model info
      */
-    static supportedVisionModels() {
+    supportedVisionModels() {
         const manager = ModelManager.getInstance();
         return manager.getSupportedVisionModels().map((m) => ({ model: m.key, label: m.label, kind: m.kind }));
     }
@@ -482,7 +571,7 @@ class TJBot {
      * List all installed Sherpa-ONNX TTS models on this device.
      * @returns {string[]} Array of installed TTS model keys
      */
-    static installedTTSModels() {
+    installedTTSModels() {
         const manager = ModelManager.getInstance();
         return manager.getInstalledTTSModels().map((m) => m.key);
     }
@@ -490,7 +579,7 @@ class TJBot {
      * List supported Sherpa-ONNX TTS models for this device.
      * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
      */
-    static supportedTTSModels() {
+    supportedTTSModels() {
         const manager = ModelManager.getInstance();
         return manager.getSupportedTTSModels().map((m) => ({
             model: m.key,

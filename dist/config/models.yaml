@@ -241,7 +241,7 @@ models:
   - type: vision
     key: mobilenetv3
     label: "MobileNetV3 INT8 (Image Classification, ~5MB)"
-    url: "https://github.com/onnx/models/raw/main/vision/classification/mobilenet_v3/model/mobilenetv3-small-7.onnx"
+    url: "https://huggingface.co/onnxmodelzoo/mobilenetv3-small-13/resolve/main/mobilenetv3-small-13.onnx"
     folder: "mobilenetv3"
     kind: classification
     inputShape:

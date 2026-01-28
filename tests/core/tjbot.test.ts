@@ -35,6 +35,10 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
         setupMicrophone: vi.fn(),
         setupServo: vi.fn(),
         setupSpeaker: vi.fn(),
+        cleanup: vi.fn(async () => {}),
+        initializeSTTEngine: vi.fn(async () => {}),
+        initializeTTSEngine: vi.fn(async () => {}),
+        initializeVisionEngine: vi.fn(async () => {}),
     };
 
     return {
@@ -55,6 +59,10 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             setupMicrophone = mockDriver.setupMicrophone;
             setupServo = mockDriver.setupServo;
             setupSpeaker = mockDriver.setupSpeaker;
+            cleanup = mockDriver.cleanup;
+            initializeSTTEngine = mockDriver.initializeSTTEngine;
+            initializeTTSEngine = mockDriver.initializeTTSEngine;
+            initializeVisionEngine = mockDriver.initializeVisionEngine;
         },
         RPi4Driver: class {
             hasCapability = mockDriver.hasCapability;
@@ -70,6 +78,10 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             setupMicrophone = mockDriver.setupMicrophone;
             setupServo = mockDriver.setupServo;
             setupSpeaker = mockDriver.setupSpeaker;
+            cleanup = mockDriver.cleanup;
+            initializeSTTEngine = mockDriver.initializeSTTEngine;
+            initializeTTSEngine = mockDriver.initializeTTSEngine;
+            initializeVisionEngine = mockDriver.initializeVisionEngine;
         },
         RPi5Driver: class {
             hasCapability = mockDriver.hasCapability;
@@ -85,14 +97,19 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             setupMicrophone = mockDriver.setupMicrophone;
             setupServo = mockDriver.setupServo;
             setupSpeaker = mockDriver.setupSpeaker;
+            cleanup = mockDriver.cleanup;
+            initializeSTTEngine = mockDriver.initializeSTTEngine;
+            initializeTTSEngine = mockDriver.initializeTTSEngine;
+            initializeVisionEngine = mockDriver.initializeVisionEngine;
         },
     };
 });
 
 describe('TJBot - Constructor and Initialization', () => {
-    test('creates TJBot instance with default config', () => {
-        const tj = new TJBot();
+    test('gets TJBot singleton instance', async () => {
+        const tj = TJBot.getInstance();
         expect(tj).toBeDefined();
+        await tj.initialize();
         expect(tj.config).toBeDefined();
     });
 
@@ -106,21 +123,24 @@ describe('TJBot - Constructor and Initialization', () => {
         expect(TJBot.Hardware.MICROPHONE).toBeDefined();
     });
 
-    test('detects RPi model on construction', () => {
-        const tj = new TJBot();
+    test('detects RPi model on initialization', async () => {
+        const tj = TJBot.getInstance();
+        await tj.initialize();
         expect(tj.rpiModel).toBeDefined();
         expect(typeof tj.rpiModel).toBe('string');
     });
 
-    test('initializes RPi driver based on model (Pi 5)', () => {
-        const tj = new TJBot();
+    test('initializes RPi driver based on model (Pi 5)', async () => {
+        const tj = TJBot.getInstance();
+        await tj.initialize();
         expect(tj.rpiDriver).toBeDefined();
         // Should be RPi5Driver for the mock
         expect(typeof tj.rpiDriver).toBe('object');
     });
 
-    test('sets logging level from config', () => {
-        const tj = new TJBot();
+    test('sets logging level from config', async () => {
+        const tj = TJBot.getInstance();
+        await tj.initialize();
         // Should not throw
         tj.setLogLevel('debug');
         expect(true).toBe(true);
@@ -130,8 +150,9 @@ describe('TJBot - Constructor and Initialization', () => {
 describe('TJBot - Color Methods', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
     });
 
     test('shineColors returns an array', () => {
@@ -180,8 +201,9 @@ describe('TJBot - Color Methods', () => {
 describe('TJBot - Capability Assertions', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
     });
 
     test('assertCapability throws when LISTEN capability missing', () => {
@@ -249,8 +271,9 @@ describe('TJBot - Capability Assertions', () => {
 describe('TJBot - Shine Method', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'renderLED').mockImplementation(async (_hexColor: string) => {});
     });
@@ -295,8 +318,9 @@ describe('TJBot - Shine Method', () => {
 describe('TJBot - Pulse Method', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'renderLED').mockImplementation(async (_hexColor: string) => {});
     });
@@ -335,8 +359,9 @@ describe('TJBot - Pulse Method', () => {
 describe('TJBot - Arm Movement Methods', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'renderServoPosition').mockImplementation(() => {});
     });
@@ -387,8 +412,9 @@ describe('TJBot - Arm Movement Methods', () => {
 describe('TJBot - Wave Method', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'renderServoPosition').mockImplementation(() => {});
     });
@@ -419,8 +445,9 @@ describe('TJBot - Wave Method', () => {
 describe('TJBot - Listen and Speak Methods', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'listenForTranscript').mockResolvedValue('hello');
         vi.spyOn(tj.rpiDriver, 'speak').mockResolvedValue(undefined);
@@ -461,8 +488,9 @@ describe('TJBot - Listen and Speak Methods', () => {
 describe('TJBot - Look Method', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'capturePhoto').mockResolvedValue('/tmp/photo.jpg');
     });
@@ -492,8 +520,9 @@ describe('TJBot - Look Method', () => {
 describe('TJBot - Configuration Access', () => {
     let tj: TJBot;
 
-    beforeEach(() => {
-        tj = new TJBot();
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
     });
 
     test('config is accessible', () => {
@@ -513,24 +542,31 @@ describe('TJBot - Configuration Access', () => {
 });
 
 describe('TJBot - Model Listing Methods', () => {
+    let tj: TJBot;
+
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
+    });
+
     test('installedSTTModels returns an array', () => {
-        const result = TJBot.installedSTTModels();
+        const result = tj.installedSTTModels();
         expect(Array.isArray(result)).toBe(true);
     });
 
     test('recommendedSTTModels returns a non-empty array', () => {
-        const result = TJBot.supportedSTTModels();
+        const result = tj.supportedSTTModels();
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBeGreaterThan(0);
     });
 
     test('installedTTSModels returns an array', () => {
-        const result = TJBot.installedTTSModels();
+        const result = tj.installedTTSModels();
         expect(Array.isArray(result)).toBe(true);
     });
 
     test('recommendedTTSModels returns a non-empty array', () => {
-        const result = TJBot.supportedTTSModels();
+        const result = tj.supportedTTSModels();
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBeGreaterThan(0);
     });

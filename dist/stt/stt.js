@@ -56,5 +56,23 @@ export class STTController {
             this.microphoneController.stop();
         }
     }
+    /**
+     * Eagerly initialize the STT engine.
+     */
+    async ensureEngineInitialized() {
+        if (this.sttEngine === undefined) {
+            this.sttEngine = await createSTTEngine(this.listenConfig);
+            await this.sttEngine.initialize();
+        }
+    }
+    /**
+     * Clean up STT resources.
+     */
+    async cleanup() {
+        if (this.sttEngine) {
+            await this.sttEngine.cleanup?.();
+            this.sttEngine = undefined;
+        }
+    }
 }
 //# sourceMappingURL=stt.js.map

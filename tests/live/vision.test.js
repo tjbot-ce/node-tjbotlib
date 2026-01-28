@@ -46,7 +46,8 @@ async function runTest() {
         formatSection(`Initializing TJBot with Vision (${BACKENDS.find((b) => b.id === selectedBackend).label})`)
     );
 
-    const tj = new TJBot({
+    const tj = TJBot.getInstance();
+    await tj.initialize({
         hardware: { camera: true },
         see: seeConfig,
     });
@@ -112,7 +113,8 @@ async function promptONNXVisionOptions(task) {
     }
 
     // Get available models from metadata
-    const allModels = TJBot.supportedVisionModels();
+    const tjbot = TJBot.getInstance();
+    const allModels = tjbot.supportedVisionModels();
     const models = allModels.filter((m) => {
         // Get model metadata to check kind
         const metadata = allModels.find((mm) => mm.model === m.model);
@@ -126,7 +128,7 @@ async function promptONNXVisionOptions(task) {
 
     // Since we now have task-specific models in the config, just show which model will be used
     const defaultModel = models[0];
-    const installedModels = new Set(TJBot.installedVisionModels());
+    const installedModels = new Set(tjbot.installedVisionModels());
     const downloaded = installedModels.has(defaultModel.model);
     const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
 
@@ -149,7 +151,8 @@ async function promptAzureVisionOptions() {
 
 async function promptTaskChoice(selectedBackend) {
     // Get model information for display
-    const allModels = TJBot.supportedVisionModels();
+    const tjbot = TJBot.getInstance();
+    const allModels = tjbot.supportedVisionModels();
     const modelByKind = {};
     allModels.forEach((m) => {
         if (!modelByKind[m.kind]) {

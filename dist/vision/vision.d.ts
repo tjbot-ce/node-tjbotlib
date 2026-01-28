@@ -45,4 +45,12 @@ export declare class VisionController {
      * @param image Image buffer or file path
      */
     describeImage(image: Buffer | string): Promise<import("./vision-engine.js").ImageDescriptionResult>;
+    /**
+     * Eagerly initialize the Vision engine.
+     */
+    ensureEngineInitialized(): Promise<void>;
+    /**
+     * Clean up Vision resources.
+     */
+    cleanup(): Promise<void>;
 }

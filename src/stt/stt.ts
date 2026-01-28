@@ -70,4 +70,24 @@ export class STTController {
             this.microphoneController.stop();
         }
     }
+
+    /**
+     * Eagerly initialize the STT engine.
+     */
+    async ensureEngineInitialized(): Promise<void> {
+        if (this.sttEngine === undefined) {
+            this.sttEngine = await createSTTEngine(this.listenConfig);
+            await this.sttEngine.initialize();
+        }
+    }
+
+    /**
+     * Clean up STT resources.
+     */
+    async cleanup(): Promise<void> {
+        if (this.sttEngine) {
+            await this.sttEngine.cleanup?.();
+            this.sttEngine = undefined;
+        }
+    }
 }

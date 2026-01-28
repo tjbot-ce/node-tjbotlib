@@ -76,4 +76,21 @@ export class VisionController {
         if (!this.visionEngine) throw new Error('Vision engine is not initialized.');
         return this.visionEngine.describeImage(image);
     }
+
+    /**
+     * Eagerly initialize the Vision engine.
+     */
+    async ensureEngineInitialized(): Promise<void> {
+        await this._initializeVisionEngineIfNeeded();
+    }
+
+    /**
+     * Clean up Vision resources.
+     */
+    async cleanup(): Promise<void> {
+        if (this.visionEngine) {
+            await this.visionEngine.cleanup?.();
+            this.visionEngine = undefined;
+        }
+    }
 }
