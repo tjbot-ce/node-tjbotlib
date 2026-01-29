@@ -539,7 +539,80 @@ export class ONNXVisionEngine extends VisionEngine {
             });
         }
 
-        return faces;
+        // Apply Non-Maximum Suppression to remove overlapping detections
+        return this.applyNMS(faces, 0.5);
+    }
+
+    /**
+     * Apply Non-Maximum Suppression to remove overlapping face detections
+     * @param faces Array of detected faces
+     * @param iouThreshold IoU threshold for suppression (default 0.5)
+     * @returns Filtered array of non-overlapping faces
+     */
+    private applyNMS(faces: FaceDetectionMetadata[], iouThreshold: number = 0.5): FaceDetectionMetadata[] {
+        if (faces.length === 0) return faces;
+
+        // Sort by confidence descending
+        const sortedFaces = [...faces].sort((a, b) => b.confidence - a.confidence);
+        const result: FaceDetectionMetadata[] = [];
+        const suppressed: boolean[] = new Array(sortedFaces.length).fill(false);
+
+        for (let i = 0; i < sortedFaces.length; i++) {
+            if (suppressed[i]) continue;
+
+            result.push(sortedFaces[i]);
+
+            // Suppress overlapping faces
+            for (let j = i + 1; j < sortedFaces.length; j++) {
+                if (suppressed[j]) continue;
+
+                const iou = this.computeIoU(sortedFaces[i].boundingBox, sortedFaces[j].boundingBox);
+                if (iou > iouThreshold) {
+                    suppressed[j] = true;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Compute Intersection over Union (IoU) between two bounding boxes
+     * @param box1 [x, y, w, h]
+     * @param box2 [x, y, w, h]
+     * @returns IoU value between 0 and 1
+     */
+    private computeIoU(box1: [number, number, number, number], box2: [number, number, number, number]): number {
+        const [x1, y1, w1, h1] = box1;
+        const [x2, y2, w2, h2] = box2;
+
+        // Convert to [x_min, y_min, x_max, y_max] format
+        const x1_min = x1;
+        const y1_min = y1;
+        const x1_max = x1 + w1;
+        const y1_max = y1 + h1;
+
+        const x2_min = x2;
+        const y2_min = y2;
+        const x2_max = x2 + w2;
+        const y2_max = y2 + h2;
+
+        // Compute intersection
+        const inter_x_min = Math.max(x1_min, x2_min);
+        const inter_y_min = Math.max(y1_min, y2_min);
+        const inter_x_max = Math.min(x1_max, x2_max);
+        const inter_y_max = Math.min(y1_max, y2_max);
+
+        if (inter_x_min >= inter_x_max || inter_y_min >= inter_y_max) {
+            return 0; // No intersection
+        }
+
+        const interArea = (inter_x_max - inter_x_min) * (inter_y_max - inter_y_min);
+        const box1Area = w1 * h1;
+        const box2Area = w2 * h2;
+        const unionArea = box1Area + box2Area - interArea;
+
+        return interArea / unionArea;
     }
 
     /**

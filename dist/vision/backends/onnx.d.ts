@@ -84,6 +84,20 @@ export declare class ONNXVisionEngine extends VisionEngine {
      */
     private postprocessFaceDetection;
     /**
+     * Apply Non-Maximum Suppression to remove overlapping face detections
+     * @param faces Array of detected faces
+     * @param iouThreshold IoU threshold for suppression (default 0.5)
+     * @returns Filtered array of non-overlapping faces
+     */
+    private applyNMS;
+    /**
+     * Compute Intersection over Union (IoU) between two bounding boxes
+     * @param box1 [x, y, w, h]
+     * @param box2 [x, y, w, h]
+     * @returns IoU value between 0 and 1
+     */
+    private computeIoU;
+    /**
      * Preprocess image to Float32 tensor for ONNX model
      */
     private preprocessImage;

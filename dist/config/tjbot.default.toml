@@ -190,7 +190,7 @@ faceDetectionModel = 'yunet'
 # Valid range: 0.0 to 1.0 (0.8 = 80% confidence)
 objectDetectionConfidence = 0.8
 imageClassificationConfidence = 0.8
-faceDetectionConfidence = 0.8
+faceDetectionConfidence = 0.9
 
 [see.backend.google-cloud-vision]
 # Google Cloud Vision API credentials and model
