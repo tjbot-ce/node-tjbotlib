@@ -30,7 +30,7 @@ export class LEDNeopixelSPI {
 
     static readonly HIGH: number = 0xf8; // possibles: F0, F8, FC
     static readonly LOW: number = 0xc0; // possibles: C0
-    static readonly FREQ: number = 6400000; // possibles: 3200000, 6400000; pi5neo uses: spi_speed_khz (800) * 1024 * 8  = 6553600
+    static readonly FREQ: number = 6553600; // 800 KHz * 1024 * 8 = exact WS2812B timing (from pi5neo)
 
     constructor(spiInterface: string, useGRB: boolean = false) {
         const i = spiInterface || '/dev/spidev0.0';
