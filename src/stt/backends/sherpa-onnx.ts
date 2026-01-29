@@ -49,7 +49,7 @@ interface STTModelPaths {
  * @public
  */
 export class SherpaONNXSTTEngine extends STTEngine {
-    private manager: ModelRegistry = ModelRegistry.getInstance();
+    private registry: ModelRegistry = ModelRegistry.getInstance();
     private modelInfo?: STTModelMetadata;
     private modelPaths?: STTModelPaths;
     private vadPath?: string;
@@ -82,7 +82,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
             // Load STT model from registry
             const modelName = this.config.model as string;
             winston.info(`🎤 Loading STT model: ${modelName}`);
-            this.modelInfo = await this.manager.loadModel<STTModelMetadata>(modelName);
+            this.modelInfo = await this.registry.loadModel<STTModelMetadata>(modelName);
             this.modelPaths = await this.ensureModelIsDownloaded();
 
             // Download VAD model if needed for offline recognition
@@ -92,7 +92,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
                 if (this.modelInfo.type.startsWith('offline') && vadConfig.enabled) {
                     const vadModelName = vadConfig.model as string;
                     winston.info(`🎤 Loading VAD model: ${vadModelName}`);
-                    const vadInfo = await this.manager.loadModel<VADModelMetadata>(vadModelName);
+                    const vadInfo = await this.registry.loadModel<VADModelMetadata>(vadModelName);
                     this.vadPath = path.join(vadInfo.folder, vadModelName);
                 }
             }
@@ -119,7 +119,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
 
         try {
             // Get the full absolute path to the model cache directory
-            const modelCacheDir = this.manager.getSTTModelCacheDir();
+            const modelCacheDir = this.registry.getModelCacheDirForType('stt');
             const modelDir = path.join(modelCacheDir, this.modelInfo.folder);
 
             // Build model paths relative to the actual cache directory

@@ -75,29 +75,13 @@ export declare class ModelRegistry {
     /**
      * Get model cache directory
      */
-    private getModelCacheDir;
+    getModelCacheDir(): string;
     /**
      * Get model cache directory for a specific type
      * @param modelType The model type (stt, tts, vad, vision.*)
      * @returns The cache directory path for the specified model type
      */
-    private getModelCacheDirForType;
-    /**
-     * Get STT model cache directory
-     */
-    getSTTModelCacheDir(): string;
-    /**
-     * Get TTS model cache directory
-     */
-    getTTSModelCacheDir(): string;
-    /**
-     * Get VAD model cache directory
-     */
-    getVADModelCacheDir(): string;
-    /**
-     * Get Vision model cache directory
-     */
-    getVisionModelCacheDir(): string;
+    getModelCacheDirForType(modelType: ModelType | 'vision'): string;
     /**
      * Register a model in the registry
      * @param model The model metadata to register
@@ -108,69 +92,22 @@ export declare class ModelRegistry {
      * @param modelKey The model key
      * @returns The model metadata
      * @throws Error if model not found
-     * @private
      */
-    private lookupModel;
+    lookupModel<T extends BaseModelMetadata = BaseModelMetadata>(modelKey: string): T;
     /**
-     * Supported models of a given type
-     * Supports exact type matching and prefix matching for vision subtypes
-     * @param modelType The model type (stt, tts, vad, vision.*) or 'vision' to get all vision models
-     * @returns List of supported models of the specified type
-     * @private
+     * Lookup model metadata by type & installation status
+     * @param modelType The model type
+     * @param installedOnly If true, only return models that are downloaded
+     * @returns List of model metadata of the specified type
      */
-    private getSupportedModels;
+    lookupModels<T extends BaseModelMetadata = BaseModelMetadata>(modelType?: ModelType, installedOnly?: boolean): T[];
     /**
-     * Supported STT models (full metadata)
-     */
-    getSupportedSTTModels(): STTModelMetadata[];
-    /**
-     * Supported TTS models (full metadata)
-     */
-    getSupportedTTSModels(): TTSModelMetadata[];
-    /**
-     * Supported VAD models (full metadata)
-     */
-    getSupportedVADModels(): VADModelMetadata[];
-    /**
-     * Supported Vision models (full metadata)
-     */
-    getSupportedVisionModels(): VisionModelMetadata[];
-    /**
-     * Validate that all required model files exist in the given path
+     * Ensure a model is downloaded and return its path
      * @param modelKey The model key
-     * @returns True if all required files exist, false otherwise
+     * @returns The model metadata
+     * @throws TJBotError if model not found or download fails
      */
-    private validateModelFilesExist;
-    /**
-     * Installed models of a given type
-     * @param modelType The model type (stt, tts, vad, vision.*) or 'vision' to get all vision models
-     * @returns List of installed models of the specified type
-     */
-    getInstalledModels(modelType: ModelType | 'vision'): BaseModelMetadata[];
-    /**
-     * List installed STT models
-     * @returns List of installed STT models
-     */
-    getInstalledSTTModels(): STTModelMetadata[];
-    /**
-     * List installed TTS models
-     * @returns List of installed TTS models
-     */
-    getInstalledTTSModels(): TTSModelMetadata[];
-    /**
-     * List installed VAD models
-     * @returns List of installed VAD models
-     */
-    getInstalledVADModels(): VADModelMetadata[];
-    /**
-     * List installed Vision models
-     * @returns List of installed Vision models
-     */
-    getInstalledVisionModels(): VisionModelMetadata[];
-    /**
-     * Fetch the remote file size in bytes using HTTP HEAD
-     */
-    fetchModelSize(modelKey: string): Promise<number>;
+    loadModel<T extends BaseModelMetadata = BaseModelMetadata>(modelKey: string): Promise<T>;
     /**
      * Check if a model is downloaded in the specified cache directory
      * @param modelKey The model key
@@ -201,11 +138,4 @@ export declare class ModelRegistry {
         primaryPath: string;
         cachePath: string;
     } | undefined>;
-    /**
-     * Ensure a model is downloaded and return its path
-     * @param modelKey The model key
-     * @returns The model metadata
-     * @throws TJBotError if model not found or download fails
-     */
-    loadModel<T extends BaseModelMetadata = BaseModelMetadata>(modelKey: string): Promise<T>;
 }

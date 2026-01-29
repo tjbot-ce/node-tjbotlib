@@ -23,5 +23,5 @@ export {
     TTSModelMetadata,
     VADModelMetadata,
     VisionModelMetadata,
-} from './model-manager.js';
+} from './model-registry.js';
 export { convertHexToRgbColor, isCommandAvailable, normalizeColor, sleep } from './utils.js';

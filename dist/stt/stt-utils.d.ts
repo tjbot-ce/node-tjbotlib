@@ -15,5 +15,12 @@
  * limitations under the License.
  */
 import { ListenConfig } from '../config/index.js';
-import { ModelType } from './model-type.js';
-export declare function inferSTTMode(listenConfig: ListenConfig): ModelType;
+export type STTModelType = 'streaming' | 'offline';
+export type STTModelFlavor = 'streaming-zipformer' | 'streaming-paraformer' | 'offline-whisper' | 'offline-moonshine';
+/**
+ * Infer sherpa-onnx local model flavor from model name/URL.
+ * Throws a TJBotError if the flavor cannot be determined.
+ */
+export declare function inferLocalModelFlavor(modelName?: string, modelUrl?: string): STTModelFlavor;
+export declare function toModelType(flavor: STTModelFlavor): STTModelType;
+export declare function inferSTTMode(listenConfig: ListenConfig): STTModelType;

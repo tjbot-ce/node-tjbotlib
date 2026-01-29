@@ -27,7 +27,7 @@ import { STTEngine, STTRequestOptions } from '../stt-engine.js';
  * @public
  */
 export declare class SherpaONNXSTTEngine extends STTEngine {
-    private manager;
+    private registry;
     private modelInfo?;
     private modelPaths?;
     private vadPath?;

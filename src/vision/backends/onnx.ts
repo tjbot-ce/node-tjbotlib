@@ -20,7 +20,7 @@ import sharp from 'sharp';
 import winston from 'winston';
 import type { SeeBackendConfig } from '../../config/config-types.js';
 import { TJBotError, ModelRegistry } from '../../utils/index.js';
-import type { VisionModelMetadata } from '../../utils/model-manager.js';
+import type { VisionModelMetadata } from '../../utils/model-registry.js';
 import {
     ImageClassificationResult,
     ObjectDetectionResult,
@@ -77,7 +77,7 @@ export class ONNXVisionEngine extends VisionEngine {
     }
 
     /**
-     * Load a model and cache it
+     * Load a model
      */
     private async loadModel(modelName: string): Promise<void> {
         if (this.models.has(modelName)) {
@@ -91,7 +91,7 @@ export class ONNXVisionEngine extends VisionEngine {
             const metadata = await this.manager.loadModel<VisionModelMetadata>(modelName);
 
             // Build model path
-            const modelCacheDir = this.manager.getVisionModelCacheDir();
+            const modelCacheDir = this.manager.getModelCacheDirForType('vision');
             const modelDir = path.join(modelCacheDir, metadata.folder);
 
             // Find the ONNX model file in the required files

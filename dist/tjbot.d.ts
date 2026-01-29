@@ -19,20 +19,21 @@ import { TJBotConfig } from './config/tjbot-config.js';
 import { RPiHardwareDriver } from './rpi-drivers/index.js';
 import { Hardware } from './utils/index.js';
 import { ObjectDetectionResult, ImageClassificationResult, FaceDetectionResult, ImageDescriptionResult } from './vision/index.js';
+import { ModelType } from './utils/model-registry.js';
 /**
  * Class representing a TJBot
  */
 declare class TJBot {
     /**
-     * Singleton instance
-     * @private
-     */
-    private static instance;
-    /**
      * TJBot library version
      * @readonly
      */
     static VERSION: string;
+    /**
+     * Singleton instance
+     * @private
+     */
+    private static instance;
     /**
      * Hardware list
      * @readonly
@@ -54,7 +55,7 @@ declare class TJBot {
     /**
      * Cache of the colors recognized by TJBot
      */
-    _shineColors: string[];
+    private _shineColors;
     /**
      * Flag to track if TJBot has been initialized
      */
@@ -82,13 +83,6 @@ declare class TJBot {
      */
     initialize(overrideConfig?: Partial<TJBotConfigSchema>): Promise<void>;
     /**
-     * Clean up all resources. Called automatically before re-initialization.
-     * @throws {TJBotError} if cleanup fails
-     * @private
-     * @async
-     */
-    private cleanup;
-    /**
      * Auto-initialize hardware devices based on configuration
      * @private
      * @async
@@ -100,6 +94,13 @@ declare class TJBot {
      * @async
      */
     private initializeAIModels;
+    /**
+     * Clean up all resources. Called automatically before re-initialization.
+     * @throws {TJBotError} if cleanup fails
+     * @private
+     * @async
+     */
+    private cleanup;
     /**
      * Change the level of TJBot's logging.
      * @param {string} level Logging level (see Winston's [list of logging levels](https://github.com/winstonjs/winston?tab=readme-ov-file#using-logging-levels))
@@ -113,6 +114,14 @@ declare class TJBot {
      */
     private assertCapability;
     /** ------------------------------------------------------------------------ */
+    /** LOCAL AI/ML MODELS                                                       */
+    /** ------------------------------------------------------------------------ */
+    /**
+     * List the AI/ML models on this device.
+     * @returns {string[]} Array of installed model keys
+     */
+    getLocalModels(modelType?: ModelType, installedOnly?: boolean): string[];
+    /** ------------------------------------------------------------------------ */
     /** LISTEN                                                                   */
     /** ------------------------------------------------------------------------ */
     /**
@@ -123,20 +132,6 @@ declare class TJBot {
      * @public
      */
     listen(callback?: (text: string) => void): Promise<string | void>;
-    /**
-     * List all downloaded Sherpa-ONNX STT models on this device.
-     * @returns {string[]} Array of installed model keys
-     */
-    installedSTTModels(): string[];
-    /**
-     * List supported Sherpa-ONNX STT models for this device.
-     * @returns {Array<{ key: string, label: string, kind: string }>} Array of supported model info
-     */
-    supportedSTTModels(): Array<{
-        key: string;
-        label: string;
-        kind: string;
-    }>;
     /** ------------------------------------------------------------------------ */
     /** LOOK                                                                      */
     /** ------------------------------------------------------------------------ */
@@ -174,20 +169,6 @@ declare class TJBot {
      * @returns {Promise<ImageDescriptionResult>}
      */
     describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
-    /**
-     * List all installed ONNX vision models on this device.
-     * @returns {string[]} Array of installed vision model keys
-     */
-    installedVisionModels(): string[];
-    /**
-     * List supported ONNX vision models for this device.
-     * @returns {Array<{ model: string, label?: string, kind: string }>} Array of supported vision model info
-     */
-    supportedVisionModels(): Array<{
-        model: string;
-        label?: string;
-        kind: string;
-    }>;
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */
     /** ------------------------------------------------------------------------ */
@@ -247,19 +228,6 @@ declare class TJBot {
      * @public
      */
     play(soundFile: string): Promise<void>;
-    /**
-     * List all installed Sherpa-ONNX TTS models on this device.
-     * @returns {string[]} Array of installed TTS model keys
-     */
-    installedTTSModels(): string[];
-    /**
-     * List supported Sherpa-ONNX TTS models for this device.
-     * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
-     */
-    supportedTTSModels(): Array<{
-        model: string;
-        label?: string;
-    }>;
     /** ------------------------------------------------------------------------ */
     /** WAVE                                                                     */
     /** ------------------------------------------------------------------------ */

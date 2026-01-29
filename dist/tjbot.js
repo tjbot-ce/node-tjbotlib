@@ -136,25 +136,6 @@ class TJBot {
         winston.info('✅ TJBot initialization complete');
     }
     /**
-     * Clean up all resources. Called automatically before re-initialization.
-     * @throws {TJBotError} if cleanup fails
-     * @private
-     * @async
-     */
-    async cleanup() {
-        try {
-            if (this.rpiDriver) {
-                await this.rpiDriver.cleanup();
-            }
-            this._initialized = false;
-        }
-        catch (error) {
-            throw new TJBotError('Failed to clean up TJBot resources', {
-                cause: error instanceof Error ? error : new Error(String(error)),
-            });
-        }
-    }
-    /**
      * Auto-initialize hardware devices based on configuration
      * @private
      * @async
@@ -265,6 +246,25 @@ class TJBot {
         }
     }
     /**
+     * Clean up all resources. Called automatically before re-initialization.
+     * @throws {TJBotError} if cleanup fails
+     * @private
+     * @async
+     */
+    async cleanup() {
+        try {
+            if (this.rpiDriver) {
+                await this.rpiDriver.cleanup();
+            }
+            this._initialized = false;
+        }
+        catch (error) {
+            throw new TJBotError('Failed to clean up TJBot resources', {
+                cause: error instanceof Error ? error : new Error(String(error)),
+            });
+        }
+    }
+    /**
      * Change the level of TJBot's logging.
      * @param {string} level Logging level (see Winston's [list of logging levels](https://github.com/winstonjs/winston?tab=readme-ov-file#using-logging-levels))
      * @public
@@ -323,6 +323,18 @@ class TJBot {
         }
     }
     /** ------------------------------------------------------------------------ */
+    /** LOCAL AI/ML MODELS                                                       */
+    /** ------------------------------------------------------------------------ */
+    /**
+     * List the AI/ML models on this device.
+     * @returns {string[]} Array of installed model keys
+     */
+    getLocalModels(modelType, installedOnly = true) {
+        const registry = ModelRegistry.getInstance();
+        const models = registry.lookupModels(modelType, installedOnly);
+        return models.map((model) => model.key);
+    }
+    /** ------------------------------------------------------------------------ */
     /** LISTEN                                                                   */
     /** ------------------------------------------------------------------------ */
     /**
@@ -353,26 +365,6 @@ class TJBot {
         }
         // Offline / single-shot: return the transcript
         return await this.rpiDriver.listenForTranscript();
-    }
-    /**
-     * List all downloaded Sherpa-ONNX STT models on this device.
-     * @returns {string[]} Array of installed model keys
-     */
-    installedSTTModels() {
-        const manager = ModelRegistry.getInstance();
-        return manager.getInstalledSTTModels().map((m) => m.key);
-    }
-    /**
-     * List supported Sherpa-ONNX STT models for this device.
-     * @returns {Array<{ key: string, label: string, kind: string }>} Array of supported model info
-     */
-    supportedSTTModels() {
-        const manager = ModelRegistry.getInstance();
-        return manager.getSupportedSTTModels().map((m) => ({
-            key: m.key,
-            label: m.label,
-            kind: m.kind,
-        }));
     }
     /** ------------------------------------------------------------------------ */
     /** LOOK                                                                      */
@@ -422,22 +414,6 @@ class TJBot {
      */
     async describeImage(image) {
         return this.rpiDriver.describeImage(image);
-    }
-    /**
-     * List all installed ONNX vision models on this device.
-     * @returns {string[]} Array of installed vision model keys
-     */
-    installedVisionModels() {
-        const manager = ModelRegistry.getInstance();
-        return manager.getInstalledVisionModels().map((m) => m.key);
-    }
-    /**
-     * List supported ONNX vision models for this device.
-     * @returns {Array<{ model: string, label?: string, kind: string }>} Array of supported vision model info
-     */
-    supportedVisionModels() {
-        const manager = ModelRegistry.getInstance();
-        return manager.getSupportedVisionModels().map((m) => ({ model: m.key, label: m.label, kind: m.kind }));
     }
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */
@@ -566,25 +542,6 @@ class TJBot {
      */
     async play(soundFile) {
         await this.rpiDriver.playAudio(soundFile);
-    }
-    /**
-     * List all installed Sherpa-ONNX TTS models on this device.
-     * @returns {string[]} Array of installed TTS model keys
-     */
-    installedTTSModels() {
-        const manager = ModelRegistry.getInstance();
-        return manager.getInstalledTTSModels().map((m) => m.key);
-    }
-    /**
-     * List supported Sherpa-ONNX TTS models for this device.
-     * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
-     */
-    supportedTTSModels() {
-        const manager = ModelRegistry.getInstance();
-        return manager.getSupportedTTSModels().map((m) => ({
-            model: m.key,
-            label: m.label,
-        }));
     }
     /** ------------------------------------------------------------------------ */
     /** WAVE                                                                     */

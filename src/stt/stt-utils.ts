@@ -17,9 +17,40 @@
 
 import { ListenConfig, STTBackendType } from '../config/index.js';
 import { TJBotError } from '../utils/index.js';
-import { inferLocalModelFlavor, toModelType, ModelType } from './model-type.js';
 
-export function inferSTTMode(listenConfig: ListenConfig): ModelType {
+export type STTModelType = 'streaming' | 'offline';
+export type STTModelFlavor = 'streaming-zipformer' | 'streaming-paraformer' | 'offline-whisper' | 'offline-moonshine';
+
+/**
+ * Infer sherpa-onnx local model flavor from model name/URL.
+ * Throws a TJBotError if the flavor cannot be determined.
+ */
+export function inferLocalModelFlavor(modelName?: string, modelUrl?: string): STTModelFlavor {
+    const name = modelName?.toLowerCase() ?? '';
+    const url = modelUrl?.toLowerCase() ?? '';
+
+    const haystack = `${name} ${url}`;
+
+    const isWhisper = /whisper/.test(haystack);
+    const isMoonshine = /moonshine/.test(haystack);
+    const isZipformer = /zipformer|transducer|streaming-zipformer/.test(haystack);
+    const isParaformer = /paraformer/.test(haystack);
+
+    if (isWhisper) return 'offline-whisper';
+    if (isMoonshine) return 'offline-moonshine';
+    if (isZipformer) return 'streaming-zipformer';
+    if (isParaformer) return 'streaming-paraformer';
+
+    throw new TJBotError(
+        'Unable to infer STT model type. Provide a sherpa-onnx model name/URL that indicates whisper, moonshine, zipformer, or paraformer.'
+    );
+}
+
+export function toModelType(flavor: STTModelFlavor): STTModelType {
+    return flavor.startsWith('streaming') ? 'streaming' : 'offline';
+}
+
+export function inferSTTMode(listenConfig: ListenConfig): STTModelType {
     const backend = (listenConfig.backend?.type as STTBackendType) ?? 'local';
 
     if (backend === 'ibm-watson-stt' || backend === 'google-cloud-stt') {

@@ -20,7 +20,7 @@ import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
 import { TJBotError, ModelRegistry } from '../../utils/index.js';
 import type { TTSBackendLocalConfig } from '../../config/config-types.js';
-import type { TTSModelMetadata } from '../../utils/model-manager.js';
+import type { TTSModelMetadata } from '../../utils/model-registry.js';
 
 // Lazy require sherpa-onnx to avoid hard dependency issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,7 +88,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
     private async ensureModelIsDownloaded(): Promise<string> {
         try {
             const model = await this.manager.loadModel<TTSModelMetadata>(this.config.model as string);
-            const cacheDir = this.manager.getTTSModelCacheDir();
+            const cacheDir = this.manager.getModelCacheDirForType('tts');
             return path.join(cacheDir, model.folder, model.required[0]);
         } catch (error) {
             throw new TJBotError('Failed to load TTS model path', { cause: error as Error });

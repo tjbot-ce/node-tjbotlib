@@ -16,6 +16,6 @@
  */
 export { Capability, Hardware } from './constants.js';
 export { TJBotError } from './errors.js';
-export { ModelRegistry, } from './model-manager.js';
+export { ModelRegistry, } from './model-registry.js';
 export { convertHexToRgbColor, isCommandAvailable, normalizeColor, sleep } from './utils.js';
 //# sourceMappingURL=index.js.map

@@ -15,7 +15,31 @@
  * limitations under the License.
  */
 import { TJBotError } from '../utils/index.js';
-import { inferLocalModelFlavor, toModelType } from './model-type.js';
+/**
+ * Infer sherpa-onnx local model flavor from model name/URL.
+ * Throws a TJBotError if the flavor cannot be determined.
+ */
+export function inferLocalModelFlavor(modelName, modelUrl) {
+    const name = modelName?.toLowerCase() ?? '';
+    const url = modelUrl?.toLowerCase() ?? '';
+    const haystack = `${name} ${url}`;
+    const isWhisper = /whisper/.test(haystack);
+    const isMoonshine = /moonshine/.test(haystack);
+    const isZipformer = /zipformer|transducer|streaming-zipformer/.test(haystack);
+    const isParaformer = /paraformer/.test(haystack);
+    if (isWhisper)
+        return 'offline-whisper';
+    if (isMoonshine)
+        return 'offline-moonshine';
+    if (isZipformer)
+        return 'streaming-zipformer';
+    if (isParaformer)
+        return 'streaming-paraformer';
+    throw new TJBotError('Unable to infer STT model type. Provide a sherpa-onnx model name/URL that indicates whisper, moonshine, zipformer, or paraformer.');
+}
+export function toModelType(flavor) {
+    return flavor.startsWith('streaming') ? 'streaming' : 'offline';
+}
 export function inferSTTMode(listenConfig) {
     const backend = listenConfig.backend?.type ?? 'local';
     if (backend === 'ibm-watson-stt' || backend === 'google-cloud-stt') {

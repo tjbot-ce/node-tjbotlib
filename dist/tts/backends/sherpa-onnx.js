@@ -73,7 +73,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
     async ensureModelIsDownloaded() {
         try {
             const model = await this.manager.loadModel(this.config.model);
-            const cacheDir = this.manager.getTTSModelCacheDir();
+            const cacheDir = this.manager.getModelCacheDirForType('tts');
             return path.join(cacheDir, model.folder, model.required[0]);
         }
         catch (error) {

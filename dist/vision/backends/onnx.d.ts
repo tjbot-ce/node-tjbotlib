@@ -24,7 +24,7 @@ export declare class ONNXVisionEngine extends VisionEngine {
      */
     initialize(): Promise<void>;
     /**
-     * Load a model and cache it
+     * Load a model
      */
     private loadModel;
     /**

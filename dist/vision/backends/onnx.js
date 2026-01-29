@@ -52,7 +52,7 @@ export class ONNXVisionEngine extends VisionEngine {
         }
     }
     /**
-     * Load a model and cache it
+     * Load a model
      */
     async loadModel(modelName) {
         if (this.models.has(modelName)) {
@@ -63,7 +63,7 @@ export class ONNXVisionEngine extends VisionEngine {
             // Get model metadata and download
             const metadata = await this.manager.loadModel(modelName);
             // Build model path
-            const modelCacheDir = this.manager.getVisionModelCacheDir();
+            const modelCacheDir = this.manager.getModelCacheDirForType('vision');
             const modelDir = path.join(modelCacheDir, metadata.folder);
             // Find the ONNX model file in the required files
             const onnxFile = metadata.required.find((file) => file.endsWith('.onnx'));
