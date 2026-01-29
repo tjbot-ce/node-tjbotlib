@@ -95,9 +95,12 @@ export const listenConfigSchema = z
 export const seeBackendTypeSchema = z.enum(['local', 'google-cloud-vision', 'azure-vision']);
 export const seeBackendLocalConfigSchema = z
     .object({
-    detectionModel: z.string().optional(),
-    classificationModel: z.string().optional(),
+    objectDetectionModel: z.string().optional(),
+    imageClassificationModel: z.string().optional(),
     faceDetectionModel: z.string().optional(),
+    objectDetectionConfidence: z.number().optional(),
+    imageClassificationConfidence: z.number().optional(),
+    faceDetectionConfidence: z.number().optional(),
 })
     .loose();
 export const seeBackendGoogleCloudConfigSchema = z

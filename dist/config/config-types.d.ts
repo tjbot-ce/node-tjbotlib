@@ -162,9 +162,12 @@ export declare const seeBackendTypeSchema: z.ZodEnum<{
 }>;
 export type SeeBackendType = z.infer<typeof seeBackendTypeSchema>;
 export declare const seeBackendLocalConfigSchema: z.ZodObject<{
-    detectionModel: z.ZodOptional<z.ZodString>;
-    classificationModel: z.ZodOptional<z.ZodString>;
+    objectDetectionModel: z.ZodOptional<z.ZodString>;
+    imageClassificationModel: z.ZodOptional<z.ZodString>;
     faceDetectionModel: z.ZodOptional<z.ZodString>;
+    objectDetectionConfidence: z.ZodOptional<z.ZodNumber>;
+    imageClassificationConfidence: z.ZodOptional<z.ZodNumber>;
+    faceDetectionConfidence: z.ZodOptional<z.ZodNumber>;
 }, z.core.$loose>;
 export type SeeBackendLocalConfig = z.infer<typeof seeBackendLocalConfigSchema>;
 export declare const seeBackendGoogleCloudConfigSchema: z.ZodObject<{
@@ -184,9 +187,12 @@ export declare const seeBackendConfigSchema: z.ZodObject<{
         "azure-vision": "azure-vision";
     }>>;
     local: z.ZodOptional<z.ZodObject<{
-        detectionModel: z.ZodOptional<z.ZodString>;
-        classificationModel: z.ZodOptional<z.ZodString>;
+        objectDetectionModel: z.ZodOptional<z.ZodString>;
+        imageClassificationModel: z.ZodOptional<z.ZodString>;
         faceDetectionModel: z.ZodOptional<z.ZodString>;
+        objectDetectionConfidence: z.ZodOptional<z.ZodNumber>;
+        imageClassificationConfidence: z.ZodOptional<z.ZodNumber>;
+        faceDetectionConfidence: z.ZodOptional<z.ZodNumber>;
     }, z.core.$loose>>;
     'google-cloud-vision': z.ZodOptional<z.ZodObject<{
         credentialsPath: z.ZodOptional<z.ZodString>;
@@ -212,9 +218,12 @@ export declare const seeConfigSchema: z.ZodObject<{
             "azure-vision": "azure-vision";
         }>>;
         local: z.ZodOptional<z.ZodObject<{
-            detectionModel: z.ZodOptional<z.ZodString>;
-            classificationModel: z.ZodOptional<z.ZodString>;
+            objectDetectionModel: z.ZodOptional<z.ZodString>;
+            imageClassificationModel: z.ZodOptional<z.ZodString>;
             faceDetectionModel: z.ZodOptional<z.ZodString>;
+            objectDetectionConfidence: z.ZodOptional<z.ZodNumber>;
+            imageClassificationConfidence: z.ZodOptional<z.ZodNumber>;
+            faceDetectionConfidence: z.ZodOptional<z.ZodNumber>;
         }, z.core.$loose>>;
         'google-cloud-vision': z.ZodOptional<z.ZodObject<{
             credentialsPath: z.ZodOptional<z.ZodString>;
@@ -475,9 +484,12 @@ export declare const tjbotConfigSchema: z.ZodObject<{
                 "azure-vision": "azure-vision";
             }>>;
             local: z.ZodOptional<z.ZodObject<{
-                detectionModel: z.ZodOptional<z.ZodString>;
-                classificationModel: z.ZodOptional<z.ZodString>;
+                objectDetectionModel: z.ZodOptional<z.ZodString>;
+                imageClassificationModel: z.ZodOptional<z.ZodString>;
                 faceDetectionModel: z.ZodOptional<z.ZodString>;
+                objectDetectionConfidence: z.ZodOptional<z.ZodNumber>;
+                imageClassificationConfidence: z.ZodOptional<z.ZodNumber>;
+                faceDetectionConfidence: z.ZodOptional<z.ZodNumber>;
             }, z.core.$loose>>;
             'google-cloud-vision': z.ZodOptional<z.ZodObject<{
                 credentialsPath: z.ZodOptional<z.ZodString>;

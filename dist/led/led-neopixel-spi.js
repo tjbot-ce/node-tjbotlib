@@ -103,5 +103,5 @@ export class LEDNeopixelSPI {
 }
 LEDNeopixelSPI.HIGH = 0xf8; // possibles: F0, F8, FC
 LEDNeopixelSPI.LOW = 0xc0; // possibles: C0
-LEDNeopixelSPI.FREQ = 6400000; // possibles: 3200000, 6400000; pi5neo uses: spi_speed_khz (800) * 1024 * 8  = 6553600
+LEDNeopixelSPI.FREQ = 6553600; // 800 KHz * 1024 * 8 = exact WS2812B timing (from pi5neo)
 //# sourceMappingURL=led-neopixel-spi.js.map

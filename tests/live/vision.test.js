@@ -18,6 +18,7 @@
 
 import { select } from '@inquirer/prompts';
 import { TJBot } from '../../dist/tjbot.js';
+import { ModelRegistry } from '../../dist/utils/model-registry.js';
 import fs from 'fs';
 import path from 'path';
 import { initWinston, formatTitle, formatSection } from './utils.js';
@@ -40,7 +41,7 @@ async function runTest() {
     await promptBackendSpecificOptions(selectedBackend, task);
 
     // Build see config from user choices
-    const seeConfig = buildSeeConfig(selectedBackend, task);
+    const seeConfig = buildSeeConfig(selectedBackend);
 
     console.log(
         formatSection(`Initializing TJBot with Vision (${BACKENDS.find((b) => b.id === selectedBackend).label})`)
@@ -102,9 +103,9 @@ async function promptBackendSpecificOptions(selectedBackend, task) {
 async function promptONNXVisionOptions(task) {
     // Map task to model type
     const modelTypeMap = {
-        detectObjects: 'detection',
-        classifyImage: 'classification',
-        detectFaces: 'face-detection',
+        detectObjects: 'vision.object-recognition',
+        classifyImage: 'vision.classification',
+        detectFaces: 'vision.face-detection',
     };
 
     const modelType = modelTypeMap[task];
@@ -112,27 +113,21 @@ async function promptONNXVisionOptions(task) {
         return {};
     }
 
-    // Get available models from metadata
-    const tjbot = TJBot.getInstance();
-    const allModels = tjbot.supportedVisionModels();
-    const models = allModels.filter((m) => {
-        // Get model metadata to check kind
-        const metadata = allModels.find((mm) => mm.model === m.model);
-        return metadata && metadata.kind === modelType;
-    });
+    // Get available models from registry
+    const registry = ModelRegistry.getInstance();
+    const models = registry.lookupModels(modelType, false);
 
     if (models.length === 0) {
         console.log(`\nNo models available for task: ${task}`);
         return {};
     }
 
-    // Since we now have task-specific models in the config, just show which model will be used
+    // Show which model will be used and its status
     const defaultModel = models[0];
-    const installedModels = new Set(tjbot.installedVisionModels());
-    const downloaded = installedModels.has(defaultModel.model);
-    const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
+    const isDownloaded = registry.isModelDownloaded(defaultModel.key);
+    const status = isDownloaded ? '✓ downloaded' : '✗ not downloaded';
 
-    console.log(`\nUsing ${modelType} model: ${defaultModel.label || defaultModel.model} ${status}`);
+    console.log(`\nUsing model: ${defaultModel.label || defaultModel.key} ${status}`);
 
     return {};
 }
@@ -150,41 +145,41 @@ async function promptAzureVisionOptions() {
 }
 
 async function promptTaskChoice(selectedBackend) {
-    // Get model information for display
-    const tjbot = TJBot.getInstance();
-    const allModels = tjbot.supportedVisionModels();
-    const modelByKind = {};
-    allModels.forEach((m) => {
-        if (!modelByKind[m.kind]) {
-            modelByKind[m.kind] = m.label || m.model;
-        }
-    });
+    // Get model information from registry
+    const registry = ModelRegistry.getInstance();
 
-    // Validate that required model kinds are defined
-    const requiredKinds = ['detection', 'classification', 'face-detection'];
-    for (const kind of requiredKinds) {
-        if (!modelByKind[kind]) {
-            throw new Error(`Required vision model kind not found: ${kind}`);
-        }
+    // Get models for each vision task type
+    const detectionModels = registry.lookupModels('vision.object-recognition', false);
+    const classificationModels = registry.lookupModels('vision.classification', false);
+    const faceDetectionModels = registry.lookupModels('vision.face-detection', false);
+    const imageDescriptionModels = registry.lookupModels('vision.image-description', false);
+
+    // Validate that required model kinds are available
+    if (detectionModels.length === 0 || classificationModels.length === 0 || faceDetectionModels.length === 0) {
+        throw new Error('Required vision models not found in registry');
     }
+
+    const detectionLabel = detectionModels[0].label || detectionModels[0].key;
+    const classificationLabel = classificationModels[0].label || classificationModels[0].key;
+    const faceDetectionLabel = faceDetectionModels[0].label || faceDetectionModels[0].key;
 
     const tasks = [
         {
-            name: `Object detection (${modelByKind['detection']})`,
+            name: `Object detection (${detectionLabel})`,
             value: 'detectObjects',
         },
         {
-            name: `Image classification (${modelByKind['classification']})`,
+            name: `Image classification (${classificationLabel})`,
             value: 'classifyImage',
         },
         {
-            name: `Face detection (${modelByKind['face-detection']})`,
+            name: `Face detection (${faceDetectionLabel})`,
             value: 'detectFaces',
         },
     ];
 
     // Add image description only for Azure backend
-    if (selectedBackend === 'azure-vision') {
+    if (selectedBackend === 'azure-vision' && imageDescriptionModels.length > 0) {
         tasks.push({ name: 'Image description', value: 'describeImage' });
     }
 
@@ -206,21 +201,22 @@ function buildSeeConfig(selectedBackend) {
     // Build backend-specific configuration
     if (selectedBackend === 'local') {
         // For local backend, configure all required models with defaults
-        const tjbot = TJBot.getInstance();
-        const allModels = tjbot.supportedVisionModels();
+        const registry = ModelRegistry.getInstance();
 
-        const kindMap = {
-            detectionModel: 'detection',
-            classificationModel: 'classification',
-            faceDetectionModel: 'face-detection',
-        };
+        // Get default models for each vision task
+        const detectionModels = registry.lookupModels('vision.object-recognition', false);
+        const classificationModels = registry.lookupModels('vision.classification', false);
+        const faceDetectionModels = registry.lookupModels('vision.face-detection', false);
 
         const localConfig = {};
-        for (const [modelKey, modelKind] of Object.entries(kindMap)) {
-            const defaultModel = allModels.find((m) => m.kind === modelKind);
-            if (defaultModel) {
-                localConfig[modelKey] = defaultModel.model;
-            }
+        if (detectionModels.length > 0) {
+            localConfig.objectDetectionModel = detectionModels[0].key;
+        }
+        if (classificationModels.length > 0) {
+            localConfig.imageClassificationModel = classificationModels[0].key;
+        }
+        if (faceDetectionModels.length > 0) {
+            localConfig.faceDetectionModel = faceDetectionModels[0].key;
         }
 
         baseConfig.backend.local = localConfig;

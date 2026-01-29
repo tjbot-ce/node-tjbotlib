@@ -177,23 +177,49 @@ export class TJBotConfig {
      * @private
      */
     private validateVisionLocalModels(localConfig: Record<string, unknown>): void {
-        const { detectionModel, classificationModel, faceDetectionModel } = localConfig as {
-            detectionModel?: string;
-            classificationModel?: string;
+        const {
+            objectDetectionModel,
+            imageClassificationModel,
+            faceDetectionModel,
+            objectDetectionConfidence,
+            imageClassificationConfidence,
+            faceDetectionConfidence,
+        } = localConfig as {
+            objectDetectionModel?: string;
+            imageClassificationModel?: string;
             faceDetectionModel?: string;
+            objectDetectionConfidence?: number;
+            imageClassificationConfidence?: number;
+            faceDetectionConfidence?: number;
         };
 
         // Models are validated at runtime when engine initializes
         // This is a basic validation that models are specified
         const models = [
-            { field: 'detectionModel', value: detectionModel, expectedKind: 'detection' },
-            { field: 'classificationModel', value: classificationModel, expectedKind: 'classification' },
+            { field: 'objectDetectionModel', value: objectDetectionModel, expectedKind: 'detection' },
+            { field: 'imageClassificationModel', value: imageClassificationModel, expectedKind: 'classification' },
             { field: 'faceDetectionModel', value: faceDetectionModel, expectedKind: 'face-detection' },
         ];
 
         for (const model of models) {
             if (!model.value) {
                 throw new TJBotError(`Vision local backend: ${model.field} is required but not configured`);
+            }
+        }
+
+        // Validate confidence thresholds if provided
+        const confidenceThresholds = [
+            { field: 'objectDetectionConfidence', value: objectDetectionConfidence },
+            { field: 'imageClassificationConfidence', value: imageClassificationConfidence },
+            { field: 'faceDetectionConfidence', value: faceDetectionConfidence },
+        ];
+
+        for (const threshold of confidenceThresholds) {
+            if (
+                threshold.value !== undefined &&
+                (typeof threshold.value !== 'number' || threshold.value < 0 || threshold.value > 1)
+            ) {
+                throw new TJBotError(`Vision local backend: ${threshold.field} must be a number between 0.0 and 1.0`);
             }
         }
     }

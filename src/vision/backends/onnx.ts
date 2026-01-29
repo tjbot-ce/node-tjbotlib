@@ -54,13 +54,13 @@ export class ONNXVisionEngine extends VisionEngine {
             // Validate that configuration is present
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const localConfig = (this.config as any) ?? {};
-            const detectionModelName = localConfig.detectionModel as string;
-            const classificationModelName = localConfig.classificationModel as string;
+            const detectionModelName = localConfig.objectDetectionModel as string;
+            const classificationModelName = localConfig.imageClassificationModel as string;
             const faceDetectionModelName = localConfig.faceDetectionModel as string;
 
             if (!detectionModelName || !classificationModelName || !faceDetectionModelName) {
                 throw new TJBotError(
-                    'ONNX vision engine config is missing required model names (detectionModel, classificationModel, faceDetectionModel)'
+                    'ONNX vision engine config is missing required model names (objectDetectionModel, imageClassificationModel, faceDetectionModel)'
                 );
             }
 
@@ -234,7 +234,8 @@ export class ONNXVisionEngine extends VisionEngine {
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const localConfig = (this.config as any) ?? {};
-        const detectionModelName = localConfig.detectionModel as string;
+        const detectionModelName = localConfig.objectDetectionModel as string;
+        const confidenceThreshold = (localConfig.objectDetectionConfidence as number) ?? 0.8;
 
         // Lazy load model if needed
         const model = await this.getOrLoadModel(detectionModelName);
@@ -250,7 +251,7 @@ export class ONNXVisionEngine extends VisionEngine {
             const results = await model.session.run(feeds);
 
             // Postprocess YOLO output
-            return this.postprocessDetection(results, model.labels, model.session.outputNames);
+            return this.postprocessDetection(results, model.labels, model.session.outputNames, confidenceThreshold);
         } catch (error) {
             throw new TJBotError('Object detection failed', { cause: error as Error });
         }
@@ -259,13 +260,12 @@ export class ONNXVisionEngine extends VisionEngine {
     /**
      * Classify an image.
      */
-    async classifyImage(
-        image: Buffer | string,
-        confidenceThreshold: number = 0.5
-    ): Promise<ImageClassificationResult[]> {
+    async classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const localConfig = (this.config as any) ?? {};
-        const classificationModelName = localConfig.classificationModel as string;
+        const classificationModelName = localConfig.imageClassificationModel as string;
+        // Use provided threshold, fall back to config, then default to 0.8
+        const threshold = confidenceThreshold ?? (localConfig.imageClassificationConfidence as number) ?? 0.8;
 
         // Lazy load model if needed
         const model = await this.getOrLoadModel(classificationModelName);
@@ -281,12 +281,7 @@ export class ONNXVisionEngine extends VisionEngine {
             const results = await model.session.run(feeds);
 
             // Postprocess classification output
-            return this.postprocessClassification(
-                results,
-                model.labels,
-                confidenceThreshold,
-                model.session.outputNames
-            );
+            return this.postprocessClassification(results, model.labels, threshold, model.session.outputNames);
         } catch (error) {
             throw new TJBotError('Image classification failed', { cause: error as Error });
         }
@@ -299,6 +294,7 @@ export class ONNXVisionEngine extends VisionEngine {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const localConfig = (this.config as any) ?? {};
         const faceDetectionModelName = localConfig.faceDetectionModel as string;
+        const confidenceThreshold = (localConfig.faceDetectionConfidence as number) ?? 0.8;
 
         // Lazy load model if needed
         const model = await this.getOrLoadModel(faceDetectionModelName);
@@ -314,7 +310,7 @@ export class ONNXVisionEngine extends VisionEngine {
             const results = await model.session.run(feeds);
 
             // Postprocess face detection output
-            return this.postprocessFaceDetection(results, model.session.outputNames);
+            return this.postprocessFaceDetection(results, model.session.outputNames, confidenceThreshold);
         } catch (error) {
             throw new TJBotError('Face detection failed', { cause: error as Error });
         }
@@ -345,7 +341,8 @@ export class ONNXVisionEngine extends VisionEngine {
     private postprocessDetection(
         results: Record<string, ort.Tensor>,
         labels: string[],
-        outputNames: readonly string[]
+        outputNames: readonly string[],
+        confidenceThreshold: number = 0.8
     ): ObjectDetectionResult[] {
         const outputName = outputNames[0];
         const outputData = results[outputName].data as Float32Array;
@@ -360,8 +357,8 @@ export class ONNXVisionEngine extends VisionEngine {
             // Apply sigmoid to normalize confidence (it's a logit from the model)
             const confidence = this.sigmoid(outputData[i + 4]);
 
-            // Filter by confidence threshold (0.25)
-            if (confidence < 0.25) continue;
+            // Filter by confidence threshold
+            if (confidence < confidenceThreshold) continue;
 
             // Find class with highest probability (apply sigmoid to class scores too)
             let maxClassScore = 0;
@@ -495,7 +492,8 @@ export class ONNXVisionEngine extends VisionEngine {
      */
     private postprocessFaceDetection(
         results: Record<string, ort.Tensor>,
-        outputNames: readonly string[]
+        outputNames: readonly string[],
+        confidenceThreshold: number = 0.8
     ): FaceDetectionResult[] {
         const outputName = outputNames[0];
         const detections = results[outputName].data as Float32Array;
@@ -515,6 +513,9 @@ export class ONNXVisionEngine extends VisionEngine {
             const w = detections[i + 2];
             const h = detections[i + 3];
             const confidence = detections[i + 4];
+
+            // Filter by confidence threshold
+            if (confidence < confidenceThreshold) continue;
 
             // Extract 5 landmarks
             const landmarks: Landmark[] = [];

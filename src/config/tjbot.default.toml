@@ -181,9 +181,16 @@ type = 'local'
 # DEFAULT MODELS (OFFLINE): Specialized quantized models for each vision task
 # All models are downloaded and cached automatically when using local backend
 # See model-registry.yaml for available models for each task
-detectionModel = 'ssd-mobilenet-v2'
-classificationModel = 'mobilenetv3'
+objectDetectionModel = 'ssd-mobilenet-v2'
+imageClassificationModel = 'mobilenetv3'
 faceDetectionModel = 'yunet'
+
+# Confidence thresholds for filtering results
+# Results with confidence scores below these thresholds will be excluded
+# Valid range: 0.0 to 1.0 (0.8 = 80% confidence)
+objectDetectionConfidence = 0.8
+imageClassificationConfidence = 0.8
+faceDetectionConfidence = 0.8
 
 [see.backend.google-cloud-vision]
 # Google Cloud Vision API credentials and model
