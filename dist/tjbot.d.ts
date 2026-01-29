@@ -18,7 +18,7 @@ import type { TJBotConfigSchema } from './config/config-types.js';
 import { TJBotConfig } from './config/tjbot-config.js';
 import { RPiHardwareDriver } from './rpi-drivers/index.js';
 import { Hardware } from './utils/index.js';
-import { ObjectDetectionResult, ImageClassificationResult, FaceDetectionResult, ImageDescriptionResult } from './vision/index.js';
+import { ObjectDetectionResult, ImageClassificationResult, FaceDetectionMetadata, ImageDescriptionResult } from './vision/index.js';
 import { ModelType } from './utils/model-registry.js';
 /**
  * Class representing a TJBot
@@ -160,9 +160,12 @@ declare class TJBot {
     /**
      * Detect faces in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
-     * @returns {Promise<FaceDetectionResult[]>}
+     * @returns {Promise<{isFaceDetected: boolean, metadata: FaceDetectionMetadata[]}>}
      */
-    detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
     /**
      * Describe an image using the configured vision engine (Azure only).
      * @param {Buffer|string} image Image buffer or file path

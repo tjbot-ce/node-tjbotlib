@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { VisionEngine, type ObjectDetectionResult, type ImageClassificationResult, type FaceDetectionResult, type ImageDescriptionResult } from '../vision-engine.js';
+import { VisionEngine, type ObjectDetectionResult, type ImageClassificationResult, type FaceDetectionMetadata, type ImageDescriptionResult } from '../vision-engine.js';
 import type { SeeBackendGoogleCloudConfig } from '../../config/config-types.js';
 export declare class GoogleCloudVisionEngine extends VisionEngine {
     private credentialsPath?;
@@ -24,6 +24,9 @@ export declare class GoogleCloudVisionEngine extends VisionEngine {
     initialize(): Promise<void>;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
-    detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
     describeImage(_image: Buffer | string): Promise<ImageDescriptionResult>;
 }

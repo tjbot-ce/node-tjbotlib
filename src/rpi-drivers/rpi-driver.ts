@@ -30,7 +30,7 @@ import { Capability, convertHexToRgbColor, Hardware, isCommandAvailable, TJBotEr
 import {
     ImageClassificationResult,
     ObjectDetectionResult,
-    FaceDetectionResult,
+    FaceDetectionMetadata,
     ImageDescriptionResult,
 } from '../vision/index.js';
 import { VisionController } from '../vision/vision.js';
@@ -71,7 +71,9 @@ export abstract class RPiHardwareDriver {
     abstract capturePhoto(atPath?: string): Promise<string>;
     abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
-    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    abstract detectFaces(
+        image: Buffer | string
+    ): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }>;
     abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
 
     // SHINE
@@ -281,7 +283,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         return this.visionController.describeImage(image);
     }
 
-    async detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]> {
+    async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
         if (!this.visionController) {
             throw new TJBotError(
                 'Vision controller is not initialized. Make sure to call setupCamera() before using Vision.'

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import type { SeeBackendConfig } from '../../config/config-types.js';
-import { ImageClassificationResult, ObjectDetectionResult, VisionEngine, FaceDetectionResult, ImageDescriptionResult } from '../vision-engine.js';
+import { ImageClassificationResult, ObjectDetectionResult, VisionEngine, FaceDetectionMetadata, ImageDescriptionResult } from '../vision-engine.js';
 export declare class ONNXVisionEngine extends VisionEngine {
     private manager;
     private models;
@@ -46,7 +46,10 @@ export declare class ONNXVisionEngine extends VisionEngine {
     /**
      * Detect faces in an image.
      */
-    detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
     /**
      * Describe an image - not supported by ONNX backend.
      */

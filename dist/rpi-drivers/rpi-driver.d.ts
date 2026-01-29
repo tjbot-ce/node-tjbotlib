@@ -24,7 +24,7 @@ import { SpeakerController } from '../speaker/index.js';
 import { STTController } from '../stt/stt.js';
 import { TTSController } from '../tts/tts.js';
 import { Capability, Hardware } from '../utils/index.js';
-import { ImageClassificationResult, ObjectDetectionResult, FaceDetectionResult, ImageDescriptionResult } from '../vision/index.js';
+import { ImageClassificationResult, ObjectDetectionResult, FaceDetectionMetadata, ImageDescriptionResult } from '../vision/index.js';
 import { VisionController } from '../vision/vision.js';
 export declare abstract class RPiHardwareDriver {
     abstract hasHardware(hardware: Hardware): boolean;
@@ -53,7 +53,10 @@ export declare abstract class RPiHardwareDriver {
     abstract capturePhoto(atPath?: string): Promise<string>;
     abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
-    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    abstract detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
     abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
     abstract renderLED(hexColor: string): Promise<void>;
     abstract renderLEDCommonAnode(rgbColor: [number, number, number]): void;
@@ -94,7 +97,10 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
     describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
-    detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
     renderLED(hexColor: string): Promise<void>;
     playAudio(audioPath: string): Promise<void>;
     speak(message: string): Promise<void>;

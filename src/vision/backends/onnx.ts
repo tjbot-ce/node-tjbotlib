@@ -25,7 +25,7 @@ import {
     ImageClassificationResult,
     ObjectDetectionResult,
     VisionEngine,
-    FaceDetectionResult,
+    FaceDetectionMetadata,
     ImageDescriptionResult,
     Landmark,
 } from '../vision-engine.js';
@@ -290,7 +290,7 @@ export class ONNXVisionEngine extends VisionEngine {
     /**
      * Detect faces in an image.
      */
-    async detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]> {
+    async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const localConfig = (this.config as any) ?? {};
         const faceDetectionModelName = localConfig.faceDetectionModel as string;
@@ -310,7 +310,11 @@ export class ONNXVisionEngine extends VisionEngine {
             const results = await model.session.run(feeds);
 
             // Postprocess face detection output
-            return this.postprocessFaceDetection(results, model.session.outputNames, confidenceThreshold);
+            const metadata = this.postprocessFaceDetection(results, model.session.outputNames, confidenceThreshold);
+            return {
+                isFaceDetected: metadata.length > 0,
+                metadata,
+            };
         } catch (error) {
             throw new TJBotError('Face detection failed', { cause: error as Error });
         }
@@ -494,11 +498,11 @@ export class ONNXVisionEngine extends VisionEngine {
         results: Record<string, ort.Tensor>,
         outputNames: readonly string[],
         confidenceThreshold: number = 0.8
-    ): FaceDetectionResult[] {
+    ): FaceDetectionMetadata[] {
         const outputName = outputNames[0];
         const detections = results[outputName].data as Float32Array;
 
-        const faces: FaceDetectionResult[] = [];
+        const faces: FaceDetectionMetadata[] = [];
 
         // YuNet output format per face: 15 values
         // [x, y, w, h, confidence, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5]

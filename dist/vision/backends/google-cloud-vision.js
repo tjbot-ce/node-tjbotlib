@@ -151,7 +151,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             throw new Error(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json());
-        const results = [];
+        const metadata = [];
         if (data.responses && data.responses[0] && data.responses[0].faceAnnotations) {
             for (const face of data.responses[0].faceAnnotations) {
                 // Extract bounding box from boundingPoly
@@ -185,7 +185,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                         pitch: face.headPose.tiltAngle || 0,
                     };
                 }
-                results.push({
+                metadata.push({
                     boundingBox: [x, y, w, h],
                     confidence: face.detectionConfidence || 0,
                     landmarks,
@@ -193,7 +193,10 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                 });
             }
         }
-        return results;
+        return {
+            isFaceDetected: metadata.length > 0,
+            metadata,
+        };
     }
     async describeImage(_image) {
         throw new Error('Image description is only available with Azure Vision backend. Configure see.backend.type to "azure-vision".');

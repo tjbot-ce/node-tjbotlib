@@ -25,7 +25,7 @@ import { Capability, Hardware, normalizeColor, ModelRegistry, sleep, TJBotError 
 import {
     ObjectDetectionResult,
     ImageClassificationResult,
-    FaceDetectionResult,
+    FaceDetectionMetadata,
     ImageDescriptionResult,
 } from './vision/index.js';
 
@@ -520,9 +520,9 @@ class TJBot {
     /**
      * Detect faces in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
-     * @returns {Promise<FaceDetectionResult[]>}
+     * @returns {Promise<{isFaceDetected: boolean, metadata: FaceDetectionMetadata[]}>}
      */
-    async detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]> {
+    async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
         return this.rpiDriver.detectFaces(image);
     }
 

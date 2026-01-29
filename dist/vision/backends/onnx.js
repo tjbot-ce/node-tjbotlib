@@ -256,7 +256,11 @@ export class ONNXVisionEngine extends VisionEngine {
             feeds[model.session.inputNames[0]] = input;
             const results = await model.session.run(feeds);
             // Postprocess face detection output
-            return this.postprocessFaceDetection(results, model.session.outputNames, confidenceThreshold);
+            const metadata = this.postprocessFaceDetection(results, model.session.outputNames, confidenceThreshold);
+            return {
+                isFaceDetected: metadata.length > 0,
+                metadata,
+            };
         }
         catch (error) {
             throw new TJBotError('Face detection failed', { cause: error });

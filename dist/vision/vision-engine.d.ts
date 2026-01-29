@@ -19,12 +19,20 @@ export interface ObjectDetectionResult {
     confidence: number;
     bbox: [number, number, number, number];
 }
+export interface ImageClassificationResult {
+    label: string;
+    confidence: number;
+}
+export interface ImageDescriptionResult {
+    description: string;
+    confidence: number;
+}
 export interface Landmark {
     x: number;
     y: number;
     type?: string;
 }
-export interface FaceDetectionResult {
+export interface FaceDetectionMetadata {
     boundingBox: [number, number, number, number];
     confidence: number;
     landmarks: Landmark[];
@@ -44,13 +52,9 @@ export interface FaceDetectionResult {
         mouthOccluded: boolean;
     };
 }
-export interface ImageClassificationResult {
-    label: string;
-    confidence: number;
-}
-export interface ImageDescriptionResult {
-    description: string;
-    confidence: number;
+export interface FaceDetectionResult {
+    isFaceDetected: boolean;
+    metadata: FaceDetectionMetadata[];
 }
 /**
  * Abstract Vision Engine Base Class
@@ -100,11 +104,11 @@ export declare abstract class VisionEngine {
      * Detect faces in an image.
      *
      * @param image - Image buffer or file path
-     * @returns Array of detected faces with bounding boxes, confidence scores, and landmarks
+     * @returns Response object with boolean flag indicating if faces were detected and array of face metadata
      * @throws {TJBotError} if detection fails
      * @public
      */
-    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult>;
     /**
      * Describe an image with natural language caption.
      * Note: This method is only supported by Azure Vision backend.

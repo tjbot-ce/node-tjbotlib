@@ -24,6 +24,7 @@ export { createVisionEngine } from './vision-engine.js';
 export type {
     ObjectDetectionResult,
     Landmark,
+    FaceDetectionMetadata,
     FaceDetectionResult,
     ImageClassificationResult,
     ImageDescriptionResult,

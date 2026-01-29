@@ -129,7 +129,7 @@ export class AzureVisionEngine extends VisionEngine {
             throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json());
-        const results = [];
+        const metadata = [];
         if (data.faces && Array.isArray(data.faces)) {
             for (const face of data.faces) {
                 const rect = face.faceRectangle || {};
@@ -190,7 +190,7 @@ export class AzureVisionEngine extends VisionEngine {
                         mouthOccluded: faceAttributes.occlusion.mouthOccluded || false,
                     };
                 }
-                results.push({
+                metadata.push({
                     boundingBox: [rect.left || 0, rect.top || 0, rect.width || 0, rect.height || 0],
                     confidence: face.confidence || 0,
                     landmarks,
@@ -200,7 +200,10 @@ export class AzureVisionEngine extends VisionEngine {
                 });
             }
         }
-        return results;
+        return {
+            isFaceDetected: metadata.length > 0,
+            metadata,
+        };
     }
     async describeImage(image) {
         if (!this.apiKey)

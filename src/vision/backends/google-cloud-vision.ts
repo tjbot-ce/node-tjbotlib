@@ -21,7 +21,7 @@ import {
     VisionEngine,
     type ObjectDetectionResult,
     type ImageClassificationResult,
-    type FaceDetectionResult,
+    type FaceDetectionMetadata,
     type ImageDescriptionResult,
     type Landmark,
 } from '../vision-engine.js';
@@ -158,7 +158,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         return results;
     }
 
-    async detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]> {
+    async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
         // Prepare image as base64
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -188,7 +188,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json()) as any;
 
-        const results: FaceDetectionResult[] = [];
+        const metadata: FaceDetectionMetadata[] = [];
 
         if (data.responses && data.responses[0] && data.responses[0].faceAnnotations) {
             for (const face of data.responses[0].faceAnnotations) {
@@ -229,7 +229,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                     };
                 }
 
-                results.push({
+                metadata.push({
                     boundingBox: [x, y, w, h],
                     confidence: face.detectionConfidence || 0,
                     landmarks,
@@ -238,7 +238,10 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             }
         }
 
-        return results;
+        return {
+            isFaceDetected: metadata.length > 0,
+            metadata,
+        };
     }
 
     async describeImage(_image: Buffer | string): Promise<ImageDescriptionResult> {

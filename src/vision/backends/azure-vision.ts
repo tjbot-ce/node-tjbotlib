@@ -21,7 +21,7 @@ import {
     VisionEngine,
     type ImageClassificationResult,
     type ObjectDetectionResult,
-    type FaceDetectionResult,
+    type FaceDetectionMetadata,
     type ImageDescriptionResult,
     type Landmark,
 } from '../vision-engine.js';
@@ -135,7 +135,7 @@ export class AzureVisionEngine extends VisionEngine {
         return results;
     }
 
-    async detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]> {
+    async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
         if (!this.apiKey) throw new Error('Azure Computer Vision API key not configured');
 
         let imgBuf: Buffer;
@@ -161,7 +161,7 @@ export class AzureVisionEngine extends VisionEngine {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json()) as any;
 
-        const results: FaceDetectionResult[] = [];
+        const metadata: FaceDetectionMetadata[] = [];
 
         if (data.faces && Array.isArray(data.faces)) {
             for (const face of data.faces) {
@@ -231,7 +231,7 @@ export class AzureVisionEngine extends VisionEngine {
                     };
                 }
 
-                results.push({
+                metadata.push({
                     boundingBox: [rect.left || 0, rect.top || 0, rect.width || 0, rect.height || 0],
                     confidence: face.confidence || 0,
                     landmarks,
@@ -242,7 +242,10 @@ export class AzureVisionEngine extends VisionEngine {
             }
         }
 
-        return results;
+        return {
+            isFaceDetected: metadata.length > 0,
+            metadata,
+        };
     }
 
     async describeImage(image: Buffer | string): Promise<ImageDescriptionResult> {

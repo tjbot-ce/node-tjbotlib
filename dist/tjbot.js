@@ -402,7 +402,7 @@ class TJBot {
     /**
      * Detect faces in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path
-     * @returns {Promise<FaceDetectionResult[]>}
+     * @returns {Promise<{isFaceDetected: boolean, metadata: FaceDetectionMetadata[]}>}
      */
     async detectFaces(image) {
         return this.rpiDriver.detectFaces(image);

@@ -38,7 +38,7 @@ export declare class VisionController {
      * Detect faces in an image using the configured Vision engine.
      * @param image Image buffer or file path
      */
-    detectFaces(image: Buffer | string): Promise<import("./vision-engine.js").FaceDetectionResult[]>;
+    detectFaces(image: Buffer | string): Promise<import("./vision-engine.js").FaceDetectionResult>;
     /**
      * Describe an image using the configured Vision engine (if supported).
      * Note: This method is only supported by Azure Vision backend.

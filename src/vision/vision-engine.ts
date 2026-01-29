@@ -23,13 +23,23 @@ export interface ObjectDetectionResult {
     bbox: [number, number, number, number]; // [x, y, width, height]
 }
 
+export interface ImageClassificationResult {
+    label: string;
+    confidence: number;
+}
+
+export interface ImageDescriptionResult {
+    description: string;
+    confidence: number;
+}
+
 export interface Landmark {
     x: number;
     y: number;
     type?: string; // e.g., 'eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'
 }
 
-export interface FaceDetectionResult {
+export interface FaceDetectionMetadata {
     // Required fields
     boundingBox: [number, number, number, number]; // [x, y, width, height]
     confidence: number;
@@ -53,14 +63,9 @@ export interface FaceDetectionResult {
     };
 }
 
-export interface ImageClassificationResult {
-    label: string;
-    confidence: number;
-}
-
-export interface ImageDescriptionResult {
-    description: string;
-    confidence: number;
+export interface FaceDetectionResult {
+    isFaceDetected: boolean; // Boolean indicating if any face was detected
+    metadata: FaceDetectionMetadata[]; // Array of detected faces with metadata
 }
 
 /**
@@ -119,11 +124,11 @@ export abstract class VisionEngine {
      * Detect faces in an image.
      *
      * @param image - Image buffer or file path
-     * @returns Array of detected faces with bounding boxes, confidence scores, and landmarks
+     * @returns Response object with boolean flag indicating if faces were detected and array of face metadata
      * @throws {TJBotError} if detection fails
      * @public
      */
-    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult[]>;
+    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult>;
 
     /**
      * Describe an image with natural language caption.
