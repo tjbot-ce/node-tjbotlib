@@ -17,7 +17,7 @@ import fs from 'fs';
 import path from 'path';
 import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
-import { TJBotError, ModelManager } from '../../utils/index.js';
+import { TJBotError, ModelRegistry } from '../../utils/index.js';
 // Lazy require sherpa-onnx to avoid hard dependency issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sherpa;
@@ -31,7 +31,7 @@ let sherpa;
 export class SherpaONNXTTSEngine extends TTSEngine {
     constructor(config) {
         super(config);
-        this.manager = ModelManager.getInstance();
+        this.manager = ModelRegistry.getInstance();
     }
     /**
      * Initialize the sherpa-onnx TTS engine.
@@ -50,22 +50,11 @@ export class SherpaONNXTTSEngine extends TTSEngine {
                 sherpa = module.default || module;
                 winston.debug('Successfully loaded sherpa-onnx-node module');
             }
-            // Check if we should use a custom model
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const configWithCustom = this.config;
-            const customModel = configWithCustom['custom-model'];
+            // Load TTS model from registry
             const modelName = this.config.model;
-            if (customModel && customModel.model && customModel.url && customModel.model === modelName) {
-                // Use custom model
-                winston.info(`💬 Loading custom TTS model: ${customModel.model}`);
-                await this.manager.downloadAndCacheCustomModel(customModel.model, customModel.url, 'tts');
-            }
-            else {
-                // Use default registry model
-                await this.manager.loadModel(modelName);
-            }
+            winston.info(`💬 Loading TTS model: ${modelName}`);
+            await this.manager.loadModel(modelName);
             // Front-load model download during initialization
-            winston.info(`💬 Loading TTS model: ${this.config.model}`);
             this.modelPath = await this.ensureModelIsDownloaded();
             // Load the TTS engine
             await this.setupTTSEngine();

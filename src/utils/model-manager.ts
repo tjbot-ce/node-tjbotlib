@@ -30,8 +30,16 @@ const execFileAsync = promisify(execFile);
 
 /**
  * Types of models managed by ModelManager
+ * Includes base types (stt, tts, vad) and vision subtypes
  */
-export type ModelType = 'stt' | 'tts' | 'vad' | 'vision';
+export type ModelType =
+    | 'stt'
+    | 'tts'
+    | 'vad'
+    | 'vision.object-recognition'
+    | 'vision.classification'
+    | 'vision.face-detection'
+    | 'vision.image-description';
 
 /**
  * Base model metadata
@@ -68,7 +76,7 @@ export type VADModelMetadata = BaseModelMetadata;
  * Vision model metadata
  */
 export interface VisionModelMetadata extends BaseModelMetadata {
-    kind: 'detection' | 'classification' | 'face-detection';
+    kind: 'detection' | 'classification' | 'face-detection' | 'image-description';
     labelUrl?: string;
     inputShape?: number[];
 }
@@ -81,12 +89,12 @@ interface ModelsYAML {
 }
 
 /**
- * Unified singleton manager for all TJBot models (STT, TTS, VAD, Vision)
- * Handles model metadata, downloading, extraction, and caching
+ * Unified singleton registry for all TJBot models (STT, TTS, VAD, Vision)
+ * Handles model metadata, registration, downloading, extraction, and caching
  */
-export class ModelManager {
-    private static instance?: ModelManager;
-    private models: BaseModelMetadata[] = [];
+export class ModelRegistry {
+    private static instance?: ModelRegistry;
+    private registeredModels: Map<string, BaseModelMetadata> = new Map();
     private metadataLoaded = false;
 
     private constructor() {
@@ -96,16 +104,16 @@ export class ModelManager {
     /**
      * Get singleton instance
      */
-    static getInstance(): ModelManager {
+    static getInstance(): ModelRegistry {
         if (!this.instance) {
-            this.instance = new ModelManager();
+            this.instance = new ModelRegistry();
         }
         return this.instance;
     }
 
     /**
      * Load model metadata from unified YAML file
-     * If no path provided, uses default models.yaml in config directory
+     * If no path provided, uses default model-registry.yaml in config directory
      * @private
      */
     private loadMetadata(yamlPath?: string): void {
@@ -115,11 +123,11 @@ export class ModelManager {
         }
 
         try {
-            // Default to models.yaml in config directory
+            // Default to model-registry.yaml in config directory
             if (!yamlPath) {
                 const __filename = fileURLToPath(import.meta.url);
                 const __dirname = path.dirname(__filename);
-                yamlPath = path.join(__dirname, '..', 'config', 'models.yaml');
+                yamlPath = path.join(__dirname, '..', 'config', 'model-registry.yaml');
             }
 
             winston.debug(`Loading model metadata from: ${yamlPath}`);
@@ -127,7 +135,7 @@ export class ModelManager {
             const fileContents = fs.readFileSync(yamlPath, 'utf8');
             const data = yaml.load(fileContents) as ModelsYAML;
 
-            this.models = (data.models || []).map((m) => {
+            const models = (data.models || []).map((m) => {
                 const key = m.key;
                 if (!key) {
                     throw new TJBotError('Model entry missing key');
@@ -140,8 +148,13 @@ export class ModelManager {
                 };
             });
 
+            // Register all loaded models
+            for (const model of models) {
+                this.registerModel(model);
+            }
+
             this.metadataLoaded = true;
-            winston.debug(`Loaded metadata for ${this.models.length} models from YAML`);
+            winston.debug(`Loaded metadata for ${this.registeredModels.size} models from YAML`);
         } catch (error) {
             winston.error('Failed to load model metadata:', error);
             throw new TJBotError('Failed to load model metadata', { cause: error as Error });
@@ -161,11 +174,13 @@ export class ModelManager {
 
     /**
      * Get model cache directory for a specific type
-     * @param modelType The model type (stt, tts, vad, vision)
+     * @param modelType The model type (stt, tts, vad, vision.*)
      * @returns The cache directory path for the specified model type
      */
     private getModelCacheDirForType(modelType: ModelType): string {
-        return path.join(this.getModelCacheDir(), modelType);
+        // For vision subtypes, use 'vision' as the base directory
+        const cacheSubdir = modelType.startsWith('vision.') ? 'vision' : modelType;
+        return path.join(this.getModelCacheDir(), cacheSubdir);
     }
 
     /**
@@ -193,12 +208,22 @@ export class ModelManager {
      * Get Vision model cache directory
      */
     getVisionModelCacheDir(): string {
-        return this.getModelCacheDirForType('vision');
+        // All vision models use the 'vision' subdirectory regardless of subtype
+        return path.join(this.getModelCacheDir(), 'vision');
     }
 
     // ============================================================================
     // Query Methods
     // ============================================================================
+
+    /**
+     * Register a model in the registry
+     * @param model The model metadata to register
+     */
+    registerModel(model: BaseModelMetadata): void {
+        this.registeredModels.set(model.key, model);
+        winston.debug(`Registered model: ${model.key} (type: ${model.type})`);
+    }
 
     /**
      * Lookup model metadata by key
@@ -208,21 +233,28 @@ export class ModelManager {
      * @private
      */
     private lookupModel(modelKey: string): BaseModelMetadata {
-        const model = this.models.find((m) => m.key === modelKey);
+        const model = this.registeredModels.get(modelKey);
         if (!model) {
-            throw new TJBotError(`Model with key "${modelKey}" not found in metadata`);
+            throw new TJBotError(`Model with key "${modelKey}" not found in registry`);
         }
         return model;
     }
 
     /**
      * Supported models of a given type
-     * @param modelType The model type (stt, tts, vad, vision)
+     * Supports exact type matching and prefix matching for vision subtypes
+     * @param modelType The model type (stt, tts, vad, vision.*) or 'vision' to get all vision models
      * @returns List of supported models of the specified type
      * @private
      */
-    private getSupportedModels(modelType: ModelType): BaseModelMetadata[] {
-        return this.models.filter((m) => m.type === modelType);
+    private getSupportedModels(modelType: ModelType | 'vision'): BaseModelMetadata[] {
+        // For 'vision', match all vision.* types
+        if (modelType === 'vision') {
+            return Array.from(this.registeredModels.values()).filter(
+                (m: BaseModelMetadata) => typeof m.type === 'string' && m.type.startsWith('vision.')
+            );
+        }
+        return Array.from(this.registeredModels.values()).filter((m: BaseModelMetadata) => m.type === modelType);
     }
 
     /**
@@ -274,14 +306,21 @@ export class ModelManager {
 
     /**
      * Installed models of a given type
-     * @param modelType The model type (stt, tts, vad, vision)
+     * @param modelType The model type (stt, tts, vad, vision.*) or 'vision' to get all vision models
      * @returns List of installed models of the specified type
      */
-    getInstalledModels(modelType: ModelType): BaseModelMetadata[] {
+    getInstalledModels(modelType: ModelType | 'vision'): BaseModelMetadata[] {
         const installed: BaseModelMetadata[] = [];
-        winston.debug(`Checking for installed ${modelType} models. Total models in metadata: ${this.models.length}`);
+        winston.debug(
+            `Checking for installed ${modelType} models. Total models in registry: ${this.registeredModels.size}`
+        );
 
-        for (const model of this.models.filter((m) => m.type === modelType)) {
+        for (const model of Array.from(this.registeredModels.values()).filter((m: BaseModelMetadata) => {
+            if (modelType === 'vision') {
+                return typeof m.type === 'string' && m.type.startsWith('vision.');
+            }
+            return m.type === modelType;
+        })) {
             const cacheDir = this.getModelCacheDirForType(model.type);
             const modelPath = path.join(cacheDir, model.folder);
             winston.debug(`Checking ${modelType} model "${model.key}" at ${modelPath}`);
@@ -385,10 +424,88 @@ export class ModelManager {
     }
 
     /**
+     * Copy a file from local filesystem
+     * Supports file:// URLs
+     */
+    private async copyFile(sourceUrl: string, destination: string): Promise<void> {
+        try {
+            // Convert file:// URL to path
+            const sourcePath = sourceUrl.startsWith('file://') ? new URL(sourceUrl).pathname : sourceUrl;
+
+            winston.info(`📦 Copying file from ${sourcePath}`);
+
+            // Get file size for progress bar
+            const stats = await fs.promises.stat(sourcePath);
+            const totalSize = stats.size;
+            let copiedSize = 0;
+
+            // Create progress bar
+            const progressBar = new cliProgress.SingleBar({
+                format: 'Copying [{bar}] {percentage}% | {value}/{total} MB',
+                barCompleteChar: '\u2588',
+                barIncompleteChar: '\u2591',
+                hideCursor: true,
+            });
+
+            if (totalSize > 0) {
+                progressBar.start(Math.round(totalSize / 1024 / 1024), 0);
+            }
+
+            // Create destination directory
+            await fs.promises.mkdir(path.dirname(destination), { recursive: true });
+
+            // Copy file with progress tracking
+            const reader = fs.createReadStream(sourcePath);
+            const writer = fs.createWriteStream(destination);
+
+            await new Promise<void>((resolve, reject) => {
+                reader.on('data', (chunk: Buffer) => {
+                    copiedSize += chunk.length;
+                    if (totalSize > 0) {
+                        progressBar.update(Math.round(copiedSize / 1024 / 1024));
+                    }
+                });
+
+                reader.pipe(writer);
+                writer.on('finish', () => {
+                    if (totalSize > 0) {
+                        progressBar.stop();
+                    }
+                    winston.info('✅ File copy complete');
+                    resolve();
+                });
+                writer.on('error', (err) => {
+                    if (totalSize > 0) {
+                        progressBar.stop();
+                    }
+                    reject(err);
+                });
+                reader.on('error', (err) => {
+                    if (totalSize > 0) {
+                        progressBar.stop();
+                    }
+                    reject(err);
+                });
+            });
+        } catch (err) {
+            winston.error('❌ File copy failed:', err);
+            throw new TJBotError(`Failed to copy file from ${sourceUrl}`, {
+                cause: err as Error,
+            });
+        }
+    }
+
+    /**
      * Download a file from URL with progress bar and exponential backoff retry
      * Retries up to 3 times with delays: 1s, 2s, 4s
+     * Supports both http/https URLs and file:// URLs
      */
     private async downloadFile(url: string, destination: string, maxRetries = 3): Promise<void> {
+        // Handle file:// URLs (local files)
+        if (url.startsWith('file://')) {
+            return this.copyFile(url, destination);
+        }
+
         let attempt = 0;
         let lastError: Error | null = null;
 
@@ -519,7 +636,7 @@ export class ModelManager {
         }
 
         // Download labels file for vision models
-        if (model.type === 'vision') {
+        if (typeof model.type === 'string' && model.type.startsWith('vision.')) {
             const visionModel = model as VisionModelMetadata;
             if (visionModel.labelUrl) {
                 const labelsFileName = path.basename(visionModel.labelUrl).split('?')[0]; // Extract filename, remove query params
@@ -554,64 +671,5 @@ export class ModelManager {
 
         // Return the model metadata
         return model as T;
-    }
-
-    /**
-     * Download and cache a custom model from a custom URL
-     * Creates synthetic metadata for the custom model and handles download/extraction
-     * @param modelName The custom model name
-     * @param modelUrl The custom model download URL
-     * @param modelType The model type (stt, tts, vad, vision)
-     * @returns The synthetic model metadata
-     * @throws TJBotError if download fails
-     */
-    async downloadAndCacheCustomModel<T extends BaseModelMetadata = BaseModelMetadata>(
-        modelName: string,
-        modelUrl: string,
-        modelType: ModelType
-    ): Promise<T> {
-        const cacheDir = this.getModelCacheDirForType(modelType);
-        const modelPath = path.join(cacheDir, modelName);
-
-        // Ensure cache directory exists
-        await fs.promises.mkdir(cacheDir, { recursive: true });
-
-        // Create synthetic metadata for custom model
-        const fileName = path.basename(modelUrl).split('?')[0]; // Remove query params
-        const isTarBz2 = modelUrl.endsWith('.tar.bz2');
-        const customModel: BaseModelMetadata = {
-            type: modelType,
-            key: modelName,
-            label: `Custom ${modelType} model: ${modelName}`,
-            url: modelUrl,
-            folder: modelName,
-            required: isTarBz2 ? ['model'] : [fileName], // Placeholder for tar.bz2; actual files discovered after extraction
-        };
-
-        // Check if model already downloaded
-        const modelExists = fs.existsSync(modelPath);
-        if (!modelExists) {
-            // Download to temporary file
-            const tempArchivePath = path.join(os.tmpdir(), `${modelName}-custom-download`);
-            await this.downloadFile(modelUrl, tempArchivePath);
-
-            if (isTarBz2) {
-                // Extract tar.bz2 archive
-                await this.extractTarBz2(tempArchivePath, cacheDir);
-                // Remove temporary archive file
-                fs.unlinkSync(tempArchivePath);
-            } else {
-                // Single file model - move directly to model path
-                await fs.promises.mkdir(modelPath, { recursive: true });
-                const targetPath = path.join(modelPath, fileName);
-                await fs.promises.rename(tempArchivePath, targetPath);
-            }
-
-            winston.info(`✅ Custom model "${modelName}" downloaded and cached to ${modelPath}`);
-        } else {
-            winston.debug(`📦 Custom model "${modelName}" already cached at ${modelPath}`);
-        }
-
-        return customModel as T;
     }
 }

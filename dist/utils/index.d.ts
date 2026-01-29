@@ -16,5 +16,5 @@
  */
 export { Capability, Hardware } from './constants.js';
 export { TJBotError } from './errors.js';
-export { ModelManager, STTModelMetadata, TTSModelMetadata, VADModelMetadata, VisionModelMetadata, } from './model-manager.js';
+export { ModelRegistry, STTModelMetadata, TTSModelMetadata, VADModelMetadata, VisionModelMetadata, } from './model-manager.js';
 export { convertHexToRgbColor, isCommandAvailable, normalizeColor, sleep } from './utils.js';

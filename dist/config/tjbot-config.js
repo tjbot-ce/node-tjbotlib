@@ -19,7 +19,7 @@ import TOML from '@iarna/toml';
 import { resolve } from 'import-meta-resolve';
 import winston from 'winston';
 import { tjbotConfigSchema, } from './config-types.js';
-import { TJBotError } from '../utils/errors.js';
+import { TJBotError, ModelRegistry } from '../utils/index.js';
 /**
  * TJBotConfig manages loading and parsing TJBot configuration from TOML files.
  * It provides access to configuration via structured interfaces.
@@ -31,6 +31,7 @@ export class TJBotConfig {
      * 1. Default configuration from tjbot.default.toml
      * 2. Local tjbot.toml file (if it exists)
      * 3. Override configuration (if provided)
+     * 4. Register user-defined models from [models] section
      *
      * @param overrideConfig Optional configuration object to overlay on top of loaded config
      */
@@ -61,6 +62,14 @@ export class TJBotConfig {
         }
         catch (err) {
             throw new TJBotError('invalid TJBot configuration', { cause: err });
+        }
+        // Register user-defined models from [models] section
+        if (this.config.models && Array.isArray(this.config.models)) {
+            const registry = ModelRegistry.getInstance();
+            for (const model of this.config.models) {
+                registry.registerModel(model);
+                winston.debug(`Registered custom model: ${model.key}`);
+            }
         }
         // Validate vision backend models if local backend is configured
         if (this.config.see?.backend?.type === 'local' && this.config.see?.backend?.local) {

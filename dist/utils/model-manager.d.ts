@@ -15,8 +15,9 @@
  */
 /**
  * Types of models managed by ModelManager
+ * Includes base types (stt, tts, vad) and vision subtypes
  */
-export type ModelType = 'stt' | 'tts' | 'vad' | 'vision';
+export type ModelType = 'stt' | 'tts' | 'vad' | 'vision.object-recognition' | 'vision.classification' | 'vision.face-detection' | 'vision.image-description';
 /**
  * Base model metadata
  */
@@ -48,26 +49,26 @@ export type VADModelMetadata = BaseModelMetadata;
  * Vision model metadata
  */
 export interface VisionModelMetadata extends BaseModelMetadata {
-    kind: 'detection' | 'classification' | 'face-detection';
+    kind: 'detection' | 'classification' | 'face-detection' | 'image-description';
     labelUrl?: string;
     inputShape?: number[];
 }
 /**
- * Unified singleton manager for all TJBot models (STT, TTS, VAD, Vision)
- * Handles model metadata, downloading, extraction, and caching
+ * Unified singleton registry for all TJBot models (STT, TTS, VAD, Vision)
+ * Handles model metadata, registration, downloading, extraction, and caching
  */
-export declare class ModelManager {
+export declare class ModelRegistry {
     private static instance?;
-    private models;
+    private registeredModels;
     private metadataLoaded;
     private constructor();
     /**
      * Get singleton instance
      */
-    static getInstance(): ModelManager;
+    static getInstance(): ModelRegistry;
     /**
      * Load model metadata from unified YAML file
-     * If no path provided, uses default models.yaml in config directory
+     * If no path provided, uses default model-registry.yaml in config directory
      * @private
      */
     private loadMetadata;
@@ -77,7 +78,7 @@ export declare class ModelManager {
     private getModelCacheDir;
     /**
      * Get model cache directory for a specific type
-     * @param modelType The model type (stt, tts, vad, vision)
+     * @param modelType The model type (stt, tts, vad, vision.*)
      * @returns The cache directory path for the specified model type
      */
     private getModelCacheDirForType;
@@ -98,6 +99,11 @@ export declare class ModelManager {
      */
     getVisionModelCacheDir(): string;
     /**
+     * Register a model in the registry
+     * @param model The model metadata to register
+     */
+    registerModel(model: BaseModelMetadata): void;
+    /**
      * Lookup model metadata by key
      * @param modelKey The model key
      * @returns The model metadata
@@ -107,7 +113,8 @@ export declare class ModelManager {
     private lookupModel;
     /**
      * Supported models of a given type
-     * @param modelType The model type (stt, tts, vad, vision)
+     * Supports exact type matching and prefix matching for vision subtypes
+     * @param modelType The model type (stt, tts, vad, vision.*) or 'vision' to get all vision models
      * @returns List of supported models of the specified type
      * @private
      */
@@ -136,10 +143,10 @@ export declare class ModelManager {
     private validateModelFilesExist;
     /**
      * Installed models of a given type
-     * @param modelType The model type (stt, tts, vad, vision)
+     * @param modelType The model type (stt, tts, vad, vision.*) or 'vision' to get all vision models
      * @returns List of installed models of the specified type
      */
-    getInstalledModels(modelType: ModelType): BaseModelMetadata[];
+    getInstalledModels(modelType: ModelType | 'vision'): BaseModelMetadata[];
     /**
      * List installed STT models
      * @returns List of installed STT models
@@ -171,8 +178,14 @@ export declare class ModelManager {
      */
     isModelDownloaded(modelKey: string): boolean;
     /**
+     * Copy a file from local filesystem
+     * Supports file:// URLs
+     */
+    private copyFile;
+    /**
      * Download a file from URL with progress bar and exponential backoff retry
      * Retries up to 3 times with delays: 1s, 2s, 4s
+     * Supports both http/https URLs and file:// URLs
      */
     private downloadFile;
     /**
@@ -195,14 +208,4 @@ export declare class ModelManager {
      * @throws TJBotError if model not found or download fails
      */
     loadModel<T extends BaseModelMetadata = BaseModelMetadata>(modelKey: string): Promise<T>;
-    /**
-     * Download and cache a custom model from a custom URL
-     * Creates synthetic metadata for the custom model and handles download/extraction
-     * @param modelName The custom model name
-     * @param modelUrl The custom model download URL
-     * @param modelType The model type (stt, tts, vad, vision)
-     * @returns The synthetic model metadata
-     * @throws TJBotError if download fails
-     */
-    downloadAndCacheCustomModel<T extends BaseModelMetadata = BaseModelMetadata>(modelName: string, modelUrl: string, modelType: ModelType): Promise<T>;
 }

@@ -16,7 +16,7 @@
 import fs from 'fs';
 import path from 'path';
 import winston from 'winston';
-import { ModelManager, TJBotError } from '../../utils/index.js';
+import { ModelRegistry, TJBotError } from '../../utils/index.js';
 import { STTEngine } from '../stt-engine.js';
 // Lazy require sherpa-onnx to avoid hard dependency issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,7 +35,7 @@ let sherpa;
 export class SherpaONNXSTTEngine extends STTEngine {
     constructor(config) {
         super(config);
-        this.manager = ModelManager.getInstance();
+        this.manager = ModelRegistry.getInstance();
     }
     async initialize() {
         try {
@@ -50,46 +50,19 @@ export class SherpaONNXSTTEngine extends STTEngine {
                 sherpa = module.default || module;
                 winston.debug('Successfully loaded sherpa-onnx-node module');
             }
-            // Check if we should use a custom model
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const configWithCustom = this.config;
-            const customModel = configWithCustom['custom-model'];
+            // Load STT model from registry
             const modelName = this.config.model;
-            if (customModel && customModel.model && customModel.url && customModel.model === modelName) {
-                // Use custom model
-                winston.info(`🎤 Loading custom STT model: ${customModel.model}`);
-                this.modelInfo = await this.manager.downloadAndCacheCustomModel(customModel.model, customModel.url, 'stt');
-            }
-            else {
-                // Use default registry model
-                this.modelInfo = await this.manager.loadModel(modelName);
-            }
-            winston.info(`🎤 Loading STT model: ${this.config.model}`);
+            winston.info(`🎤 Loading STT model: ${modelName}`);
+            this.modelInfo = await this.manager.loadModel(modelName);
             this.modelPaths = await this.ensureModelIsDownloaded();
             // Download VAD model if needed for offline recognition
             const vadConfig = this.config.vad;
             if (vadConfig && this.modelInfo) {
                 if (this.modelInfo.type.startsWith('offline') && vadConfig.enabled) {
-                    // Check if we should use a custom VAD model
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const vadConfigWithCustom = vadConfig;
-                    const customVadModel = vadConfigWithCustom['custom-model'];
                     const vadModelName = vadConfig.model;
-                    if (customVadModel &&
-                        customVadModel.model &&
-                        customVadModel.url &&
-                        customVadModel.model === vadModelName) {
-                        // Use custom VAD model
-                        winston.info(`🎤 Loading custom VAD model: ${customVadModel.model}`);
-                        const customVadInfo = await this.manager.downloadAndCacheCustomModel(customVadModel.model, customVadModel.url, 'vad');
-                        this.vadPath = path.join(customVadInfo.folder, customVadModel.model);
-                    }
-                    else {
-                        // Use default registry VAD model
-                        winston.info(`🎤 Loading VAD model: ${vadModelName}`);
-                        const vadInfo = await this.manager.loadModel(vadModelName);
-                        this.vadPath = path.join(vadInfo.folder, vadModelName);
-                    }
+                    winston.info(`🎤 Loading VAD model: ${vadModelName}`);
+                    const vadInfo = await this.manager.loadModel(vadModelName);
+                    this.vadPath = path.join(vadInfo.folder, vadModelName);
                 }
             }
             // Create the TTS recognizer and VAD as needed

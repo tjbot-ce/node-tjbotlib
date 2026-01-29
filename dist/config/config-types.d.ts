@@ -32,22 +32,9 @@ export declare const sttBackendTypeSchema: z.ZodEnum<{
     "azure-stt": "azure-stt";
 }>;
 export type STTBackendType = z.infer<typeof sttBackendTypeSchema>;
-/**
- * Custom model configuration for overriding default models from registry
- * If customModel is specified, both 'model' and 'url' must be provided
- */
-export declare const customModelConfigSchema: z.ZodObject<{
-    model: z.ZodOptional<z.ZodString>;
-    url: z.ZodOptional<z.ZodString>;
-}, z.core.$loose>;
-export type CustomModelConfig = z.infer<typeof customModelConfigSchema>;
 export declare const vadConfigSchema: z.ZodObject<{
     enabled: z.ZodOptional<z.ZodBoolean>;
     model: z.ZodOptional<z.ZodString>;
-    'custom-model': z.ZodOptional<z.ZodObject<{
-        model: z.ZodOptional<z.ZodString>;
-        url: z.ZodOptional<z.ZodString>;
-    }, z.core.$loose>>;
 }, z.core.$loose>;
 export type VADConfig = z.infer<typeof vadConfigSchema>;
 export declare const sttBackendLocalConfigSchema: z.ZodObject<{
@@ -55,14 +42,6 @@ export declare const sttBackendLocalConfigSchema: z.ZodObject<{
     vad: z.ZodOptional<z.ZodObject<{
         enabled: z.ZodOptional<z.ZodBoolean>;
         model: z.ZodOptional<z.ZodString>;
-        'custom-model': z.ZodOptional<z.ZodObject<{
-            model: z.ZodOptional<z.ZodString>;
-            url: z.ZodOptional<z.ZodString>;
-        }, z.core.$loose>>;
-    }, z.core.$loose>>;
-    'custom-model': z.ZodOptional<z.ZodObject<{
-        model: z.ZodOptional<z.ZodString>;
-        url: z.ZodOptional<z.ZodString>;
     }, z.core.$loose>>;
 }, z.core.$loose>;
 export type STTBackendLocalConfig = z.infer<typeof sttBackendLocalConfigSchema>;
@@ -102,14 +81,6 @@ export declare const sttBackendConfigSchema: z.ZodObject<{
         vad: z.ZodOptional<z.ZodObject<{
             enabled: z.ZodOptional<z.ZodBoolean>;
             model: z.ZodOptional<z.ZodString>;
-            'custom-model': z.ZodOptional<z.ZodObject<{
-                model: z.ZodOptional<z.ZodString>;
-                url: z.ZodOptional<z.ZodString>;
-            }, z.core.$loose>>;
-        }, z.core.$loose>>;
-        'custom-model': z.ZodOptional<z.ZodObject<{
-            model: z.ZodOptional<z.ZodString>;
-            url: z.ZodOptional<z.ZodString>;
         }, z.core.$loose>>;
     }, z.core.$loose>>;
     'ibm-watson-stt': z.ZodOptional<z.ZodObject<{
@@ -155,14 +126,6 @@ export declare const listenConfigSchema: z.ZodObject<{
             vad: z.ZodOptional<z.ZodObject<{
                 enabled: z.ZodOptional<z.ZodBoolean>;
                 model: z.ZodOptional<z.ZodString>;
-                'custom-model': z.ZodOptional<z.ZodObject<{
-                    model: z.ZodOptional<z.ZodString>;
-                    url: z.ZodOptional<z.ZodString>;
-                }, z.core.$loose>>;
-            }, z.core.$loose>>;
-            'custom-model': z.ZodOptional<z.ZodObject<{
-                model: z.ZodOptional<z.ZodString>;
-                url: z.ZodOptional<z.ZodString>;
             }, z.core.$loose>>;
         }, z.core.$loose>>;
         'ibm-watson-stt': z.ZodOptional<z.ZodObject<{
@@ -304,10 +267,6 @@ export declare const ttsBackendTypeSchema: z.ZodEnum<{
 export type TTSBackendType = z.infer<typeof ttsBackendTypeSchema>;
 export declare const ttsBackendLocalConfigSchema: z.ZodObject<{
     model: z.ZodOptional<z.ZodString>;
-    'custom-model': z.ZodOptional<z.ZodObject<{
-        model: z.ZodOptional<z.ZodString>;
-        url: z.ZodOptional<z.ZodString>;
-    }, z.core.$loose>>;
 }, z.core.$loose>;
 export type TTSBackendLocalConfig = z.infer<typeof ttsBackendLocalConfigSchema>;
 export declare const ttsBackendIBMWatsonConfigSchema: z.ZodObject<{
@@ -334,10 +293,6 @@ export declare const ttsBackendConfigSchema: z.ZodObject<{
     }>>;
     local: z.ZodOptional<z.ZodObject<{
         model: z.ZodOptional<z.ZodString>;
-        'custom-model': z.ZodOptional<z.ZodObject<{
-            model: z.ZodOptional<z.ZodString>;
-            url: z.ZodOptional<z.ZodString>;
-        }, z.core.$loose>>;
     }, z.core.$loose>>;
     'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
         credentialsPath: z.ZodOptional<z.ZodString>;
@@ -367,10 +322,6 @@ export declare const speakConfigSchema: z.ZodObject<{
         }>>;
         local: z.ZodOptional<z.ZodObject<{
             model: z.ZodOptional<z.ZodString>;
-            'custom-model': z.ZodOptional<z.ZodObject<{
-                model: z.ZodOptional<z.ZodString>;
-                url: z.ZodOptional<z.ZodString>;
-            }, z.core.$loose>>;
         }, z.core.$loose>>;
         'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
             credentialsPath: z.ZodOptional<z.ZodString>;
@@ -408,6 +359,50 @@ export declare const hardwareConfigSchema: z.ZodObject<{
 }, z.core.$loose>;
 export type HardwareConfig = z.infer<typeof hardwareConfigSchema>;
 /**
+ * User-defined model configuration
+ * Allows users to register custom models via TOML [models] section
+ */
+export declare const modelEntrySchema: z.ZodObject<{
+    type: z.ZodEnum<{
+        vad: "vad";
+        stt: "stt";
+        tts: "tts";
+        "vision.object-recognition": "vision.object-recognition";
+        "vision.classification": "vision.classification";
+        "vision.face-detection": "vision.face-detection";
+        "vision.image-description": "vision.image-description";
+    }>;
+    key: z.ZodString;
+    label: z.ZodString;
+    url: z.ZodString;
+    folder: z.ZodOptional<z.ZodString>;
+    kind: z.ZodOptional<z.ZodString>;
+    inputShape: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+    labelUrl: z.ZodOptional<z.ZodString>;
+    required: z.ZodOptional<z.ZodArray<z.ZodString>>;
+}, z.core.$strict>;
+export type ModelEntry = z.infer<typeof modelEntrySchema>;
+export declare const modelsConfigSchema: z.ZodOptional<z.ZodArray<z.ZodObject<{
+    type: z.ZodEnum<{
+        vad: "vad";
+        stt: "stt";
+        tts: "tts";
+        "vision.object-recognition": "vision.object-recognition";
+        "vision.classification": "vision.classification";
+        "vision.face-detection": "vision.face-detection";
+        "vision.image-description": "vision.image-description";
+    }>;
+    key: z.ZodString;
+    label: z.ZodString;
+    url: z.ZodString;
+    folder: z.ZodOptional<z.ZodString>;
+    kind: z.ZodOptional<z.ZodString>;
+    inputShape: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+    labelUrl: z.ZodOptional<z.ZodString>;
+    required: z.ZodOptional<z.ZodArray<z.ZodString>>;
+}, z.core.$strict>>>;
+export type ModelsConfig = z.infer<typeof modelsConfigSchema>;
+/**
  * TTS & STT Engine configuration (used for TTSEngine & STTEngine constructors)
  */
 export type TTSEngineConfig = Record<string, unknown>;
@@ -444,14 +439,6 @@ export declare const tjbotConfigSchema: z.ZodObject<{
                 vad: z.ZodOptional<z.ZodObject<{
                     enabled: z.ZodOptional<z.ZodBoolean>;
                     model: z.ZodOptional<z.ZodString>;
-                    'custom-model': z.ZodOptional<z.ZodObject<{
-                        model: z.ZodOptional<z.ZodString>;
-                        url: z.ZodOptional<z.ZodString>;
-                    }, z.core.$loose>>;
-                }, z.core.$loose>>;
-                'custom-model': z.ZodOptional<z.ZodObject<{
-                    model: z.ZodOptional<z.ZodString>;
-                    url: z.ZodOptional<z.ZodString>;
                 }, z.core.$loose>>;
             }, z.core.$loose>>;
             'ibm-watson-stt': z.ZodOptional<z.ZodObject<{
@@ -525,10 +512,6 @@ export declare const tjbotConfigSchema: z.ZodObject<{
             }>>;
             local: z.ZodOptional<z.ZodObject<{
                 model: z.ZodOptional<z.ZodString>;
-                'custom-model': z.ZodOptional<z.ZodObject<{
-                    model: z.ZodOptional<z.ZodString>;
-                    url: z.ZodOptional<z.ZodString>;
-                }, z.core.$loose>>;
             }, z.core.$loose>>;
             'ibm-watson-tts': z.ZodOptional<z.ZodObject<{
                 credentialsPath: z.ZodOptional<z.ZodString>;
@@ -548,6 +531,25 @@ export declare const tjbotConfigSchema: z.ZodObject<{
         gpioChip: z.ZodOptional<z.ZodNumber>;
         servoPin: z.ZodOptional<z.ZodNumber>;
     }, z.core.$loose>>;
+    models: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        type: z.ZodEnum<{
+            vad: "vad";
+            stt: "stt";
+            tts: "tts";
+            "vision.object-recognition": "vision.object-recognition";
+            "vision.classification": "vision.classification";
+            "vision.face-detection": "vision.face-detection";
+            "vision.image-description": "vision.image-description";
+        }>;
+        key: z.ZodString;
+        label: z.ZodString;
+        url: z.ZodString;
+        folder: z.ZodOptional<z.ZodString>;
+        kind: z.ZodOptional<z.ZodString>;
+        inputShape: z.ZodOptional<z.ZodArray<z.ZodNumber>>;
+        labelUrl: z.ZodOptional<z.ZodString>;
+        required: z.ZodOptional<z.ZodArray<z.ZodString>>;
+    }, z.core.$strict>>>;
     recipe: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
 }, z.core.$loose>;
 export type TJBotConfigSchema = z.infer<typeof tjbotConfigSchema>;

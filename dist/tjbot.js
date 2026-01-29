@@ -18,7 +18,7 @@ import { TJBotConfig } from './config/tjbot-config.js';
 import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
-import { Capability, Hardware, normalizeColor, ModelManager, sleep, TJBotError } from './utils/index.js';
+import { Capability, Hardware, normalizeColor, ModelRegistry, sleep, TJBotError } from './utils/index.js';
 // node modules
 import cm from 'color-model';
 import colorToHex from 'colornames';
@@ -359,7 +359,7 @@ class TJBot {
      * @returns {string[]} Array of installed model keys
      */
     installedSTTModels() {
-        const manager = ModelManager.getInstance();
+        const manager = ModelRegistry.getInstance();
         return manager.getInstalledSTTModels().map((m) => m.key);
     }
     /**
@@ -367,7 +367,7 @@ class TJBot {
      * @returns {Array<{ key: string, label: string, kind: string }>} Array of supported model info
      */
     supportedSTTModels() {
-        const manager = ModelManager.getInstance();
+        const manager = ModelRegistry.getInstance();
         return manager.getSupportedSTTModels().map((m) => ({
             key: m.key,
             label: m.label,
@@ -428,7 +428,7 @@ class TJBot {
      * @returns {string[]} Array of installed vision model keys
      */
     installedVisionModels() {
-        const manager = ModelManager.getInstance();
+        const manager = ModelRegistry.getInstance();
         return manager.getInstalledVisionModels().map((m) => m.key);
     }
     /**
@@ -436,7 +436,7 @@ class TJBot {
      * @returns {Array<{ model: string, label?: string, kind: string }>} Array of supported vision model info
      */
     supportedVisionModels() {
-        const manager = ModelManager.getInstance();
+        const manager = ModelRegistry.getInstance();
         return manager.getSupportedVisionModels().map((m) => ({ model: m.key, label: m.label, kind: m.kind }));
     }
     /** ------------------------------------------------------------------------ */
@@ -572,7 +572,7 @@ class TJBot {
      * @returns {string[]} Array of installed TTS model keys
      */
     installedTTSModels() {
-        const manager = ModelManager.getInstance();
+        const manager = ModelRegistry.getInstance();
         return manager.getInstalledTTSModels().map((m) => m.key);
     }
     /**
@@ -580,7 +580,7 @@ class TJBot {
      * @returns {Array<{ model: string, label?: string }>} Array of supported TTS model info
      */
     supportedTTSModels() {
-        const manager = ModelManager.getInstance();
+        const manager = ModelRegistry.getInstance();
         return manager.getSupportedTTSModels().map((m) => ({
             model: m.key,
             label: m.label,

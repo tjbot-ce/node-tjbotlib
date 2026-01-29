@@ -17,14 +17,13 @@ import fs from 'fs';
 import * as ort from 'onnxruntime-node';
 import sharp from 'sharp';
 import winston from 'winston';
-import { TJBotError } from '../../utils/index.js';
-import { ModelManager } from '../../utils/model-manager.js';
+import { TJBotError, ModelRegistry } from '../../utils/index.js';
 import { VisionEngine, } from '../vision-engine.js';
 import path from 'path';
 export class ONNXVisionEngine extends VisionEngine {
     constructor(config) {
         super(config);
-        this.manager = ModelManager.getInstance();
+        this.manager = ModelRegistry.getInstance();
         this.models = new Map();
     }
     /**

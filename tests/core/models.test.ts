@@ -15,20 +15,20 @@
  */
 
 import { describe, test, expect, beforeAll } from 'vitest';
-import { ModelManager } from '../../src/utils/model-manager.js';
+import { ModelRegistry } from '../../src/utils/model-manager.js';
 
 /**
- * Lightweight test suite for ModelManager - Model Discovery Only
+ * Lightweight test suite for ModelRegistry - Model Discovery Only
  *
  * These tests verify model discovery and querying without downloading models.
- * For full integration tests with model downloads, see tests/models/model-manager.test.ts
+ * For full integration tests with model downloads, see tests/models/model-registry.test.ts
  * Run those with: npm run test-models
  */
-describe('ModelManager - Model Discovery', () => {
-    let manager: ModelManager;
+describe('ModelRegistry - Model Discovery', () => {
+    let manager: ModelRegistry;
 
     beforeAll(() => {
-        manager = ModelManager.getInstance();
+        manager = ModelRegistry.getInstance();
     });
 
     describe('STT Models', () => {
@@ -83,18 +83,11 @@ describe('ModelManager - Model Discovery', () => {
             expect(models.length).toBeGreaterThan(0);
         });
 
-        test('yolov8n vision model exists in supported models', () => {
-            const models = manager.getSupportedVisionModels();
-            const yolo = models.find((m) => m.key === 'yolov8n');
-            expect(yolo).toBeDefined();
-            expect(yolo?.type).toBe('vision');
-        });
-
         test('mobilenetv3 classification model exists in supported models', () => {
             const models = manager.getSupportedVisionModels();
             const mobilenet = models.find((m) => m.key === 'mobilenetv3');
             expect(mobilenet).toBeDefined();
-            expect(mobilenet?.type).toBe('vision');
+            expect(mobilenet?.type).toBe('vision.classification');
             expect(mobilenet?.kind).toBe('classification');
         });
 
@@ -102,7 +95,7 @@ describe('ModelManager - Model Discovery', () => {
             const models = manager.getSupportedVisionModels();
             const yunet = models.find((m) => m.key === 'yunet');
             expect(yunet).toBeDefined();
-            expect(yunet?.type).toBe('vision');
+            expect(yunet?.type).toBe('vision.face-detection');
             expect(yunet?.kind).toBe('face-detection');
         });
     });

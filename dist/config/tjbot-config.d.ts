@@ -36,6 +36,7 @@ export declare class TJBotConfig {
      * 1. Default configuration from tjbot.default.toml
      * 2. Local tjbot.toml file (if it exists)
      * 3. Override configuration (if provided)
+     * 4. Register user-defined models from [models] section
      *
      * @param overrideConfig Optional configuration object to overlay on top of loaded config
      */

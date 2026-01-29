@@ -33,36 +33,11 @@ export type LogConfig = z.infer<typeof logConfigSchema>;
 export const sttBackendTypeSchema = z.enum(['local', 'ibm-watson-stt', 'google-cloud-stt', 'azure-stt']);
 export type STTBackendType = z.infer<typeof sttBackendTypeSchema>;
 
-/**
- * Custom model configuration for overriding default models from registry
- * If customModel is specified, both 'model' and 'url' must be provided
- */
-export const customModelConfigSchema = z
-    .object({
-        model: z.string().optional(),
-        url: z.string().optional(),
-    })
-    .superRefine((data, ctx) => {
-        const hasModel = data.model !== undefined && data.model !== '';
-        const hasUrl = data.url !== undefined && data.url !== '';
-
-        if ((hasModel && !hasUrl) || (!hasModel && hasUrl)) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: 'Custom model configuration must have both "model" and "url" specified, or neither',
-                path: hasModel ? ['url'] : ['model'],
-            });
-        }
-    })
-    .loose();
-export type CustomModelConfig = z.infer<typeof customModelConfigSchema>;
-
 export const vadConfigSchema = z
     .object({
         enabled: z.boolean().optional(),
-        /** Optional model filename (e.g., silero_vad.onnx) */
+        /** Optional model name from registry (e.g., silero-vad) */
         model: z.string().optional(),
-        'custom-model': customModelConfigSchema.optional(),
     })
     .loose();
 export type VADConfig = z.infer<typeof vadConfigSchema>;
@@ -71,7 +46,6 @@ export const sttBackendLocalConfigSchema = z
     .object({
         model: z.string().optional(),
         vad: vadConfigSchema.optional(),
-        'custom-model': customModelConfigSchema.optional(),
     })
     .loose();
 export type STTBackendLocalConfig = z.infer<typeof sttBackendLocalConfigSchema>;
@@ -227,7 +201,6 @@ export type TTSBackendType = z.infer<typeof ttsBackendTypeSchema>;
 export const ttsBackendLocalConfigSchema = z
     .object({
         model: z.string().optional(),
-        'custom-model': customModelConfigSchema.optional(),
     })
     .loose();
 export type TTSBackendLocalConfig = z.infer<typeof ttsBackendLocalConfigSchema>;
@@ -305,6 +278,36 @@ export const hardwareConfigSchema = z
 export type HardwareConfig = z.infer<typeof hardwareConfigSchema>;
 
 /**
+ * User-defined model configuration
+ * Allows users to register custom models via TOML [models] section
+ */
+export const modelEntrySchema = z
+    .object({
+        type: z.enum([
+            'stt',
+            'tts',
+            'vad',
+            'vision.object-recognition',
+            'vision.classification',
+            'vision.face-detection',
+            'vision.image-description',
+        ]),
+        key: z.string(),
+        label: z.string(),
+        url: z.string(),
+        folder: z.string().optional(),
+        kind: z.string().optional(),
+        inputShape: z.array(z.number()).optional(),
+        labelUrl: z.string().optional(),
+        required: z.array(z.string()).optional(),
+    })
+    .strict();
+export type ModelEntry = z.infer<typeof modelEntrySchema>;
+
+export const modelsConfigSchema = z.array(modelEntrySchema).optional();
+export type ModelsConfig = z.infer<typeof modelsConfigSchema>;
+
+/**
  * TTS & STT Engine configuration (used for TTSEngine & STTEngine constructors)
  */
 export type TTSEngineConfig = Record<string, unknown>;
@@ -323,6 +326,7 @@ export const tjbotConfigSchema = z
         shine: shineConfigSchema.optional(),
         speak: speakConfigSchema.optional(),
         wave: waveConfigSchema.optional(),
+        models: modelsConfigSchema,
         // Use explicit key schema to satisfy TS signature for z.record
         recipe: z.record(z.string(), z.any()).optional(),
     })

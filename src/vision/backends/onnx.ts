@@ -19,8 +19,8 @@ import * as ort from 'onnxruntime-node';
 import sharp from 'sharp';
 import winston from 'winston';
 import type { SeeBackendConfig } from '../../config/config-types.js';
-import { TJBotError } from '../../utils/index.js';
-import { ModelManager, VisionModelMetadata } from '../../utils/model-manager.js';
+import { TJBotError, ModelRegistry } from '../../utils/index.js';
+import type { VisionModelMetadata } from '../../utils/model-manager.js';
 import {
     ImageClassificationResult,
     ObjectDetectionResult,
@@ -39,7 +39,7 @@ interface LoadedModel {
 }
 
 export class ONNXVisionEngine extends VisionEngine {
-    private manager: ModelManager = ModelManager.getInstance();
+    private manager: ModelRegistry = ModelRegistry.getInstance();
     private models: Map<string, LoadedModel> = new Map();
 
     constructor(config?: SeeBackendConfig) {

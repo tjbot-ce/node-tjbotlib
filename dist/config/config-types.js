@@ -27,40 +27,17 @@ const logConfigSchema = z
  * STT Backend configuration
  */
 export const sttBackendTypeSchema = z.enum(['local', 'ibm-watson-stt', 'google-cloud-stt', 'azure-stt']);
-/**
- * Custom model configuration for overriding default models from registry
- * If customModel is specified, both 'model' and 'url' must be provided
- */
-export const customModelConfigSchema = z
-    .object({
-    model: z.string().optional(),
-    url: z.string().optional(),
-})
-    .superRefine((data, ctx) => {
-    const hasModel = data.model !== undefined && data.model !== '';
-    const hasUrl = data.url !== undefined && data.url !== '';
-    if ((hasModel && !hasUrl) || (!hasModel && hasUrl)) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Custom model configuration must have both "model" and "url" specified, or neither',
-            path: hasModel ? ['url'] : ['model'],
-        });
-    }
-})
-    .loose();
 export const vadConfigSchema = z
     .object({
     enabled: z.boolean().optional(),
-    /** Optional model filename (e.g., silero_vad.onnx) */
+    /** Optional model name from registry (e.g., silero-vad) */
     model: z.string().optional(),
-    'custom-model': customModelConfigSchema.optional(),
 })
     .loose();
 export const sttBackendLocalConfigSchema = z
     .object({
     model: z.string().optional(),
     vad: vadConfigSchema.optional(),
-    'custom-model': customModelConfigSchema.optional(),
 })
     .loose();
 export const sttBackendIBMWatsonConfigSchema = z
@@ -184,7 +161,6 @@ export const ttsBackendTypeSchema = z.enum(['local', 'ibm-watson-tts', 'google-c
 export const ttsBackendLocalConfigSchema = z
     .object({
     model: z.string().optional(),
-    'custom-model': customModelConfigSchema.optional(),
 })
     .loose();
 export const ttsBackendIBMWatsonConfigSchema = z
@@ -246,6 +222,32 @@ export const hardwareConfigSchema = z
 })
     .loose();
 /**
+ * User-defined model configuration
+ * Allows users to register custom models via TOML [models] section
+ */
+export const modelEntrySchema = z
+    .object({
+    type: z.enum([
+        'stt',
+        'tts',
+        'vad',
+        'vision.object-recognition',
+        'vision.classification',
+        'vision.face-detection',
+        'vision.image-description',
+    ]),
+    key: z.string(),
+    label: z.string(),
+    url: z.string(),
+    folder: z.string().optional(),
+    kind: z.string().optional(),
+    inputShape: z.array(z.number()).optional(),
+    labelUrl: z.string().optional(),
+    required: z.array(z.string()).optional(),
+})
+    .strict();
+export const modelsConfigSchema = z.array(modelEntrySchema).optional();
+/**
  * Complete TJBot configuration
  */
 export const tjbotConfigSchema = z
@@ -257,6 +259,7 @@ export const tjbotConfigSchema = z
     shine: shineConfigSchema.optional(),
     speak: speakConfigSchema.optional(),
     wave: waveConfigSchema.optional(),
+    models: modelsConfigSchema,
     // Use explicit key schema to satisfy TS signature for z.record
     recipe: z.record(z.string(), z.any()).optional(),
 })

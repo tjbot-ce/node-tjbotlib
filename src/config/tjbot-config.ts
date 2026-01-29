@@ -30,7 +30,7 @@ import {
     type SpeakConfig,
     type WaveConfig,
 } from './config-types.js';
-import { TJBotError } from '../utils/errors.js';
+import { TJBotError, ModelRegistry } from '../utils/index.js';
 
 /**
  * TJBotConfig manages loading and parsing TJBot configuration from TOML files.
@@ -55,6 +55,7 @@ export class TJBotConfig {
      * 1. Default configuration from tjbot.default.toml
      * 2. Local tjbot.toml file (if it exists)
      * 3. Override configuration (if provided)
+     * 4. Register user-defined models from [models] section
      *
      * @param overrideConfig Optional configuration object to overlay on top of loaded config
      */
@@ -84,6 +85,15 @@ export class TJBotConfig {
             this.config = tjbotConfigSchema.parse(mergedConfig);
         } catch (err) {
             throw new TJBotError('invalid TJBot configuration', { cause: err as Error });
+        }
+
+        // Register user-defined models from [models] section
+        if (this.config.models && Array.isArray(this.config.models)) {
+            const registry = ModelRegistry.getInstance();
+            for (const model of this.config.models) {
+                registry.registerModel(model as never);
+                winston.debug(`Registered custom model: ${model.key}`);
+            }
         }
 
         // Validate vision backend models if local backend is configured

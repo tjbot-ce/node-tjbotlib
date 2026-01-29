@@ -18,7 +18,7 @@
 export { Capability, Hardware } from './constants.js';
 export { TJBotError } from './errors.js';
 export {
-    ModelManager,
+    ModelRegistry,
     STTModelMetadata,
     TTSModelMetadata,
     VADModelMetadata,
