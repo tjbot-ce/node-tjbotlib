@@ -22,7 +22,7 @@
  */
 export enum Capability {
     LISTEN = 'listen',
-    LOOK = 'look',
+    SEE = 'see',
     SHINE = 'shine',
     SPEAK = 'speak',
     WAVE = 'wave',

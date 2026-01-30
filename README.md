@@ -18,14 +18,15 @@ Raspberry Pi.
 TJBot's core capabilities are:
 
 - **Listen** – Capture and transcribe speech with Speech-to-Text
-- **Look** – Take photos with an integrated camera
+- **See** – Recognize objects, faces, and image classes (and describe images with Azure Vision)
 - **Shine** – Control an RGB LED in various colors and effects
 - **Speak** – Play audio and synthesize speech with Text-to-Speech
 - **Wave** – Move its arm using a servo motor
 
-This library supports both **local AI backends** (using sherpa-onnx for
-offline speech processing) and **IBM Watson cloud services** for more advanced
-capabilities.
+This library supports **local AI backends** (sherpa-onnx for speech, ONNX
+runtime for vision) and **cloud services** for speech and vision, including IBM
+Watson (speech), Google Cloud (speech + vision), and Microsoft Azure (speech +
+vision).
 
 ## System Dependencies
 
@@ -141,8 +142,7 @@ const tj = new TJBot({
 ## Configuration Reference
 
 TJBot uses [TOML](https://toml.io/en/) for configuration. By default, it
-looks for `tjbot.toml` in the current working directory. Create this file to
-override the default settings shown below:
+looks for a `tjbot.toml` configuration file in the current working directory. Create this file to override the default settings shown below:
 
 ```toml
 ################################################################################
@@ -155,15 +155,76 @@ override the default settings shown below:
 # Set this to 'verbose' or 'debug' to see detailed logs for troubleshooting
 level = 'info'
 
-[hardware]
+# =============================================================================
+# Hardware Configuration
+# =============================================================================
 # Hardware devices to initialize with TJBot
-# Set to true to enable, false to disable (or omit to disable)
+# Set to true to enable, false (or omit) to disable
+
+[hardware]
 speaker = false          # Text-to-speech synthesis output
 microphone = false       # Speech-to-text audio input
 led_common_anode = false # LED with common anode (traditional RGB LED)
 led_neopixel = false     # Addressable RGB NeoPixel LED
 servo = false            # Servo motor for arm/movement
 camera = false           # Camera module for image capture
+
+# ============================================================================
+# On-Device ML Models
+# ============================================================================
+# TJBot supports on-device ML models for speech and vision tasks using the
+# sherpa-onnx runtime (speech) and onnx runtime (vision). Several models are
+# available by default, defined in the model registry (model-registry.yaml).
+# You can also register additional models here. Models must be in the ONNX
+# format and compatible with the sherpa-onnx or onnx runtimes.
+#
+# On-device models are registered in the [[models]] array. Each model entry
+# includes:
+#   type       -> Model type (e.g., 'stt', 'tts', 'vad',
+#                 'vision.object-recognition')
+#   key        -> Unique model identifier (e.g., 'sherpa-onnx-whisper-base.en')
+#   label      -> Human-readable name for the model
+#   url        -> URL to download the model files (can be file:// for local
+#                 files)
+#   folder     -> Folder name to store the model files locally
+#   kind       -> Model architecture:
+#                 STT: 'offline', 'offline-whisper', 'streaming-zipformer',
+#                 'streaming'
+#                 TTS: 'vits-piper', 'tacotron', 'fastpitch', 'streaming'
+#                 Vision: 'detection', 'classification', 'face-detection',
+#                 'image-description'
+#   required   -> List of required files for the model (used to validate the
+#                 model was downloaded correctly)
+#   inputShape -> (Vision models only) Expected input tensor shape [batch,
+#                 channels, height, width]
+#   labelUrl   -> (Vision models only) URL to download label/class names file
+#
+# Example: Register a custom STT model
+# [[models]]
+# type = 'stt'
+# key = 'my-custom-stt-model'
+# label = 'My Custom STT Model'
+# url = "file:///path/to/my/model.onnx"
+# folder = "my-custom-stt-model"
+# kind = "offline"
+# required = ["model.onnx", "tokens.txt"]
+
+# Example: Register a custom vision classification model
+# [[models]]
+# type = 'vision.classification'
+# key = 'my-vision-classifier'
+# label = 'My Vision Classifier'
+# url = "file:///path/to/my/classifier.zip"
+# folder = "my-vision-classifier"
+# kind = "classification"
+# required = ["model.onnx", "labels.txt"]
+# labelUrl = "file:///path/to/labels.txt"
+# inputShape = [1, 3, 224, 224]
+
+# =============================================================================
+# Listen
+# =============================================================================
+# Configuration for TJBot's ability to listen and transcribe speech
 
 [listen]
 # 'device' specifies the audio device `arecord` will use for audio recording.
@@ -178,19 +239,17 @@ microphoneChannels = 2
 
 [listen.backend]
 # 'type' chooses the STT provider:
-#   'local'  -> sherpa-onnx on-device (OFFLINE by default, can also do streaming models)
-#   'ibm-watson-stt' -> IBM Cloud STT (STREAMING)
+#   'local'            -> sherpa-onnx on-device (OFFLINE by default, can also do streaming models)
+#   'ibm-watson-stt'   -> IBM Cloud STT (STREAMING)
 #   'google-cloud-stt' -> Google Cloud STT (STREAMING)
-#   'azure-stt' -> Microsoft Azure STT (single-shot, treated as OFFLINE for API usage)
+#   'azure-stt'        -> Microsoft Azure STT (single-shot, treated as OFFLINE for API usage)
 # If you add a callback for an offline model or omit it for a streaming model, TJBot will throw a TJBotError.
 type = 'local'
 
 [listen.backend.local]
 # DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
-# See src/config/models.yaml for other available models and their URLs.
-# More STT models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+# See model-registry.yaml for other available models.
 model = 'sherpa-onnx-whisper-base.en'
-modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.en.tar.bz2'
 
 [listen.backend.local.vad]
 # Voice activity detection (VAD) is used for local OFFLINE models (e.g. whisper, moonshine).
@@ -200,9 +259,8 @@ modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/s
 enabled = true
 
 # DEFAULT MODEL: Silero VAD (~350KB)
-# More VAD models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
-model = 'silero_vad.onnx'
-modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/silero_vad.onnx'
+# See model-registry.yaml for other available models.
+model = 'silero-vad'
 
 [listen.backend.ibm-watson-stt]
 # Specify the STT model to use.
@@ -230,6 +288,36 @@ interimResults = false
 #   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
 credentialsPath = ''
 
+[listen.backend.google-cloud-stt]
+# Google Cloud Speech-to-Text API credentials and configuration
+#
+# Path to google-credentials.json file containing Google Cloud API credentials
+# If not specified, TJBot will search for the file in this order:
+#   1. Current working directory (./google-credentials.json)
+#   2. .tjbot directory (~/.tjbot/google-credentials.json)
+credentialsPath = ''
+
+# Optional: Google Cloud Speech-to-Text model to use (e.g., 'latest_long',
+# 'latest_short')
+model = ''
+
+[listen.backend.azure-stt]
+# Microsoft Azure Speech-to-Text API credentials and configuration
+#
+# Path to azure-credentials.env file containing Azure API credentials
+# If not specified, TJBot will search for the file in this order:
+#   1. Current working directory (./azure-credentials.env)
+#   2. .tjbot directory (~/.tjbot/azure-credentials.env)
+credentialsPath = ''
+
+# Optional: Language code (e.g., 'en-US', 'en-GB', 'fr-FR')
+language = ''
+
+# =============================================================================
+# See
+# =============================================================================
+# Configuration for TJBot's ability to see and recognize objects, faces, and text
+
 [see]
 # Camera resolution is width x height
 # Common resolutions: [1920, 1080], [1280, 720], [640, 480]
@@ -240,6 +328,43 @@ verticalFlip = false
 
 # If true, flips the camera image horizontally
 horizontalFlip = false
+
+[see.backend]
+# 'type' chooses the CV provider:
+#   'local'               -> on-device ONNX (OFFLINE)
+#   'google-cloud-vision' -> Google Cloud Vision (CLOUD)
+#   'azure-vision'        -> Microsoft Azure Vision (CLOUD)
+type = 'local'
+
+[see.backend.local]
+# DEFAULT MODELS (OFFLINE): Specialized quantized models for each vision task
+# All models are downloaded and cached automatically when using local backend
+# See model-registry.yaml for available models for each task
+objectDetectionModel = 'ssd-mobilenet-v2'
+imageClassificationModel = 'mobilenetv3'
+faceDetectionModel = 'yunet'
+
+# Confidence thresholds for filtering results
+# Results with confidence scores below these thresholds will be excluded
+# Valid range: 0.0 to 1.0 (0.8 = 80% confidence)
+objectDetectionConfidence = 0.8
+imageClassificationConfidence = 0.8
+faceDetectionConfidence = 0.9
+
+[see.backend.google-cloud-vision]
+# Google Cloud Vision API credentials and model
+credentialsPath = ''
+model = ''
+
+[see.backend.azure-vision]
+# Microsoft Azure Vision API credentials and model
+credentialsPath = ''
+model = ''
+
+# =============================================================================
+# Shine
+# =============================================================================
+# Configuration for TJBot's ability to shine its LED
 
 [shine.neopixel]
 # NeoPixel LED Pin Configuration
@@ -282,6 +407,11 @@ redPin = 19   # GPIO19 / Physical pin 35
 greenPin = 13 # GPIO13 / Physical pin 33
 bluePin = 12  # GPIO12 / Physical pin 32
 
+# =============================================================================
+# Speak
+# =============================================================================
+# Configuration for TJBot's ability to speak using text-to-speech synthesis
+
 [speak]
 # 'device' specifies the audio device `aplay` will use for audio playback
 # in most cases, leaving this blank should just work. if you have difficulty
@@ -301,11 +431,9 @@ device = ''
 type = 'local'
 
 [speak.backend.local]
-# DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
-# See src/config/models.yaml for other available models and their URLs.
-# More TTS models can be found here: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+# DEFAULT MODEL: Whisper base.en (good accuracy, English-only, ~140MB)
+# See model-registry.yaml for other available models.
 model = 'vits-piper-en_US-ryan-medium'
-modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-ryan-medium.tar.bz2'
 
 [speak.backend.ibm-watson-tts]
 # 'voice' specifies the IBM Watson Text-to-Speech voice to use.
@@ -327,6 +455,35 @@ voice = 'en-US_MichaelV3Voice'
 #   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
 credentialsPath = ''
 
+[speak.backend.google-cloud-tts]
+# Google Cloud Text-to-Speech API credentials and configuration
+#
+# Path to google-credentials.json file containing Google Cloud API credentials
+# If not specified, TJBot will search for the file in this order:
+#   1. Current working directory (./google-credentials.json)
+#   2. .tjbot directory (~/.tjbot/google-credentials.json)
+credentialsPath = ''
+
+# Optional: Google Cloud language code (e.g., 'en-US', 'en-GB', 'fr-FR')
+languageCode = ''
+
+[speak.backend.azure-tts]
+# Microsoft Azure Text-to-Speech API credentials and configuration
+#
+# Path to azure-credentials.env file containing Azure API credentials
+# If not specified, TJBot will search for the file in this order:
+#   1. Current working directory (./azure-credentials.env)
+#   2. .tjbot directory (~/.tjbot/azure-credentials.env)
+credentialsPath = ''
+
+# Optional: Azure voice name (e.g., 'en-US-JennyNeural')
+voice = ''
+
+# =============================================================================
+# Wave
+# =============================================================================
+# Configuration for TJBot's ability to wave its arm using a servo motor
+
 [wave]
 # The GPIO chip and pin number for controlling a servo motor
 # connected to TJBot's arm.
@@ -334,36 +491,49 @@ gpioChip = 0  # GPIO chip 0
 servoPin = 18 # GPIO18 / Physical Pin 12
 ```
 
-## Setting Up Speech Backends
+## Setting Up Speech and Vision Backends
 
-TJBot supports two backends for speech processing:
+TJBot supports local and cloud backends for speech and vision:
 
-### Local Backend (sherpa-onnx)
+- **Speech**: Local (sherpa-onnx), IBM Watson, Google Cloud, Microsoft Azure
+- **Vision**: Local (ONNX runtime), Google Cloud Vision, Microsoft Azure Vision
 
-The local backend uses [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx)
-for speech recognition and synthesis. This runs entirely offline.
+### Local Backend (sherpa-onnx + ONNX)
 
-<!-- > ⚠️ Local speech recognition (STT) and speech synthesis (TTS) require -->
-<!-- > a Raspberry Pi 4 or 5. -->
+The local backend uses [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) for
+speech recognition and synthesis, and [ONNX](https://github.com/Microsoft/onnxruntime) runtime for vision tasks. Everything
+runs offline, and models are downloaded automatically on first use.
+
+> ⚠️ Local ML backends require a Raspberry Pi 4 or 5.
 
 #### Setup
 
-1. Set `backend = 'local'` in the `[listen]` and `[speak]` sections of
-   `tjbot.toml`
+1. Set `type = 'local'` under `[listen.backend]`, `[speak.backend]`, and
+   `[see.backend]` in `tjbot.toml`
 2. Models are automatically downloaded on first use (may take a few minutes)
 
 #### Example Configuration
 
 ```toml
-[listen]
-backend = 'local'
+[listen.backend]
+type = 'local'
 
-[speak]
-backend = 'local'
+[listen.backend.local]
+model = 'sherpa-onnx-whisper-base.en'
+
+[speak.backend]
+type = 'local'
 
 [speak.backend.local]
 model = 'vits-piper-en_US-arctic-medium'
-modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-en_US-arctic-medium.tar.bz2'
+
+[see.backend]
+type = 'local'
+
+[see.backend.local]
+objectDetectionModel = 'ssd-mobilenet-v2'
+imageClassificationModel = 'mobilenetv3'
+faceDetectionModel = 'yunet'
 ```
 
 > 💡 Check out the complete list of
@@ -372,7 +542,40 @@ modelUrl = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/v
 > [Speech to Text](https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models)
 > models.
 
-### IBM Watson Backend
+#### Custom Models & Model Registry
+
+TJBot ships with a built-in model registry in
+[config/model-registry.yaml](config/model-registry.yaml) for speech (STT/TTS/VAD)
+and vision tasks. You can register additional ONNX models in your tjbot.toml
+file (create one or copy [config/tjbot.default.toml](config/tjbot.default.toml))
+using the [[models]] array. Custom entries are merged with the built-in registry
+and can be referenced by key in your configuration.
+
+Example: register a custom vision classification model and use it locally:
+
+```toml
+[[models]]
+type = 'vision.classification'
+key = 'my-classifier'
+label = 'My Classifier'
+url = 'file:///home/pi/models/my-classifier.zip'
+folder = 'my-classifier'
+kind = 'classification'
+required = ['model.onnx', 'labels.txt']
+labelUrl = 'file:///home/pi/models/labels.txt'
+inputShape = [1, 3, 224, 224]
+
+[see.backend]
+type = 'local'
+
+[see.backend.local]
+imageClassificationModel = 'my-classifier'
+```
+
+You can register custom speech models the same way and then set
+`listen.backend.local.model` or `speak.backend.local.model` to your custom key.
+
+### IBM Watson Backend (Speech)
 
 To use IBM Watson services for Speech-to-Text and Text-to-Speech, you need an
 IBM Cloud account and Watson service credentials.
@@ -388,8 +591,8 @@ IBM Cloud account and Watson service credentials.
    service instance → "Manage" → "Credentials" → download credentials)
 4. Save your credentials in an `ibm-credentials.env` file (see "IBM
    Credentials File Location" below)
-5. Set `backend = 'ibm-watson-stt'` and/or `backend = 'ibm-watson-tts'` in
-   `tjbot.toml`
+5. Set `type = 'ibm-watson-stt'` and/or `type = 'ibm-watson-tts'` under
+   `[listen.backend]` and `[speak.backend]`
 
 #### IBM Credentials File Location
 
@@ -412,11 +615,11 @@ so all your TJBot projects can share the same credentials.
 #### IBM Watson Configuration Example
 
 ```toml
-[listen]
-backend = 'ibm-watson-stt'
+[listen.backend]
+type = 'ibm-watson-stt'
 
-[speak]
-backend = 'ibm-watson-tts'
+[speak.backend]
+type = 'ibm-watson-tts'
 
 [speak.backend.ibm-watson-tts]
 voice = 'en-US_EmilyV3Voice'
@@ -426,6 +629,47 @@ voice = 'en-US_EmilyV3Voice'
 
 > 💡 Check out the complete list of
 > [Text-to-Speech voices](https://cloud.ibm.com/docs/text-to-speech?topic=text-to-speech-voices).
+
+### Google Cloud Backend (Speech + Vision)
+
+1. Create a Google Cloud project and enable **Speech-to-Text**, **Text-to-Speech**,
+   and **Vision** APIs
+2. Create a service account and download its credentials to
+   `google-credentials.json`
+3. Set `type = 'google-cloud-stt'`, `type = 'google-cloud-tts'`, and
+   `type = 'google-cloud-vision'` under the respective backend sections
+
+```toml
+[listen.backend]
+type = 'google-cloud-stt'
+
+[speak.backend]
+type = 'google-cloud-tts'
+
+[see.backend]
+type = 'google-cloud-vision'
+```
+
+### Microsoft Azure Backend (Speech + Vision)
+
+1. Create Azure resources for **Speech-to-Text**, **Text-to-Speech**, and
+   **Computer Vision**
+2. Save your credentials in `azure-credentials.env`
+3. Set `type = 'azure-stt'`, `type = 'azure-tts'`, and `type = 'azure-vision'`
+   under the respective backend sections
+
+```toml
+[listen.backend]
+type = 'azure-stt'
+
+[speak.backend]
+type = 'azure-tts'
+
+[see.backend]
+type = 'azure-vision'
+```
+
+> 💡 Image description is supported when using Azure Vision.
 
 ## API Documentation
 
@@ -468,6 +712,7 @@ tests validate specific components:
 - Speaker (playback): `npm run test-speaker`
 - Speech-to-Text: `npm run test-stt`
 - Text-to-Speech: `npm run test-tts`
+- Vision: `npm run test-vision`
 
 > ⚠️ These tests must be run on a Raspberry Pi with properly connected
 > hardware components.
@@ -562,16 +807,18 @@ To write a TJBot receipe using a local version of `node-tjbotlib`:
 node-tjbotlib/
 ├── src/                   # TypeScript source code
 │   ├── tjbot.ts           # Main TJBot class
+│   ├── @types/            # TypeScript type definitions
 │   ├── camera/            # Camera module
+│   ├── config/            # Configuration parsing and model registry
 │   ├── led/               # LED control (NeoPixel, Common Anode)
 │   ├── microphone/        # Microphone module
+│   ├── rpi-drivers/       # Raspberry Pi hardware drivers
 │   ├── servo/             # Servo module
 │   ├── speaker/           # Speaker module
 │   ├── stt/               # Speech-to-Text module
 │   ├── tts/               # Text-to-Speech module
-│   ├── config/            # Configuration parsing
-│   ├── rpi-drivers/       # Raspberry Pi hardware drivers
-│   └── utils/             # Utilities and constants
+│   ├── utils/             # Utilities, constants, and model registry
+│   └── vision/            # Vision module (object detection, classification, face detection)
 ├── tests/
 │   ├── core/              # Automated unit tests
 │   └── live/              # Interactive hardware tests
