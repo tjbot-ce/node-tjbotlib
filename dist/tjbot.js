@@ -134,6 +134,7 @@ class TJBot {
         await this.initializeAIModels();
         this._initialized = true;
         winston.info('✅ TJBot initialization complete');
+        return this;
     }
     /**
      * Auto-initialize hardware devices based on configuration

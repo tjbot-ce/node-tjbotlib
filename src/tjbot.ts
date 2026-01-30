@@ -152,7 +152,7 @@ class TJBot {
      * @async
      * @public
      */
-    async initialize(overrideConfig?: Partial<TJBotConfigSchema>): Promise<void> {
+    async initialize(overrideConfig?: Partial<TJBotConfigSchema>): Promise<TJBot> {
         winston.info('🔄 Initializing TJBot...');
 
         // Cleanup previous initialization if any
@@ -198,6 +198,8 @@ class TJBot {
 
         this._initialized = true;
         winston.info('✅ TJBot initialization complete');
+
+        return this;
     }
 
     /**

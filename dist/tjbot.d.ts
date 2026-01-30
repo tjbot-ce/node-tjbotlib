@@ -81,7 +81,7 @@ declare class TJBot {
      * @async
      * @public
      */
-    initialize(overrideConfig?: Partial<TJBotConfigSchema>): Promise<void>;
+    initialize(overrideConfig?: Partial<TJBotConfigSchema>): Promise<TJBot>;
     /**
      * Auto-initialize hardware devices based on configuration
      * @private
