@@ -51,6 +51,7 @@ export declare abstract class RPiHardwareDriver {
         abortSignal?: AbortSignal;
     }): Promise<string>;
     abstract capturePhoto(atPath?: string): Promise<string>;
+    abstract capturePhotoBuffer(): Promise<Buffer>;
     abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
     abstract detectFaces(image: Buffer | string): Promise<{
@@ -94,6 +95,7 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         abortSignal?: AbortSignal;
     }): Promise<string>;
     capturePhoto(atPath?: string): Promise<string>;
+    capturePhotoBuffer(): Promise<Buffer>;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
     describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;

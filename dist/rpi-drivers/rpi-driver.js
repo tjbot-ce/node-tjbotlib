@@ -145,6 +145,12 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         }
         return this.cameraController.capturePhoto(atPath);
     }
+    async capturePhotoBuffer() {
+        if (!this.cameraController) {
+            throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
+        }
+        return this.cameraController.capturePhotoBuffer();
+    }
     async detectObjects(image) {
         if (!this.visionController) {
             throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');

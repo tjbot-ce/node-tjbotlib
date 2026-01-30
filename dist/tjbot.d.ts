@@ -133,8 +133,16 @@ declare class TJBot {
      */
     listen(callback?: (text: string) => void): Promise<string | void>;
     /** ------------------------------------------------------------------------ */
-    /** LOOK                                                                      */
+    /** SEE                                                                      */
     /** ------------------------------------------------------------------------ */
+    /**
+     * Capture an image and return it as a buffer.
+     * @return {Promise<Buffer>} The captured image as a buffer.
+     * @throws {TJBotError} if the camera hardware is not initialized
+     * @async
+     * @public
+     */
+    see(): Promise<Buffer>;
     /**
      * Capture an image and save it in the given path.
      * @param  {string=} filePath (optional) Path at which to save the photo file. If not
@@ -144,7 +152,7 @@ declare class TJBot {
      * @async
      * @public
      */
-    look(filePath?: string): Promise<string>;
+    takePhoto(filePath?: string): Promise<string>;
     /**
      * Detect objects in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path

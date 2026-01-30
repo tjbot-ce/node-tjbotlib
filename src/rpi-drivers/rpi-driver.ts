@@ -69,6 +69,7 @@ export abstract class RPiHardwareDriver {
 
     // SEE
     abstract capturePhoto(atPath?: string): Promise<string>;
+    abstract capturePhotoBuffer(): Promise<Buffer>;
     abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
     abstract detectFaces(
@@ -256,6 +257,13 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
             throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
         }
         return this.cameraController.capturePhoto(atPath);
+    }
+
+    async capturePhotoBuffer(): Promise<Buffer> {
+        if (!this.cameraController) {
+            throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
+        }
+        return this.cameraController.capturePhotoBuffer();
     }
 
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {

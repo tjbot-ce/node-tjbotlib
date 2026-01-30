@@ -480,8 +480,21 @@ class TJBot {
     }
 
     /** ------------------------------------------------------------------------ */
-    /** LOOK                                                                      */
+    /** SEE                                                                      */
     /** ------------------------------------------------------------------------ */
+
+    /**
+     * Capture an image and return it as a buffer.
+     * @return {Promise<Buffer>} The captured image as a buffer.
+     * @throws {TJBotError} if the camera hardware is not initialized
+     * @async
+     * @public
+     */
+    async see(): Promise<Buffer> {
+        this.assertCapability(Capability.SEE);
+        const buffer = await this.rpiDriver.capturePhotoBuffer();
+        return buffer;
+    }
 
     /**
      * Capture an image and save it in the given path.
@@ -492,7 +505,7 @@ class TJBot {
      * @async
      * @public
      */
-    async look(filePath?: string): Promise<string> {
+    async takePhoto(filePath?: string): Promise<string> {
         this.assertCapability(Capability.SEE);
 
         const path = await this.rpiDriver.capturePhoto(filePath);

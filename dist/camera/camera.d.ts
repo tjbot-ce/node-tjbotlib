@@ -35,12 +35,25 @@ export declare class CameraController {
      */
     initialize(resolution: [number, number], verticalFlip: boolean, horizontalFlip: boolean, captureTimeout?: number, zeroShutterLag?: boolean): void;
     /**
+     * Build rpicam-still command arguments
+     * @param outputPath Output path or '-' for stdout
+     * @param encoding Optional encoding format (e.g., 'jpg')
+     * @returns Array of command-line arguments
+     */
+    private buildCameraArgs;
+    /**
      * Capture a photo by invoking rpicam-still via child_process
      * @param atPath Optional path to save the photo. If not provided, a temporary file will be used.
      * @returns Path to the saved photo
      * @throws TJBotError if the camera command fails
      */
     capturePhoto(atPath?: string): Promise<string>;
+    /**
+     * Capture a photo and return it as a Buffer
+     * @returns Promise that resolves to a Buffer containing the photo data
+     * @throws TJBotError if the camera capture fails
+     */
+    capturePhotoBuffer(): Promise<Buffer>;
     /**
      * Clean up resources (no-op for direct process invocation)
      */
