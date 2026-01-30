@@ -329,6 +329,21 @@ verticalFlip = false
 # If true, flips the camera image horizontally
 horizontalFlip = false
 
+# Camera capture timeout in milliseconds
+# This controls how long the camera preview runs before capturing the photo.
+# The preview allows auto-exposure and white balance to stabilize.
+#   500  - Fast capture with minimal preview (recommended for responsive behavior)
+#   1000 - 1 second preview (good balance of speed and quality)
+#   5000 - Full 5 second preview (maximum quality, default if not specified)
+#   0    - Immediate capture with no preview (fastest but may have poor exposure)
+captureTimeout = 500
+
+# Enable zero shutter lag for faster repeated captures
+# When enabled, the camera streams continuously in the background so captures
+# use recent frames that are already properly exposed. Best for taking multiple
+# photos in quick succession.
+zeroShutterLag = false
+
 [see.backend]
 # 'type' chooses the CV provider:
 #   'local'               -> on-device ONNX (OFFLINE)

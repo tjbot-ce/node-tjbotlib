@@ -22,14 +22,18 @@ export declare class CameraController {
     private resolution;
     private verticalFlip;
     private horizontalFlip;
+    private captureTimeout;
+    private zeroShutterLag;
     constructor();
     /**
      * Initialize the camera with configuration
      * @param resolution Camera resolution as [width, height]
      * @param verticalFlip Whether to vertically flip the image
      * @param horizontalFlip Whether to horizontally flip the image
+     * @param captureTimeout Timeout in milliseconds before capturing (default: 500)
+     * @param zeroShutterLag Enable zero shutter lag mode (default: false)
      */
-    initialize(resolution: [number, number], verticalFlip: boolean, horizontalFlip: boolean): void;
+    initialize(resolution: [number, number], verticalFlip: boolean, horizontalFlip: boolean, captureTimeout?: number, zeroShutterLag?: boolean): void;
     /**
      * Capture a photo by invoking rpicam-still via child_process
      * @param atPath Optional path to save the photo. If not provided, a temporary file will be used.

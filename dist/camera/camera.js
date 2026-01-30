@@ -27,17 +27,23 @@ export class CameraController {
         this.resolution = [1920, 1080];
         this.verticalFlip = false;
         this.horizontalFlip = false;
+        this.captureTimeout = 500;
+        this.zeroShutterLag = false;
     }
     /**
      * Initialize the camera with configuration
      * @param resolution Camera resolution as [width, height]
      * @param verticalFlip Whether to vertically flip the image
      * @param horizontalFlip Whether to horizontally flip the image
+     * @param captureTimeout Timeout in milliseconds before capturing (default: 500)
+     * @param zeroShutterLag Enable zero shutter lag mode (default: false)
      */
-    initialize(resolution, verticalFlip, horizontalFlip) {
+    initialize(resolution, verticalFlip, horizontalFlip, captureTimeout = 500, zeroShutterLag = false) {
         this.resolution = resolution;
         this.verticalFlip = verticalFlip;
         this.horizontalFlip = horizontalFlip;
+        this.captureTimeout = captureTimeout;
+        this.zeroShutterLag = zeroShutterLag;
         winston.debug('📷 camera instance configured for rpicam-still');
     }
     /**
@@ -67,6 +73,17 @@ export class CameraController {
             args.push('--vflip');
         if (this.horizontalFlip)
             args.push('--hflip');
+        // Add timeout argument
+        if (this.captureTimeout === 0) {
+            args.push('--immediate');
+        }
+        else {
+            args.push('--timeout', this.captureTimeout.toString());
+        }
+        // Add zero shutter lag if enabled
+        if (this.zeroShutterLag) {
+            args.push('--zsl');
+        }
         winston.verbose(`📷 capturing image at path: ${photoPath}`);
         winston.debug(`📷 rpicam-still args: ${args.join(' ')}`);
         return new Promise((resolve, reject) => {

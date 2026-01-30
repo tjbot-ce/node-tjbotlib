@@ -123,7 +123,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         switch (capability) {
             case Capability.LISTEN:
                 return this.hasHardware(Hardware.MICROPHONE);
-            case Capability.LOOK:
+            case Capability.SEE:
                 return this.hasHardware(Hardware.CAMERA);
             case Capability.SHINE:
                 return this.hasHardware(Hardware.LED_COMMON_ANODE) || this.hasHardware(Hardware.LED_NEOPIXEL);
@@ -142,7 +142,9 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const height = config.cameraResolution?.[1] ?? 1080;
         const verticalFlip = config.verticalFlip ?? false;
         const horizontalFlip = config.horizontalFlip ?? false;
-        this.cameraController.initialize([width, height], verticalFlip, horizontalFlip);
+        const captureTimeout = config.captureTimeout ?? 500;
+        const zeroShutterLag = config.zeroShutterLag ?? false;
+        this.cameraController.initialize([width, height], verticalFlip, horizontalFlip, captureTimeout, zeroShutterLag);
         this.visionController = new VisionController(config.backend ?? {});
         this.initializedHardware.add(Hardware.CAMERA);
     }

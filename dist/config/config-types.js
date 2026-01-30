@@ -131,6 +131,8 @@ export const seeConfigSchema = z
     cameraResolution: z.tuple([z.number(), z.number()]).optional(),
     verticalFlip: z.boolean().optional(),
     horizontalFlip: z.boolean().optional(),
+    captureTimeout: z.number().optional(),
+    zeroShutterLag: z.boolean().optional(),
     backend: seeBackendConfigSchema.optional(),
 })
     .loose();

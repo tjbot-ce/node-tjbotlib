@@ -211,6 +211,8 @@ export declare const seeConfigSchema: z.ZodObject<{
     cameraResolution: z.ZodOptional<z.ZodTuple<[z.ZodNumber, z.ZodNumber], null>>;
     verticalFlip: z.ZodOptional<z.ZodBoolean>;
     horizontalFlip: z.ZodOptional<z.ZodBoolean>;
+    captureTimeout: z.ZodOptional<z.ZodNumber>;
+    zeroShutterLag: z.ZodOptional<z.ZodBoolean>;
     backend: z.ZodOptional<z.ZodObject<{
         type: z.ZodOptional<z.ZodEnum<{
             local: "local";
@@ -477,6 +479,8 @@ export declare const tjbotConfigSchema: z.ZodObject<{
         cameraResolution: z.ZodOptional<z.ZodTuple<[z.ZodNumber, z.ZodNumber], null>>;
         verticalFlip: z.ZodOptional<z.ZodBoolean>;
         horizontalFlip: z.ZodOptional<z.ZodBoolean>;
+        captureTimeout: z.ZodOptional<z.ZodNumber>;
+        zeroShutterLag: z.ZodOptional<z.ZodBoolean>;
         backend: z.ZodOptional<z.ZodObject<{
             type: z.ZodOptional<z.ZodEnum<{
                 local: "local";

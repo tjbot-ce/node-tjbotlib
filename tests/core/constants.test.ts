@@ -21,7 +21,7 @@ import { Capability, Hardware } from '../../src/utils/index.js';
 describe('Constants - Capability Enum', () => {
     test('Capability enum has all expected values', () => {
         expect(Capability.LISTEN).toBe('listen');
-        expect(Capability.LOOK).toBe('look');
+        expect(Capability.SEE).toBe('see');
         expect(Capability.SHINE).toBe('shine');
         expect(Capability.SPEAK).toBe('speak');
         expect(Capability.WAVE).toBe('wave');

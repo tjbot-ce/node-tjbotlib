@@ -237,7 +237,7 @@ class TJBot {
             }
         }
         // Initialize Vision engine if camera is configured
-        if (this.rpiDriver.hasCapability(Capability.LOOK)) {
+        if (this.rpiDriver.hasCapability(Capability.SEE)) {
             const seeConfig = this.config.see;
             if (seeConfig?.backend?.local) {
                 winston.info('👁️  Loading Vision engine...');
@@ -289,9 +289,9 @@ class TJBot {
                         `${Hardware.MICROPHONE} hardware in TJBot's configuration.`);
                 }
                 break;
-            case Capability.LOOK:
-                if (!this.rpiDriver.hasCapability(Capability.LOOK)) {
-                    throw new TJBotError('TJBot is not configured to look. ' +
+            case Capability.SEE:
+                if (!this.rpiDriver.hasCapability(Capability.SEE)) {
+                    throw new TJBotError('TJBot is not configured to see. ' +
                         'Please check that you included the ' +
                         `${Hardware.CAMERA} hardware in TJBot's configuration.`);
                 }
@@ -379,7 +379,7 @@ class TJBot {
      * @public
      */
     async look(filePath) {
-        this.assertCapability(Capability.LOOK);
+        this.assertCapability(Capability.SEE);
         const path = await this.rpiDriver.capturePhoto(filePath);
         return path;
     }

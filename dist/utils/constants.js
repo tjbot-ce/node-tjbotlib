@@ -22,7 +22,7 @@
 export var Capability;
 (function (Capability) {
     Capability["LISTEN"] = "listen";
-    Capability["LOOK"] = "look";
+    Capability["SEE"] = "see";
     Capability["SHINE"] = "shine";
     Capability["SPEAK"] = "speak";
     Capability["WAVE"] = "wave";

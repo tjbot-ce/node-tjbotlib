@@ -215,11 +215,11 @@ describe('TJBot - Capability Assertions', () => {
         }).toThrow(TJBotError);
     });
 
-    test('assertCapability throws when LOOK capability missing', () => {
+    test('assertCapability throws when SEE capability missing', () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         expect(() => {
-            tj['assertCapability'](Capability.LOOK);
+            tj['assertCapability'](Capability.SEE);
         }).toThrow(TJBotError);
     });
 
