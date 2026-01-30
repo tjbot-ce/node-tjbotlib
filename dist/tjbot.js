@@ -562,54 +562,67 @@ class TJBot {
     /**
      * Moves TJBot's arm all the way back. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_BACK may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully back.
      * @example tj.armBack()
      * @public
      */
     armBack() {
-        // make sure we have an arm
         this.assertCapability(Capability.WAVE);
         winston.verbose("🦾 Moving TJBot's arm back");
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_BACK);
+        return new Promise((resolve) => {
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_BACK);
+            resolve();
+        });
     }
     /**
      * Raises TJBot's arm. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_UP may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully raised.
      * @example tj.raiseArm()
      * @public
      */
     raiseArm() {
-        // make sure we have an arm
         this.assertCapability(Capability.WAVE);
         winston.verbose("🦾 Raising TJBot's arm");
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+        return new Promise((resolve) => {
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+            resolve();
+        });
     }
     /**
      * Lowers TJBot's arm. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_DOWN may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully lowered.
      * @example tj.lowerArm()
      * @public
      */
     lowerArm() {
-        // make sure we have an arm
         this.assertCapability(Capability.WAVE);
         winston.verbose("🦾 Lowering TJBot's arm");
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
+        return new Promise((resolve) => {
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
+            resolve();
+        });
     }
     /**
      * Waves TJBots's arm once.
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the wave is complete.
      * @public
      */
     wave() {
         this.assertCapability(Capability.WAVE);
         winston.verbose("🦾 Waving TJBot's arm");
         const delay = 0.2;
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
-        sleep(delay);
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
-        sleep(delay);
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
-        sleep(delay);
+        return new Promise((resolve) => {
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+            sleep(delay);
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
+            sleep(delay);
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+            sleep(delay);
+            resolve();
+        });
     }
 }
 /**

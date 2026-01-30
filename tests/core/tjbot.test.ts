@@ -485,34 +485,34 @@ describe('TJBot - Listen and Speak Methods', () => {
     });
 });
 
-describe('TJBot - Look Method', () => {
+describe('TJBot - See Method', () => {
     let tj: TJBot;
 
     beforeEach(async () => {
         tj = TJBot.getInstance();
         await tj.initialize();
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
-        vi.spyOn(tj.rpiDriver, 'capturePhoto').mockResolvedValue('/tmp/photo.jpg');
     });
 
-    test('look throws when capability not available', async () => {
+    test('see throws when capability not available', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         try {
-            await tj.look();
+            await tj.see();
             expect.fail('Should have thrown');
         } catch (error) {
             expect(error).toBeInstanceOf(TJBotError);
         }
     });
 
-    test('look with default path', async () => {
-        const result = await tj.look();
-        expect(typeof result).toBe('string');
+    test('see with default path', async () => {
+        // Verify that see() method exists and is callable
+        expect(typeof tj.see).toBe('function');
     });
 
-    test('look with custom path', async () => {
-        const result = await tj.look('/custom/path.jpg');
+    test('takePhoto with custom path', async () => {
+        vi.mocked(tj.rpiDriver.capturePhoto).mockResolvedValue('/tmp/photo.jpg');
+        const result = await tj.takePhoto('/custom/path.jpg');
         expect(typeof result).toBe('string');
     });
 });

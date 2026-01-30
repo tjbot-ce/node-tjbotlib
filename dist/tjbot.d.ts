@@ -245,30 +245,34 @@ declare class TJBot {
     /**
      * Moves TJBot's arm all the way back. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_BACK may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully back.
      * @example tj.armBack()
      * @public
      */
-    armBack(): void;
+    armBack(): Promise<void>;
     /**
      * Raises TJBot's arm. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_UP may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully raised.
      * @example tj.raiseArm()
      * @public
      */
-    raiseArm(): void;
+    raiseArm(): Promise<void>;
     /**
      * Lowers TJBot's arm. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_DOWN may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully lowered.
      * @example tj.lowerArm()
      * @public
      */
-    lowerArm(): void;
+    lowerArm(): Promise<void>;
     /**
      * Waves TJBots's arm once.
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the wave is complete.
      * @public
      */
-    wave(): void;
+    wave(): Promise<void>;
 }
 /** ------------------------------------------------------------------------ */
 /** MODULE EXPORTS                                                           */
