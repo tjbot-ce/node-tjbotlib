@@ -345,3 +345,93 @@ describe('TJBotConfig - Complex Configurations', () => {
         expect(config.recipe.custom_setting).toBe('value');
     });
 });
+describe('TJBotConfig - Deep Merge Behavior', () => {
+    test('overrideConfig deeply merges nested objects', () => {
+        // Simulate default config with full vision backend settings
+        const overrideConfig = {
+            see: {
+                backend: {
+                    type: 'local' as const,
+                    local: {
+                        objectDetectionModel: 'custom-model',
+                        // Note: not specifying imageClassificationModel or faceDetectionModel
+                    },
+                },
+            },
+        };
+
+        const config = new TJBotConfig(overrideConfig);
+
+        // The override should only replace the specified key
+        expect(config.see.backend?.local?.objectDetectionModel).toBe('custom-model');
+        
+        // These should still have their default values from tjbot.default.toml
+        // (not undefined because the override didn't specify them)
+        expect(config.see.backend?.local?.imageClassificationModel).toBeDefined();
+        expect(config.see.backend?.local?.faceDetectionModel).toBeDefined();
+    });
+
+    test('overrideConfig preserves sibling properties in nested sections', () => {
+        const overrideConfig = {
+            listen: {
+                backend: {
+                    type: 'local' as const,
+                    local: {
+                        model: 'custom-whisper-model',
+                        // Not specifying other local config properties
+                    },
+                },
+            },
+        };
+
+        const config = new TJBotConfig(overrideConfig);
+
+        // Custom value should be set
+        expect(config.listen.backend?.local?.model).toBe('custom-whisper-model');
+        
+        // Other properties from defaults should still exist
+        expect(config.listen.backend?.local).toBeDefined();
+        expect(config.listen.backend?.type).toBe('local');
+    });
+
+    test('overrideConfig can update multiple nested levels independently', () => {
+        const overrideConfig = {
+            see: {
+                cameraResolution: [1280, 720] as [number, number],
+                backend: {
+                    local: {
+                        objectDetectionModel: 'my-model',
+                    },
+                },
+            },
+            listen: {
+                microphoneRate: 48000,
+            },
+        };
+
+        const config = new TJBotConfig(overrideConfig);
+
+        // All override values should be present
+        expect(config.see.cameraResolution).toEqual([1280, 720]);
+        expect(config.see.backend?.local?.objectDetectionModel).toBe('my-model');
+        expect(config.listen.microphoneRate).toBe(48000);
+        
+        // Default values should still exist
+        expect(config.see.backend?.local?.imageClassificationModel).toBeDefined();
+        expect(config.see.backend?.local?.faceDetectionModel).toBeDefined();
+        expect(config.listen.device).toBeDefined();
+    });
+
+    test('arrays are replaced entirely, not merged', () => {
+        const overrideConfig = {
+            see: {
+                cameraResolution: [640, 480] as [number, number],
+            },
+        };
+
+        const config = new TJBotConfig(overrideConfig);
+
+        // Arrays should be replaced entirely, not element-by-element
+        expect(config.see.cameraResolution).toEqual([640, 480]);
+    });
+});

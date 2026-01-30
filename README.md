@@ -139,6 +139,21 @@ const tj = new TJBot({
 });
 ```
 
+**Important:** Configuration overrides use **deep merging** - only the specific keys you provide are overridden, while other values keep their defaults. For example:
+
+```js
+const tj = new TJBot({
+  see: {
+    backend: {
+      local: {
+        objectDetectionModel: 'yolov8n-obb'
+        // imageClassificationModel and faceDetectionModel keep their default values
+      }
+    }
+  }
+});
+```
+
 ## Configuration Reference
 
 TJBot uses [TOML](https://toml.io/en/) for configuration. By default, it

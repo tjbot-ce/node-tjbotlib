@@ -79,7 +79,7 @@ export class TJBotConfig {
             throw new TJBotError(`unable to read tjbot configuration from ${localConfigPath}: ${err}`);
         }
 
-        const mergedConfig = { ...defaultConfig, ...userConfig, ...overrideConfig };
+        const mergedConfig = this.deepMerge(defaultConfig, userConfig, overrideConfig ?? {});
 
         try {
             this.config = tjbotConfigSchema.parse(mergedConfig);
@@ -130,6 +130,57 @@ export class TJBotConfig {
         }
 
         return config as TJBotConfigSchema;
+    }
+
+    /**
+     * Deep merge multiple configuration objects.
+     * Later objects override earlier ones, but only at the leaf level.
+     * @private
+     */
+    private deepMerge(...sources: Array<Record<string, unknown> | Partial<TJBotConfigSchema>>): Record<string, unknown> {
+        const result: Record<string, unknown> = {};
+
+        for (const source of sources) {
+            for (const key in source) {
+                if (!Object.prototype.hasOwnProperty.call(source, key)) {
+                    continue;
+                }
+
+                const sourceValue = source[key];
+                const resultValue = result[key];
+
+                // If the value is an array, replace it entirely (no merging)
+                if (Array.isArray(sourceValue)) {
+                    result[key] = sourceValue;
+                }
+                // If both values are plain objects, merge them recursively
+                else if (this.isPlainObject(sourceValue) && this.isPlainObject(resultValue)) {
+                    result[key] = this.deepMerge(
+                        resultValue as Record<string, unknown>,
+                        sourceValue as Record<string, unknown>
+                    );
+                }
+                // Otherwise, replace the value
+                else {
+                    result[key] = sourceValue;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Check if a value is a plain object (not null, not array, not Date, etc.)
+     * @private
+     */
+    private isPlainObject(value: unknown): boolean {
+        return (
+            value !== null &&
+            typeof value === 'object' &&
+            !Array.isArray(value) &&
+            Object.prototype.toString.call(value) === '[object Object]'
+        );
     }
 
     /**

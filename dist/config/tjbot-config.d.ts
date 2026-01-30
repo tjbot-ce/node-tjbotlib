@@ -47,6 +47,17 @@ export declare class TJBotConfig {
      */
     private loadInternalConfig;
     /**
+     * Deep merge multiple configuration objects.
+     * Later objects override earlier ones, but only at the leaf level.
+     * @private
+     */
+    private deepMerge;
+    /**
+     * Check if a value is a plain object (not null, not array, not Date, etc.)
+     * @private
+     */
+    private isPlainObject;
+    /**
      * Clean configuration object to remove Symbol keys and non-string properties
      * @private
      */

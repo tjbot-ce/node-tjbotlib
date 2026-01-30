@@ -56,7 +56,7 @@ export class TJBotConfig {
         catch (err) {
             throw new TJBotError(`unable to read tjbot configuration from ${localConfigPath}: ${err}`);
         }
-        const mergedConfig = { ...defaultConfig, ...userConfig, ...overrideConfig };
+        const mergedConfig = this.deepMerge(defaultConfig, userConfig, overrideConfig ?? {});
         try {
             this.config = tjbotConfigSchema.parse(mergedConfig);
         }
@@ -102,6 +102,46 @@ export class TJBotConfig {
             throw new TJBotError(`unable to read TOML from ${configFile}: ${err}`);
         }
         return config;
+    }
+    /**
+     * Deep merge multiple configuration objects.
+     * Later objects override earlier ones, but only at the leaf level.
+     * @private
+     */
+    deepMerge(...sources) {
+        const result = {};
+        for (const source of sources) {
+            for (const key in source) {
+                if (!Object.prototype.hasOwnProperty.call(source, key)) {
+                    continue;
+                }
+                const sourceValue = source[key];
+                const resultValue = result[key];
+                // If the value is an array, replace it entirely (no merging)
+                if (Array.isArray(sourceValue)) {
+                    result[key] = sourceValue;
+                }
+                // If both values are plain objects, merge them recursively
+                else if (this.isPlainObject(sourceValue) && this.isPlainObject(resultValue)) {
+                    result[key] = this.deepMerge(resultValue, sourceValue);
+                }
+                // Otherwise, replace the value
+                else {
+                    result[key] = sourceValue;
+                }
+            }
+        }
+        return result;
+    }
+    /**
+     * Check if a value is a plain object (not null, not array, not Date, etc.)
+     * @private
+     */
+    isPlainObject(value) {
+        return (value !== null &&
+            typeof value === 'object' &&
+            !Array.isArray(value) &&
+            Object.prototype.toString.call(value) === '[object Object]');
     }
     /**
      * Clean configuration object to remove Symbol keys and non-string properties
