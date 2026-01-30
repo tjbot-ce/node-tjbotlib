@@ -71,7 +71,7 @@ async function runTest() {
             console.log(`✓ NeoPixel GPIO pin: ${gpioPin}\n`);
         }
 
-        config.hardware = { led_neopixel: true };
+        config.hardware = { [TJBot.Hardware.LED_NEOPIXEL]: true };
         config.shine = { neopixel: neopixelConfig };
         console.log('✓ NeoPixel LED config ready\n');
     } else {
@@ -101,7 +101,7 @@ async function runTest() {
             },
         });
 
-        config.hardware = { led_common_anode: true };
+        config.hardware = { [TJBot.Hardware.LED_COMMON_ANODE]: true };
         config.shine = {
             commonanode: {
                 redPin: parseInt(redPin),
@@ -112,8 +112,7 @@ async function runTest() {
         console.log('✓ Common Anode LED config ready\n');
     }
 
-    const tjbot = TJBot.getInstance();
-    await tjbot.initialize(config);
+    const tjbot = await TJBot.getInstance().initialize(config);
     if (config.hardware.led_neopixel) {
         console.log('✓ TJBot initialized with NeoPixel LED\n');
     } else {

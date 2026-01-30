@@ -33,8 +33,8 @@ export declare enum Capability {
  */
 export declare enum Hardware {
     CAMERA = "camera",
-    LED_COMMON_ANODE = "common_anode_led",
-    LED_NEOPIXEL = "neopixel_led",
+    LED_COMMON_ANODE = "led_common_anode",
+    LED_NEOPIXEL = "led_neopixel",
     MICROPHONE = "microphone",
     SERVO = "servo",
     SPEAKER = "speaker"

@@ -128,8 +128,8 @@ class TJBot {
         }
         winston.verbose(`🤖 TJBot library version ${TJBot.VERSION}`);
         winston.debug(`🛠️ TJBot configuration:\n${JSON.stringify(this.config, null, 2)}`);
-        // Initialize hardware from configuration
-        await this.initializeHardwareFromConfig();
+        // Initialize hardware
+        await this.initializeHardware();
         // Eagerly initialize AI models if configured
         await this.initializeAIModels();
         this._initialized = true;
@@ -137,14 +137,14 @@ class TJBot {
         return this;
     }
     /**
-     * Auto-initialize hardware devices based on configuration
+     * Initialize hardware devices
      * @private
      * @async
      */
-    async initializeHardwareFromConfig() {
+    async initializeHardware() {
         const hwConfig = this.config.hardware;
         if (!hwConfig || Object.keys(hwConfig).length === 0) {
-            winston.debug('No hardware configured in config file');
+            winston.debug('No hardware configured');
             return;
         }
         const hardwareToInit = [];
@@ -282,6 +282,8 @@ class TJBot {
         if (!this._initialized) {
             throw new TJBotError('TJBot has not been initialized. Please call await tj.initialize() before using TJBot.');
         }
+        winston.debug(`Asserting capability: ${capability}`);
+        winston.debug(`TJBot capabilities: ${Array.from(this.rpiDriver.getHardware()).join(', ')}`);
         switch (capability) {
             case Capability.LISTEN:
                 if (!this.rpiDriver.hasCapability(Capability.LISTEN)) {

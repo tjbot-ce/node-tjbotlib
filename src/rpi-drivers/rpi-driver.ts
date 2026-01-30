@@ -37,19 +37,20 @@ import { VisionController } from '../vision/vision.js';
 
 export abstract class RPiHardwareDriver {
     // capability checks
+    abstract getHardware(): Set<Hardware>;
     abstract hasHardware(hardware: Hardware): boolean;
     abstract hasCapability(capability: Capability): boolean;
 
-    // hardware setup
+    // hardware setup & cleanup
     abstract setupCamera(config: SeeConfig): void;
     abstract setupLEDCommonAnode(config: ShineConfig['commonanode']): void;
     abstract setupLEDNeopixel(config: ShineConfig['neopixel']): void;
     abstract setupMicrophone(config: ListenConfig): void;
     abstract setupServo(config: WaveConfig): void;
     abstract setupSpeaker(config: SpeakConfig): void;
-
-    // resource management
     abstract cleanup(): Promise<void>;
+
+    // AI engines
     abstract initializeSTTEngine(): Promise<void>;
     abstract initializeTTSEngine(): Promise<void>;
     abstract initializeVisionEngine(): Promise<void>;
@@ -114,6 +115,10 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     constructor() {
         super();
         this.initializedHardware = new Set();
+    }
+
+    getHardware(): Set<Hardware> {
+        return this.initializedHardware;
     }
 
     hasHardware(hardware: Hardware): boolean {

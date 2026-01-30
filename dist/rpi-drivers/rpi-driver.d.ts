@@ -27,6 +27,7 @@ import { Capability, Hardware } from '../utils/index.js';
 import { ImageClassificationResult, ObjectDetectionResult, FaceDetectionMetadata, ImageDescriptionResult } from '../vision/index.js';
 import { VisionController } from '../vision/vision.js';
 export declare abstract class RPiHardwareDriver {
+    abstract getHardware(): Set<Hardware>;
     abstract hasHardware(hardware: Hardware): boolean;
     abstract hasCapability(capability: Capability): boolean;
     abstract setupCamera(config: SeeConfig): void;
@@ -78,6 +79,7 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     protected listenConfig: ListenConfig;
     protected seeConfig: SeeConfig;
     constructor();
+    getHardware(): Set<Hardware>;
     hasHardware(hardware: Hardware): boolean;
     hasCapability(capability: Capability): boolean;
     setupCamera(config: SeeConfig): void;

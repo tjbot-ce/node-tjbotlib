@@ -22,6 +22,8 @@ import { Capability, Hardware, TJBotError } from '../../src/utils/index.js';
 // Mock the RPiDriver and its subclasses
 vi.mock('../../src/rpi-drivers/index.js', () => {
     const mockDriver = {
+        getHardware: vi.fn(() => new Set()),
+        hasHardware: vi.fn(() => false),
         hasCapability: vi.fn(() => false),
         renderLED: vi.fn(),
         renderServoPosition: vi.fn(),
@@ -46,6 +48,8 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             model: () => 'Raspberry Pi 5 Model B Rev 1.0',
         },
         RPi3Driver: class {
+            getHardware = mockDriver.getHardware;
+            hasHardware = mockDriver.hasHardware;
             hasCapability = mockDriver.hasCapability;
             renderLED = mockDriver.renderLED;
             renderServoPosition = mockDriver.renderServoPosition;
@@ -65,6 +69,8 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             initializeVisionEngine = mockDriver.initializeVisionEngine;
         },
         RPi4Driver: class {
+            getHardware = mockDriver.getHardware;
+            hasHardware = mockDriver.hasHardware;
             hasCapability = mockDriver.hasCapability;
             renderLED = mockDriver.renderLED;
             renderServoPosition = mockDriver.renderServoPosition;
@@ -84,6 +90,8 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             initializeVisionEngine = mockDriver.initializeVisionEngine;
         },
         RPi5Driver: class {
+            getHardware = mockDriver.getHardware;
+            hasHardware = mockDriver.hasHardware;
             hasCapability = mockDriver.hasCapability;
             renderLED = mockDriver.renderLED;
             renderServoPosition = mockDriver.renderServoPosition;

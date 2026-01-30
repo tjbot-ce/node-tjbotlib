@@ -42,10 +42,9 @@ async function runTest() {
     console.log('✓ All dependencies available\n');
 
     console.log(formatSection('Testing TJBot.look() API'));
-    const tjbot = TJBot.getInstance();
-    await tjbot.initialize({
+    const tjbot = await TJBot.getInstance().initialize({
         log: { level: LOG_LEVEL },
-        hardware: { camera: true },
+        hardware: { [TJBot.Hardware.CAMERA]: true },
         see: { cameraResolution: [640, 480] },
     });
 

@@ -31,10 +31,9 @@ async function runTest() {
     const gpioInput = await input({ message: 'Enter GPIO pin for servo:', default: '18' });
     const servoPin = gpioInput.trim() === '' ? 18 : parseInt(gpioInput.trim());
 
-    const tjbot = TJBot.getInstance();
-    await tjbot.initialize({
+    const tjbot = await TJBot.getInstance().initialize({
         log: { level: LOG_LEVEL },
-        hardware: { servo: true },
+        hardware: { [TJBot.Hardware.SERVO]: true },
         wave: {
             servoPin,
         },

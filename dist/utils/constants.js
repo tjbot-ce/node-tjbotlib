@@ -35,8 +35,8 @@ export var Capability;
 export var Hardware;
 (function (Hardware) {
     Hardware["CAMERA"] = "camera";
-    Hardware["LED_COMMON_ANODE"] = "common_anode_led";
-    Hardware["LED_NEOPIXEL"] = "neopixel_led";
+    Hardware["LED_COMMON_ANODE"] = "led_common_anode";
+    Hardware["LED_NEOPIXEL"] = "led_neopixel";
     Hardware["MICROPHONE"] = "microphone";
     Hardware["SERVO"] = "servo";
     Hardware["SPEAKER"] = "speaker";

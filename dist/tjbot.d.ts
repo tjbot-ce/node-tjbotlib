@@ -83,11 +83,11 @@ declare class TJBot {
      */
     initialize(overrideConfig?: Partial<TJBotConfigSchema>): Promise<TJBot>;
     /**
-     * Auto-initialize hardware devices based on configuration
+     * Initialize hardware devices
      * @private
      * @async
      */
-    private initializeHardwareFromConfig;
+    private initializeHardware;
     /**
      * Eagerly initialize AI models (STT, TTS, Vision) if configured
      * @private

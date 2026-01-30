@@ -47,9 +47,8 @@ async function runTest() {
         formatSection(`Initializing TJBot with Vision (${BACKENDS.find((b) => b.id === selectedBackend).label})`)
     );
 
-    const tj = TJBot.getInstance();
-    await tj.initialize({
-        hardware: { camera: true },
+    const tj = await TJBot.getInstance().initialize({
+        hardware: { [TJBot.Hardware.CAMERA]: true },
         see: seeConfig,
     });
     console.log('✓ TJBot initialized');

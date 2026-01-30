@@ -58,8 +58,8 @@ describe('Constants - Capability Enum', () => {
 describe('Constants - Hardware Enum', () => {
     test('Hardware enum has all expected values', () => {
         expect(Hardware.CAMERA).toBe('camera');
-        expect(Hardware.LED_COMMON_ANODE).toBe('common_anode_led');
-        expect(Hardware.LED_NEOPIXEL).toBe('neopixel_led');
+        expect(Hardware.LED_COMMON_ANODE).toBe('led_common_anode');
+        expect(Hardware.LED_NEOPIXEL).toBe('led_neopixel');
         expect(Hardware.MICROPHONE).toBe('microphone');
         expect(Hardware.SERVO).toBe('servo');
         expect(Hardware.SPEAKER).toBe('speaker');
