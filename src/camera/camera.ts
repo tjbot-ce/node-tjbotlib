@@ -89,14 +89,14 @@ export class CameraController {
         ];
         if (this.verticalFlip) args.push('--vflip');
         if (this.horizontalFlip) args.push('--hflip');
-        
+
         // Add timeout argument
         if (this.captureTimeout === 0) {
             args.push('--immediate');
         } else {
             args.push('--timeout', this.captureTimeout.toString());
         }
-        
+
         // Add zero shutter lag if enabled
         if (this.zeroShutterLag) {
             args.push('--zsl');
