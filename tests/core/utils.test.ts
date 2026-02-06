@@ -132,9 +132,9 @@ describe('Utils - convertHexToRgbColor', () => {
         expect(result).toEqual([255, 0, 0]);
     });
 
-    test('handles invalid hex gracefully (returns NaN values)', () => {
+    test('returns array with three elements for invalid hex (values may be NaN)', () => {
         const result = convertHexToRgbColor('GGGGGG');
-        // Function returns NaN for invalid input, not [0,0,0]
+        // Function returns array with NaN values for invalid input
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBe(3);
     });

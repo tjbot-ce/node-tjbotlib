@@ -80,7 +80,7 @@ export declare class ONNXVisionEngine extends VisionEngine {
     private postprocessClassification;
     /**
      * Postprocess face detection output from YuNet
-     * YuNet outputs: [n_faces, 15] where each face has [x, y, w, h, confidence, landmarks_x, landmarks_y, ...]
+     * YuNet outputs multi-scale detections: cls_*, obj_*, bbox_*, kps_* for scales 8, 16, 32
      */
     private postprocessFaceDetection;
     /**

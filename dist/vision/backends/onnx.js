@@ -244,7 +244,8 @@ export class ONNXVisionEngine extends VisionEngine {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const localConfig = this.config ?? {};
         const faceDetectionModelName = localConfig.faceDetectionModel;
-        const confidenceThreshold = localConfig.faceDetectionConfidence ?? 0.8;
+        const confidenceThreshold = localConfig.faceDetectionConfidence ?? 0.35;
+        winston.info(`👁️  Running face detection with confidence threshold: ${confidenceThreshold}`);
         // Lazy load model if needed
         const model = await this.getOrLoadModel(faceDetectionModelName);
         try {
@@ -255,8 +256,11 @@ export class ONNXVisionEngine extends VisionEngine {
             const feeds = {};
             feeds[model.session.inputNames[0]] = input;
             const results = await model.session.run(feeds);
+            winston.info(`YuNet output: ${model.session.outputNames.join(', ')}`);
+            const outputTensor = results[model.session.outputNames[0]];
+            winston.info(`Output shape: [${outputTensor.dims.join(', ')}], size: ${outputTensor.size}`);
             // Postprocess face detection output
-            const metadata = this.postprocessFaceDetection(results, model.session.outputNames, confidenceThreshold);
+            const metadata = this.postprocessFaceDetection(results, model.session.outputNames, confidenceThreshold, [width, height]);
             return {
                 isFaceDetected: metadata.length > 0,
                 metadata,
@@ -399,42 +403,88 @@ export class ONNXVisionEngine extends VisionEngine {
     }
     /**
      * Postprocess face detection output from YuNet
-     * YuNet outputs: [n_faces, 15] where each face has [x, y, w, h, confidence, landmarks_x, landmarks_y, ...]
+     * YuNet outputs multi-scale detections: cls_*, obj_*, bbox_*, kps_* for scales 8, 16, 32
      */
-    postprocessFaceDetection(results, outputNames, confidenceThreshold = 0.8) {
-        const outputName = outputNames[0];
-        const detections = results[outputName].data;
+    postprocessFaceDetection(results, outputNames, confidenceThreshold = 0.5, modelInputSize) {
+        winston.info(`Processing YuNet multi-scale output...`);
         const faces = [];
-        // YuNet output format per face: 15 values
-        // [x, y, w, h, confidence, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5]
-        // where x1-y5 are 5 landmark points
-        const valuesPerFace = 15;
-        for (let i = 0; i < detections.length; i += valuesPerFace) {
-            if (i + valuesPerFace > detections.length)
-                break;
-            const x = detections[i];
-            const y = detections[i + 1];
-            const w = detections[i + 2];
-            const h = detections[i + 3];
-            const confidence = detections[i + 4];
-            // Filter by confidence threshold
-            if (confidence < confidenceThreshold)
+        const [modelWidth, modelHeight] = modelInputSize || [640, 640];
+        // YuNet outputs 12 tensors across 3 scales (8, 16, 32)
+        // Test hypothesis: raw outputs may already be normalized [0-1], not feature-map space
+        const scales = [8, 16, 32];
+        for (const stride of scales) {
+            const clsKey = `cls_${stride}`;
+            const objKey = `obj_${stride}`;
+            const bboxKey = `bbox_${stride}`;
+            const kpsKey = `kps_${stride}`;
+            if (!results[clsKey] || !results[objKey] || !results[bboxKey] || !results[kpsKey]) {
+                winston.warn(`Missing output tensors for stride ${stride}`);
                 continue;
-            // Extract 5 landmarks
-            const landmarks = [];
-            const landmarkTypes = ['eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'];
-            for (let j = 0; j < 5; j++) {
-                landmarks.push({
-                    x: detections[i + 5 + j * 2],
-                    y: detections[i + 6 + j * 2],
-                    type: landmarkTypes[j],
+            }
+            const clsData = results[clsKey].data;
+            const objData = results[objKey].data;
+            const bboxData = results[bboxKey].data;
+            const kpsData = results[kpsKey].data;
+            const numCells = clsData.length;
+            winston.info(`Stride ${stride}: ${numCells} detection slots`);
+            let maxScore = 0;
+            let detectionsPassed = 0;
+            // Process all cells/detections
+            for (let i = 0; i < numCells; i++) {
+                // YuNet outputs logits - apply sigmoid to convert to probabilities
+                const clsProb = this.sigmoid(clsData[i]);
+                const objProb = this.sigmoid(objData[i]);
+                // Official YuNet confidence: geometric mean of cls and obj probabilities
+                const score = Math.sqrt(clsProb * objProb);
+                if (score > maxScore)
+                    maxScore = score;
+                if (score < confidenceThreshold)
+                    continue;
+                detectionsPassed++;
+                // Raw bbox values - hypothesis: already normalized [0-1] as [cx, cy, w, h]
+                const cx = bboxData[i * 4];
+                const cy = bboxData[i * 4 + 1];
+                const w = bboxData[i * 4 + 2];
+                const h = bboxData[i * 4 + 3];
+                // Convert from center to top-left format [x, y, w, h]
+                const x = cx - w / 2;
+                const y = cy - h / 2;
+                // Validate: if already normalized, should be in [0-1] range
+                if (x < 0 || y < 0 || x + w > 1 || y + h > 1 || w <= 0 || h <= 0) {
+                    continue;
+                }
+                // Filter tiny detections (less than 3% of image)
+                const minFaceSize = 0.03;
+                if (w < minFaceSize || h < minFaceSize) {
+                    continue;
+                }
+                // Filter by edge proximity: reject detections where center is close to edges
+                const centerX = x + w / 2;
+                const centerY = y + h / 2;
+                const edgeMargin = 0.1;
+                if (centerX < edgeMargin || centerX > (1 - edgeMargin) || centerY < edgeMargin || centerY > (1 - edgeMargin)) {
+                    continue;
+                }
+                // Process landmarks: 5 landmarks × 2 coords per detection
+                const landmarks = [];
+                const landmarkTypes = ['eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'];
+                for (let j = 0; j < 5; j++) {
+                    const kpsX = kpsData[i * 10 + j * 2];
+                    const kpsY = kpsData[i * 10 + j * 2 + 1];
+                    landmarks.push({
+                        x: kpsX,
+                        y: kpsY,
+                        type: landmarkTypes[j],
+                    });
+                }
+                winston.debug(`  ✅ Detected face: ${(score * 100).toFixed(1)}% conf, ${(w * 100).toFixed(1)}% × ${(h * 100).toFixed(1)}% @ (${(x * 100).toFixed(1)}, ${(y * 100).toFixed(1)})`);
+                faces.push({
+                    boundingBox: [x, y, w, h],
+                    confidence: score,
+                    landmarks,
                 });
             }
-            faces.push({
-                boundingBox: [x, y, w, h],
-                confidence,
-                landmarks,
-            });
+            winston.info(`Stride ${stride}: max score=${(maxScore * 100).toFixed(1)}%, ${detectionsPassed} faces passed threshold`);
         }
         // Apply Non-Maximum Suppression to remove overlapping detections
         return this.applyNMS(faces, 0.5);

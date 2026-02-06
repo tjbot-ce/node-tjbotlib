@@ -137,7 +137,9 @@ export class TJBotConfig {
      * Later objects override earlier ones, but only at the leaf level.
      * @private
      */
-    private deepMerge(...sources: Array<Record<string, unknown> | Partial<TJBotConfigSchema>>): Record<string, unknown> {
+    private deepMerge(
+        ...sources: Array<Record<string, unknown> | Partial<TJBotConfigSchema>>
+    ): Record<string, unknown> {
         const result: Record<string, unknown> = {};
 
         for (const source of sources) {

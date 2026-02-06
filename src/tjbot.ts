@@ -510,7 +510,7 @@ class TJBot {
      * @async
      * @public
      */
-    async takePhoto(filePath?: string): Promise<string> {
+    async look(filePath?: string): Promise<string> {
         this.assertCapability(Capability.SEE);
 
         const path = await this.rpiDriver.capturePhoto(filePath);

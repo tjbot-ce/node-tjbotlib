@@ -484,7 +484,7 @@ describe('TJBot - Listen and Speak Methods', () => {
         }
     });
 
-    test('play does not check capability', async () => {
+    test('play() does not check for SPEAK capability before execution', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
         // play() doesn't check capability, so it should not throw
@@ -518,9 +518,9 @@ describe('TJBot - See Method', () => {
         expect(typeof tj.see).toBe('function');
     });
 
-    test('takePhoto with custom path', async () => {
+    test('look() returns string when given custom path', async () => {
         vi.mocked(tj.rpiDriver.capturePhoto).mockResolvedValue('/tmp/photo.jpg');
-        const result = await tj.takePhoto('/custom/path.jpg');
+        const result = await tj.look('/custom/path.jpg');
         expect(typeof result).toBe('string');
     });
 });

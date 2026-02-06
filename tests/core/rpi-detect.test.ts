@@ -202,14 +202,13 @@ Model		: Raspberry Pi 5 Model B Rev 1.0
         expect(typeof result).toBe('boolean');
     });
 
-    test('returns correct Pi version based on current hardware', () => {
-        // The test runs on some hardware, at least one should be true
+    test('each Pi version detector returns boolean', () => {
+        // Each detector should return a boolean regardless of current hardware
         const pi3 = RPiDetect.isPi3();
         const pi4 = RPiDetect.isPi4();
         const pi5 = RPiDetect.isPi5();
 
-        // At least one should be true (unless running on non-Pi)
-        // This test might pass OR fail depending on hardware, so we just verify they're booleans
+        // Verify all detectors return booleans
         expect(typeof pi3).toBe('boolean');
         expect(typeof pi4).toBe('boolean');
         expect(typeof pi5).toBe('boolean');

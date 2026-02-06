@@ -233,7 +233,7 @@ describe('TJBotConfig - User Config Loading', () => {
 });
 
 describe('TJBotConfig - Invalid Config', () => {
-    test('throws error for invalid config values', () => {
+    test('throws error when cameraResolution is not a tuple', () => {
         const invalidConfig: Record<string, unknown> = {
             see: {
                 cameraResolution: 'not a tuple',
@@ -364,7 +364,7 @@ describe('TJBotConfig - Deep Merge Behavior', () => {
 
         // The override should only replace the specified key
         expect(config.see.backend?.local?.objectDetectionModel).toBe('custom-model');
-        
+
         // These should still have their default values from tjbot.default.toml
         // (not undefined because the override didn't specify them)
         expect(config.see.backend?.local?.imageClassificationModel).toBeDefined();
@@ -388,7 +388,7 @@ describe('TJBotConfig - Deep Merge Behavior', () => {
 
         // Custom value should be set
         expect(config.listen.backend?.local?.model).toBe('custom-whisper-model');
-        
+
         // Other properties from defaults should still exist
         expect(config.listen.backend?.local).toBeDefined();
         expect(config.listen.backend?.type).toBe('local');
@@ -415,7 +415,7 @@ describe('TJBotConfig - Deep Merge Behavior', () => {
         expect(config.see.cameraResolution).toEqual([1280, 720]);
         expect(config.see.backend?.local?.objectDetectionModel).toBe('my-model');
         expect(config.listen.microphoneRate).toBe(48000);
-        
+
         // Default values should still exist
         expect(config.see.backend?.local?.imageClassificationModel).toBeDefined();
         expect(config.see.backend?.local?.faceDetectionModel).toBeDefined();

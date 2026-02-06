@@ -152,7 +152,7 @@ declare class TJBot {
      * @async
      * @public
      */
-    takePhoto(filePath?: string): Promise<string>;
+    look(filePath?: string): Promise<string>;
     /**
      * Detect objects in an image using the configured vision engine.
      * @param {Buffer|string} image Image buffer or file path

@@ -21,9 +21,10 @@ import { TJBot } from '../../dist/tjbot.js';
 import { ModelRegistry } from '../../dist/utils/model-registry.js';
 import fs from 'fs';
 import path from 'path';
+import sharp from 'sharp';
 import { initWinston, formatTitle, formatSection } from './utils.js';
 
-const LOG_LEVEL = 'info';
+const LOG_LEVEL = 'debug';
 
 const BACKENDS = [
     { id: 'local', label: 'Local (ONNX)' },
@@ -54,7 +55,7 @@ async function runTest() {
     console.log('✓ TJBot initialized');
 
     // Capture image from camera
-    const imgPath = path.join('/tmp', `tjbot-cvtest-${Date.now()}.jpg`);
+    const imgPath = path.join('/tmp', `tjbot-vision-test-${Date.now()}.jpg`);
     console.log(formatSection('Capturing image and running vision task'));
     console.log('Capturing image from camera...');
     await tj.look(imgPath);
@@ -73,6 +74,16 @@ async function runTest() {
     }
     console.log('\nCV result:');
     console.log(JSON.stringify(result, null, 2));
+
+    // Annotate image with bounding boxes if applicable
+    if ((task === 'detectFaces' || task === 'detectObjects') && result?.metadata) {
+        const annotatedPath = await annotateImageWithBoundingBoxes(imgPath, result, task);
+        console.log(`\n✓ Original image saved to: ${imgPath}`);
+        console.log(`✓ Annotated image saved to: ${annotatedPath}`);
+    } else {
+        console.log(`\n✓ Test image saved to: ${imgPath}`);
+    }
+
     console.log('\n✓ Vision test complete');
 }
 
@@ -228,6 +239,98 @@ function buildSeeConfig(selectedBackend) {
     }
 
     return baseConfig;
+}
+
+/**
+ * Annotates an image with bounding boxes from vision detection results
+ * @param {string} imgPath - Path to the image to annotate
+ * @param {object} result - Vision detection result with metadata containing bounding boxes
+ * @param {string} task - The vision task ('detectFaces' or 'detectObjects')
+ * @returns {Promise<string>} Path to the annotated image
+ */
+async function annotateImageWithBoundingBoxes(imgPath, result, task) {
+    try {
+        // Get image metadata to know dimensions
+        const metadata = await sharp(imgPath).metadata();
+        const { width, height } = metadata;
+
+        // Create SVG overlay with bounding boxes
+        let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
+
+        if (result.metadata && Array.isArray(result.metadata)) {
+            result.metadata.forEach((item, index) => {
+                if (item.boundingBox && Array.isArray(item.boundingBox)) {
+                    // Bounding box is [x, y, w, h] in normalized coordinates (0-1)
+                    // where x, y are top-left corner and w, h are width/height
+                    const [x, y, w, h] = item.boundingBox;
+
+                    // Convert to pixel coordinates
+                    const x1 = Math.round(x * width);
+                    const y1 = Math.round(y * height);
+                    const boxWidth = Math.round(w * width);
+                    const boxHeight = Math.round(h * height);
+
+                    // Determine color based on confidence if available
+                    let color = '#00FF00'; // Default green
+                    if (item.confidence !== undefined) {
+                        const confidence = item.confidence;
+                        if (confidence < 0.5) {
+                            color = '#FF0000'; // Red for low confidence
+                        } else if (confidence < 0.7) {
+                            color = '#FFFF00'; // Yellow for medium confidence
+                        }
+                    }
+
+                    // Draw rectangle
+                    svg += `<rect x="${x1}" y="${y1}" width="${boxWidth}" height="${boxHeight}" fill="none" stroke="${color}" stroke-width="3"/>`;
+
+                    // Add label with confidence if available
+                    if (item.confidence !== undefined) {
+                        const confidencePercent = (item.confidence * 100).toFixed(1);
+                        svg += `<text x="${x1 + 5}" y="${y1 - 5}" fill="${color}" font-size="16" font-weight="bold" font-family="Arial">`;
+                        svg += `${confidencePercent}%</text>`;
+                    }
+
+                    // Draw landmarks if available (for face detection)
+                    if (item.landmarks && Array.isArray(item.landmarks)) {
+                        item.landmarks.forEach((landmark) => {
+                            // Landmarks are normalized coordinates (0-1)
+                            const lx = Math.round(landmark.x * width);
+                            const ly = Math.round(landmark.y * height);
+                            // Draw small circle for each landmark
+                            svg += `<circle cx="${lx}" cy="${ly}" r="4" fill="${color}"/>`;
+                            // Add label
+                            svg += `<text x="${lx + 6}" y="${ly - 6}" fill="${color}" font-size="12" font-family="Arial">`;
+                            svg += `${landmark.type}</text>`;
+                        });
+                    }
+                }
+            });
+        }
+
+        svg += '</svg>';
+
+        // Create output filename for annotated image
+        const timestamp = Date.now();
+        const annotatedPath = path.join('/tmp', `tjbot-vision-test-annotated-${timestamp}.jpg`);
+
+        // Overlay SVG on image and save to new file
+        await sharp(imgPath)
+            .composite([
+                {
+                    input: Buffer.from(svg),
+                    left: 0,
+                    top: 0,
+                },
+            ])
+            .jpeg({ quality: 90 })
+            .toFile(annotatedPath);
+
+        return annotatedPath;
+    } catch (error) {
+        console.error('Error annotating image:', error);
+        throw error;
+    }
 }
 
 runTest().catch(console.error);

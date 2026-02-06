@@ -18,9 +18,10 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import { ModelRegistry } from '../../src/utils/model-registry.js';
 
 /**
- * Lightweight test suite for ModelRegistry - Model Discovery Only
+ * Lightweight test suite for ModelRegistry - Model Discovery and Error Handling
  *
  * These tests verify model discovery and querying without downloading models.
+ * Error handling tests verify rejection of non-existent models without attempting downloads.
  * For full integration tests with model downloads, see tests/models/model-registry.test.ts
  * Run those with: npm run test-models
  */

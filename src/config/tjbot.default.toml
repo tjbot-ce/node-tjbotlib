@@ -214,10 +214,12 @@ faceDetectionModel = 'yunet'
 
 # Confidence thresholds for filtering results
 # Results with confidence scores below these thresholds will be excluded
-# Valid range: 0.0 to 1.0 (0.8 = 80% confidence)
+# Valid range: 0.0 to 1.0 (0.5 = 50% confidence)
+# Note: YuNet face detection uses geometric mean sqrt(cls_score * obj_score) after sigmoid
+# Most noise is below 50%, real faces typically 55-70%
 objectDetectionConfidence = 0.8
 imageClassificationConfidence = 0.8
-faceDetectionConfidence = 0.9
+faceDetectionConfidence = 0.5
 
 [see.backend.google-cloud-vision]
 # Google Cloud Vision API credentials and model
