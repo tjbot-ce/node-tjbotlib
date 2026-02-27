@@ -79,10 +79,17 @@ export declare class ONNXVisionEngine extends VisionEngine {
      */
     private postprocessClassification;
     /**
-     * Postprocess face detection output from YuNet
-     * YuNet outputs multi-scale detections: cls_*, obj_*, bbox_*, kps_* for scales 8, 16, 32
+     * Postprocess face detection output.
      */
     private postprocessFaceDetection;
+    /**
+     * Postprocess face detection output from SCRFD-2.5G.
+     */
+    private postprocessSCRFDFaceDetection;
+    /**
+     * Preprocess face image for SCRFD input requirements.
+     */
+    private preprocessFaceImage;
     /**
      * Apply Non-Maximum Suppression to remove overlapping face detections
      * @param faces Array of detected faces

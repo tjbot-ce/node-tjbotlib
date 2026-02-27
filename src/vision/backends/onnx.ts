@@ -304,19 +304,23 @@ export class ONNXVisionEngine extends VisionEngine {
         try {
             // Preprocess image using model's expected input size
             const [, , height, width] = model.inputShape;
-            const input = await this.preprocessImage(image, [width, height]);
+            const input = await this.preprocessFaceImage(image, [width, height], faceDetectionModelName);
 
             // Run inference
             const feeds: Record<string, ort.Tensor> = {};
             feeds[model.session.inputNames[0]] = input;
             const results = await model.session.run(feeds);
 
-            winston.info(`YuNet output: ${model.session.outputNames.join(', ')}`);
+            winston.debug(`Face model output: ${model.session.outputNames.join(', ')}`);
             const outputTensor = results[model.session.outputNames[0]];
-            winston.info(`Output shape: [${outputTensor.dims.join(', ')}], size: ${outputTensor.size}`);
+            winston.debug(`Output shape: [${outputTensor.dims.join(', ')}], size: ${outputTensor.size}`);
 
             // Postprocess face detection output
-            const metadata = this.postprocessFaceDetection(results, model.session.outputNames, confidenceThreshold, [width, height]);
+            const metadata = this.postprocessFaceDetection(
+                results,
+                confidenceThreshold,
+                [width, height]
+            );
             return {
                 isFaceDetected: metadata.length > 0,
                 metadata,
@@ -497,119 +501,136 @@ export class ONNXVisionEngine extends VisionEngine {
     }
 
     /**
-     * Postprocess face detection output from YuNet
-     * YuNet outputs multi-scale detections: cls_*, obj_*, bbox_*, kps_* for scales 8, 16, 32
+     * Postprocess face detection output.
      */
     private postprocessFaceDetection(
         results: Record<string, ort.Tensor>,
-        outputNames: readonly string[],
         confidenceThreshold: number = 0.5,
         modelInputSize?: [number, number]
     ): FaceDetectionMetadata[] {
-        winston.info(`Processing YuNet multi-scale output...`);
-        
-        const faces: FaceDetectionMetadata[] = [];
-        const [modelWidth, modelHeight] = modelInputSize || [640, 640];
+        return this.postprocessSCRFDFaceDetection(results, confidenceThreshold, modelInputSize);
+    }
 
-        // YuNet outputs 12 tensors across 3 scales (8, 16, 32)
-        // Test hypothesis: raw outputs may already be normalized [0-1], not feature-map space
-        const scales = [8, 16, 32];
-        
-        for (const stride of scales) {
-            const clsKey = `cls_${stride}`;
-            const objKey = `obj_${stride}`;
-            const bboxKey = `bbox_${stride}`;
-            const kpsKey = `kps_${stride}`;
-            
-            if (!results[clsKey] || !results[objKey] || !results[bboxKey] || !results[kpsKey]) {
-                winston.warn(`Missing output tensors for stride ${stride}`);
+    /**
+     * Postprocess face detection output from SCRFD-2.5G.
+     */
+    private postprocessSCRFDFaceDetection(
+        results: Record<string, ort.Tensor>,
+        confidenceThreshold: number = 0.5,
+        modelInputSize?: [number, number]
+    ): FaceDetectionMetadata[] {
+        const [modelWidth, modelHeight] = modelInputSize || [640, 640];
+        const faces: FaceDetectionMetadata[] = [];
+
+        const scales = [
+            { stride: 8, scoreKey: '446', bboxKey: '449', kpsKey: '452' },
+            { stride: 16, scoreKey: '466', bboxKey: '469', kpsKey: '472' },
+            { stride: 32, scoreKey: '486', bboxKey: '489', kpsKey: '492' },
+        ];
+
+        winston.debug('Processing SCRFD-2.5G multi-scale output...');
+
+        for (const scale of scales) {
+            const scoreTensor = results[scale.scoreKey];
+            const bboxTensor = results[scale.bboxKey];
+            const kpsTensor = results[scale.kpsKey];
+
+            if (!scoreTensor || !bboxTensor) {
+                winston.warn(`Missing SCRFD tensors for stride ${scale.stride}`);
                 continue;
             }
-            
-            const clsData = results[clsKey].data as Float32Array;
-            const objData = results[objKey].data as Float32Array;
-            const bboxData = results[bboxKey].data as Float32Array;
-            const kpsData = results[kpsKey].data as Float32Array;
-            
-            const numCells = clsData.length;
-            winston.info(`Stride ${stride}: ${numCells} detection slots`);
-            
-            let maxScore = 0;
-            let detectionsPassed = 0;
-            
-            // Process all cells/detections
-            for (let i = 0; i < numCells; i++) {
-                // YuNet outputs logits - apply sigmoid to convert to probabilities
-                const clsProb = this.sigmoid(clsData[i]);
-                const objProb = this.sigmoid(objData[i]);
-                
-                // Official YuNet confidence: geometric mean of cls and obj probabilities
-                const score = Math.sqrt(clsProb * objProb);
-                
-                if (score > maxScore) maxScore = score;
-                
-                if (score < confidenceThreshold) continue;
-                
-                detectionsPassed++;
-                
-                // Raw bbox values - hypothesis: already normalized [0-1] as [cx, cy, w, h]
-                const cx = bboxData[i * 4];
-                const cy = bboxData[i * 4 + 1];
-                const w = bboxData[i * 4 + 2];
-                const h = bboxData[i * 4 + 3];
-                
-                // Convert from center to top-left format [x, y, w, h]
-                const x = cx - w / 2;
-                const y = cy - h / 2;
-                
-                // Validate: if already normalized, should be in [0-1] range
-                if (x < 0 || y < 0 || x + w > 1 || y + h > 1 || w <= 0 || h <= 0) {
-                    continue;
-                }
-                
-                // Filter tiny detections (less than 3% of image)
-                const minFaceSize = 0.03;
-                if (w < minFaceSize || h < minFaceSize) {
-                    continue;
-                }
-                
-                // Filter by edge proximity: reject detections where center is close to edges
-                const centerX = x + w / 2;
-                const centerY = y + h / 2;
-                const edgeMargin = 0.1;
-                if (centerX < edgeMargin || centerX > (1 - edgeMargin) || centerY < edgeMargin || centerY > (1 - edgeMargin)) {
-                    continue;
-                }
-                
-                // Process landmarks: 5 landmarks × 2 coords per detection
+
+            const scores = scoreTensor.data as Float32Array;
+            const bboxes = bboxTensor.data as Float32Array;
+            const kps = kpsTensor?.data as Float32Array | undefined;
+
+            const gridSize = modelWidth / scale.stride;
+            const numAnchors = 2;
+
+            for (let i = 0; i < scores.length; i++) {
+                const confidence = scores[i];
+                if (confidence < confidenceThreshold) continue;
+
+                const anchorIndex = Math.floor(i / numAnchors);
+                const gridY = Math.floor(anchorIndex / gridSize);
+                const gridX = anchorIndex % gridSize;
+                const anchorX = (gridX + 0.5) * scale.stride;
+                const anchorY = (gridY + 0.5) * scale.stride;
+
+                const left = bboxes[i * 4 + 0] * scale.stride;
+                const top = bboxes[i * 4 + 1] * scale.stride;
+                const right = bboxes[i * 4 + 2] * scale.stride;
+                const bottom = bboxes[i * 4 + 3] * scale.stride;
+
+                const x1 = Math.max(0, anchorX - left);
+                const y1 = Math.max(0, anchorY - top);
+                const x2 = Math.min(modelWidth, anchorX + right);
+                const y2 = Math.min(modelHeight, anchorY + bottom);
+
+                if (x2 <= x1 || y2 <= y1) continue;
+
+                const boxW = x2 - x1;
+                const boxH = y2 - y1;
+
                 const landmarks: Landmark[] = [];
-                const landmarkTypes = ['eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'];
-                
-                for (let j = 0; j < 5; j++) {
-                    const kpsX = kpsData[i * 10 + j * 2];
-                    const kpsY = kpsData[i * 10 + j * 2 + 1];
-                    
-                    landmarks.push({
-                        x: kpsX,
-                        y: kpsY,
-                        type: landmarkTypes[j],
-                    });
+                if (kps && kps.length >= (i * 10 + 10)) {
+                    const landmarkTypes = ['eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'];
+                    for (let j = 0; j < 5; j++) {
+                        const kx = (kps[i * 10 + j * 2] * scale.stride + anchorX) / modelWidth;
+                        const ky = (kps[i * 10 + j * 2 + 1] * scale.stride + anchorY) / modelHeight;
+                        landmarks.push({
+                            x: Math.min(1, Math.max(0, kx)),
+                            y: Math.min(1, Math.max(0, ky)),
+                            type: landmarkTypes[j],
+                        });
+                    }
                 }
-                
-                winston.debug(`  ✅ Detected face: ${(score * 100).toFixed(1)}% conf, ${(w * 100).toFixed(1)}% × ${(h * 100).toFixed(1)}% @ (${(x * 100).toFixed(1)}, ${(y * 100).toFixed(1)})`);
-                
+
                 faces.push({
-                    boundingBox: [x, y, w, h],
-                    confidence: score,
+                    boundingBox: [x1 / modelWidth, y1 / modelHeight, boxW / modelWidth, boxH / modelHeight],
+                    confidence,
                     landmarks,
                 });
             }
-            
-            winston.info(`Stride ${stride}: max score=${(maxScore * 100).toFixed(1)}%, ${detectionsPassed} faces passed threshold`);
         }
 
-        // Apply Non-Maximum Suppression to remove overlapping detections
-        return this.applyNMS(faces, 0.5);
+        return this.applyNMS(faces, 0.45);
+    }
+
+    /**
+     * Preprocess face image for SCRFD input requirements.
+     */
+    private async preprocessFaceImage(image: Buffer | string, size: [number, number], _modelName: string): Promise<ort.Tensor> {
+        let imgBuf: Buffer;
+        if (typeof image === 'string') {
+            imgBuf = fs.readFileSync(image);
+        } else {
+            imgBuf = image;
+        }
+
+        const { data } = await sharp(imgBuf)
+            .resize(size[0], size[1])
+            .removeAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        const [W, H] = size;
+        const input = new Float32Array(3 * H * W);
+
+        for (let y = 0; y < H; ++y) {
+            for (let x = 0; x < W; ++x) {
+                const offset = y * W * 3 + x * 3;
+                const r = data[offset] / 255.0;
+                const g = data[offset + 1] / 255.0;
+                const b = data[offset + 2] / 255.0;
+
+                input[0 * H * W + y * W + x] = b * 2.0 - 1.0;
+                input[1 * H * W + y * W + x] = g * 2.0 - 1.0;
+                input[2 * H * W + y * W + x] = r * 2.0 - 1.0;
+            }
+        }
+
+        return new ort.Tensor('float32', input, [1, 3, H, W]);
     }
 
     /**

@@ -263,10 +263,10 @@ models:
   # ============================================================================
 
   - type: vision.face-detection
-    key: yunet
-    label: "YuNet (Face Detection, ~230KB)"
-    url: "https://huggingface.co/opencv/face_detection_yunet/resolve/main/face_detection_yunet_2023mar.onnx"
-    folder: "yunet"
+    key: scrfd-2.5g
+    label: "SCRFD-2.5G (Face Detection, ~3.3MB)"
+    url: "https://huggingface.co/hsuyabc/scrfd_2.5g_bnkps.onnx/resolve/main/scrfd_2.5g_bnkps.onnx"
+    folder: "scrfd-2.5g"
     kind: face-detection
     inputShape:
       - 1
@@ -274,4 +274,4 @@ models:
       - 640
       - 640
     required:
-      - face_detection_yunet_2023mar.onnx
+      - scrfd_2.5g_bnkps.onnx

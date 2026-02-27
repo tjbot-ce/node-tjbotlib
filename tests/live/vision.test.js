@@ -24,7 +24,7 @@ import path from 'path';
 import sharp from 'sharp';
 import { initWinston, formatTitle, formatSection } from './utils.js';
 
-const LOG_LEVEL = 'debug';
+const LOG_LEVEL = 'info';
 
 const BACKENDS = [
     { id: 'local', label: 'Local (ONNX)' },
@@ -72,7 +72,7 @@ async function runTest() {
     } else if (task === 'describeImage') {
         result = await tj.describeImage(imgBuf);
     }
-    console.log('\nCV result:');
+    console.log('\nResult:');
     console.log(JSON.stringify(result, null, 2));
 
     // Annotate image with bounding boxes if applicable

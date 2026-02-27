@@ -91,11 +91,11 @@ describe('ModelRegistry - Model Discovery', () => {
             expect(mobilenet?.type).toBe('vision.classification');
         });
 
-        test('yunet face detection model exists in supported models', () => {
+        test('scrfd-2.5g face detection model exists in supported models', () => {
             const models = manager.lookupModels('vision.face-detection');
-            const yunet = models.find((m) => m.key === 'yunet');
-            expect(yunet).toBeDefined();
-            expect(yunet?.type).toBe('vision.face-detection');
+            const scrfd = models.find((m) => m.key === 'scrfd-2.5g');
+            expect(scrfd).toBeDefined();
+            expect(scrfd?.type).toBe('vision.face-detection');
         });
     });
 
