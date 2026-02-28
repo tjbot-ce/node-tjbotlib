@@ -16,6 +16,8 @@
  */
 
 import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import TOML from '@iarna/toml';
 import { resolve } from 'import-meta-resolve';
 import winston from 'winston';
@@ -53,33 +55,35 @@ export class TJBotConfig {
      * Creates a TJBotConfig instance.
      * Loads configuration in the following order:
      * 1. Default configuration from tjbot.default.toml
-     * 2. Local tjbot.toml file (if it exists)
+     * 2. User configuration from ~/.tjbot/tjbot.toml (if it exists)
      * 3. Override configuration (if provided)
-     * 4. Register user-defined models from [models] section
+     * 4. Recipe-specific configuration from recipe.toml (if it exists)
+     * 5. Register user-defined models from [models] section
      *
      * @param overrideConfig Optional configuration object to overlay on top of loaded config
+     * @param recipeConfigPath Path to recipe configuration file (default: recipe.toml in current working directory)
      */
-    constructor(overrideConfig?: Partial<TJBotConfigSchema>) {
+    constructor(overrideConfig?: Partial<TJBotConfigSchema>, recipeConfigPath?: string) {
         // Load default config
         const defaultConfig = this.loadInternalConfig(this.defaultConfigPath);
-        let userConfig: TOML.JsonMap = {};
 
-        // Load local tjbot.toml if it exists
-        const localConfigPath = 'tjbot.toml';
-        try {
-            if (fs.existsSync(localConfigPath) && fs.lstatSync(localConfigPath).isFile()) {
-                winston.debug(`loading local TJBot configuration from ${localConfigPath}`);
-                const configData = fs.readFileSync(localConfigPath, 'utf8');
-                userConfig = TOML.parse(configData);
-                userConfig = this.cleanConfig(userConfig) as TOML.JsonMap;
-            } else {
-                winston.debug(`local configuration file ${localConfigPath} not found, using defaults`);
-            }
-        } catch (err) {
-            throw new TJBotError(`unable to read tjbot configuration from ${localConfigPath}: ${err}`);
+        // Load user config from ~/.tjbot/tjbot.toml if it exists
+        const homeConfig = this.loadHomeConfig();
+
+        // Load recipe config from recipe.toml if it exists
+        const recipeConfig = this.loadRecipeConfig(recipeConfigPath ?? 'recipe.toml');
+
+        // Merge general configuration in cascade order: default -> home -> overrides
+        const mergedConfig = this.deepMerge(
+            defaultConfig,
+            homeConfig ?? {},
+            overrideConfig ?? {}
+        );
+
+        // Merge recipe config into the recipe section
+        if (recipeConfig) {
+            mergedConfig.recipe = this.deepMerge(mergedConfig.recipe ?? {}, recipeConfig);
         }
-
-        const mergedConfig = this.deepMerge(defaultConfig, userConfig, overrideConfig ?? {});
 
         try {
             this.config = tjbotConfigSchema.parse(mergedConfig);
@@ -130,6 +134,57 @@ export class TJBotConfig {
         }
 
         return config as TJBotConfigSchema;
+    }
+
+    /**
+     * Load user configuration from ~/.tjbot/tjbot.toml if it exists
+     * @private
+     */
+    private loadHomeConfig(): TJBotConfigSchema | null {
+        const homeConfigPath = path.join(os.homedir(), '.tjbot', 'tjbot.toml');
+
+        try {
+            if (fs.existsSync(homeConfigPath) && fs.lstatSync(homeConfigPath).isFile()) {
+                winston.debug(`loading user TJBot configuration from ${homeConfigPath}`);
+                const configData = fs.readFileSync(homeConfigPath, 'utf8');
+                let config = TOML.parse(configData);
+                // Clean up the config to remove any Symbol keys
+                config = this.cleanConfig(config) as TOML.JsonMap;
+                return config as TJBotConfigSchema;
+            } else {
+                winston.debug(`user configuration file ${homeConfigPath} not found, skipping`);
+                return null;
+            }
+        } catch (err) {
+            throw new TJBotError(`unable to read user TJBot configuration from ${homeConfigPath}: ${err}`);
+        }
+    }
+
+    /**
+     * Load recipe-specific configuration from recipe.toml if it exists.
+     * The entire file content is treated as recipe configuration.
+     * @private
+     */
+    private loadRecipeConfig(recipeConfigPath: string): Record<string, unknown> | null {
+        const absoluteRecipeConfigPath = path.isAbsolute(recipeConfigPath)
+            ? recipeConfigPath
+            : path.join(process.cwd(), recipeConfigPath);
+
+        try {
+            if (fs.existsSync(absoluteRecipeConfigPath) && fs.lstatSync(absoluteRecipeConfigPath).isFile()) {
+                winston.debug(`loading recipe configuration from ${absoluteRecipeConfigPath}`);
+                const configData = fs.readFileSync(absoluteRecipeConfigPath, 'utf8');
+                let config = TOML.parse(configData);
+                // Clean up the config to remove any Symbol keys
+                config = this.cleanConfig(config) as TOML.JsonMap;
+                return config as Record<string, unknown>;
+            } else {
+                winston.debug(`recipe configuration file ${absoluteRecipeConfigPath} not found, skipping`);
+                return null;
+            }
+        } catch (err) {
+            throw new TJBotError(`unable to read recipe configuration from ${absoluteRecipeConfigPath}: ${err}`);
+        }
     }
 
     /**

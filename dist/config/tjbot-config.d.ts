@@ -34,18 +34,31 @@ export declare class TJBotConfig {
      * Creates a TJBotConfig instance.
      * Loads configuration in the following order:
      * 1. Default configuration from tjbot.default.toml
-     * 2. Local tjbot.toml file (if it exists)
+     * 2. User configuration from ~/.tjbot/tjbot.toml (if it exists)
      * 3. Override configuration (if provided)
-     * 4. Register user-defined models from [models] section
+     * 4. Recipe-specific configuration from recipe.toml (if it exists)
+     * 5. Register user-defined models from [models] section
      *
      * @param overrideConfig Optional configuration object to overlay on top of loaded config
+     * @param recipeConfigPath Path to recipe configuration file (default: recipe.toml in current working directory)
      */
-    constructor(overrideConfig?: Partial<TJBotConfigSchema>);
+    constructor(overrideConfig?: Partial<TJBotConfigSchema>, recipeConfigPath?: string);
     /**
      * Load internal default TOML configuration
      * @private
      */
     private loadInternalConfig;
+    /**
+     * Load user configuration from ~/.tjbot/tjbot.toml if it exists
+     * @private
+     */
+    private loadHomeConfig;
+    /**
+     * Load recipe-specific configuration from recipe.toml if it exists.
+     * The entire file content is treated as recipe configuration.
+     * @private
+     */
+    private loadRecipeConfig;
     /**
      * Deep merge multiple configuration objects.
      * Later objects override earlier ones, but only at the leaf level.

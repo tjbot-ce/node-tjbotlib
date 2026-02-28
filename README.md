@@ -101,11 +101,15 @@ console.log('Speech demo complete!');
 
 ### Example 3: Change TJBot's Configuration
 
-TJBot automatically loads its configuration from the `tjbot.toml` file in
-your current working directory. Create this file to customize TJBot's
-behavior:
+TJBot uses a cascading configuration system that loads settings from multiple
+sources in order of priority. Create a `~/.tjbot/tjbot.toml` file for
+user-wide settings, or place `recipe.toml` in your current working directory
+for application-specific recipe configuration.
 
-**tjbot.toml:**
+**User-wide configuration (`~/.tjbot/tjbot.toml`):**
+
+This file is loaded once for your user account and applies to all TJBot
+applications. Example:
 
 ```toml
 [log]
@@ -115,34 +119,63 @@ level = 'debug'
 gpioPin = 18
 ```
 
-Then use it in your code:
+**Recipe-specific configuration (`recipe.toml`):**
+
+This file contains only recipe (application) configuration and is placed in
+your project directory:
+
+```toml
+# recipe.toml - recipe-specific settings
+enabled = true
+timeout = 5000
+apikey = "my-custom-key"
+```
+
+Then use TJBot in your code:
 
 ```js
 import TJBot from 'tjbot';
 
 const tj = new TJBot();
 
-// TJBot automatically loads tjbot.toml from the current directory
+// TJBot automatically loads configuration from:
+// 1. Built-in defaults
+// 2. ~/.tjbot/tjbot.toml (if it exists)
+// 3. recipe.toml in current directory (if it exists)
+// 4. Programmatic overrides (passed below)
+
 tj.initialize([TJBot.Hardware.LED_NEOPIXEL]);
 
-// Use the configured settings
-tj.shine('cyan');
-await tj.speak('TJBot is ready!');
+// Access recipe settings
+console.log(tj.config.recipe.timeout); // 5000
 ```
 
-You can also pass configuration overrides:
+You can also pass configuration overrides and specify a custom recipe config path:
 
 ```js
-const tj = new TJBot({
-  hardware: { microphone: true, speaker: true },
-  listen: { backend: { type: 'local' } }
-});
+// Override configuration and specify custom recipe config
+const tj = new TJBot();
+await tj.initialize(
+  {
+    hardware: { microphone: true, speaker: true },
+    listen: { backend: { type: 'local' } }
+  },
+  '/path/to/custom-recipe.toml'  // optional: custom recipe config path
+);
 ```
 
-**Important:** Configuration overrides use **deep merging** - only the specific keys you provide are overridden, while other values keep their defaults. For example:
+**Configuration Cascade Order (lowest to highest priority):**
+
+1. Built-in defaults (`tjbot.default.toml`)
+2. User configuration (`~/.tjbot/tjbot.toml`) - optional
+3. Programmatic overrides (passed to `initialize()`)
+4. Recipe configuration (`recipe.toml`) - merged into `recipe` section only
+
+**Important:** Configuration uses **deep merging** - only the specific keys you provide are overridden, while other values keep their defaults. For example:
 
 ```js
-const tj = new TJBot({
+const tj = new TJBot();
+await tj.initialize({
   see: {
     backend: {
       local: {
@@ -156,12 +189,13 @@ const tj = new TJBot({
 
 ## Configuration Reference
 
-TJBot uses [TOML](https://toml.io/en/) for configuration. By default, it
-looks for a `tjbot.toml` configuration file in the current working directory. Create this file to override the default settings shown below:
+TJBot uses [TOML](https://toml.io/en/) for configuration. The cascade system allows
+global settings in `~/.tjbot/tjbot.toml` and application-specific overrides. For recipe-specific
+configuration, use `recipe.toml` in your project directory:
 
 ```toml
 ################################################################################
-# TJBot Configuration File
+# User Configuration (~/.tjbot/tjbot.toml) or Project Configuration (tjbot.toml)
 ################################################################################
 
 [log]

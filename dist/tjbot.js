@@ -92,11 +92,12 @@ class TJBot {
      * Performs cleanup of previous initialization, loads configuration, detects hardware,
      * initializes all configured hardware and AI models eagerly.
      * @param {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
+     * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
      * @throws {TJBotError} if configuration file cannot be loaded, is invalid, or cleanup fails
      * @async
      * @public
      */
-    async initialize(overrideConfig) {
+    async initialize(overrideConfig, recipeConfigPath) {
         winston.info('🔄 Initializing TJBot...');
         // Cleanup previous initialization if any
         if (this._initialized) {
@@ -104,7 +105,7 @@ class TJBot {
             await this.cleanup();
         }
         // Load configuration
-        this.config = new TJBotConfig(overrideConfig);
+        this.config = new TJBotConfig(overrideConfig, recipeConfigPath);
         // Update log level from config
         const logConfig = this.config.log;
         if (logConfig && logConfig.level) {

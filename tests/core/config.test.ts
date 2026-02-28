@@ -435,3 +435,60 @@ describe('TJBotConfig - Deep Merge Behavior', () => {
         expect(config.see.cameraResolution).toEqual([640, 480]);
     });
 });
+
+describe('TJBotConfig - Recipe Configuration', () => {
+    test('accepts recipe config in override', () => {
+        const overrideConfig = {
+            recipe: {
+                myCustomSetting: true,
+                timeout: 5000,
+                name: 'my-recipe',
+            },
+        };
+
+        const config = new TJBotConfig(overrideConfig);
+
+        expect(config.recipe.myCustomSetting).toBe(true);
+        expect(config.recipe.timeout).toBe(5000);
+        expect(config.recipe.name).toBe('my-recipe');
+    });
+
+    test('handles missing recipe config file gracefully', () => {
+        // When recipe.toml does not exist, should not throw
+        const config = new TJBotConfig({}, 'non-existent-recipe.toml');
+
+        expect(config).toBeDefined();
+        // recipe should be the default empty object or preserved from defaults
+        expect(config.recipe).toBeDefined();
+    });
+
+    test('merges recipe config with recipe section from overrideConfig', () => {
+        const overrideRecipe = {
+            recipe: {
+                setting1: 'from-override',
+                setting2: 'override-value',
+            },
+        };
+
+        const config = new TJBotConfig(overrideRecipe);
+
+        expect(config.recipe.setting1).toBe('from-override');
+        expect(config.recipe.setting2).toBe('override-value');
+    });
+
+    test('recipe parameter allows custom recipe config path', () => {
+        // Should accept path parameter without throwing
+        const config = new TJBotConfig({}, './custom-recipe.toml');
+
+        expect(config).toBeDefined();
+        expect(config.recipe).toBeDefined();
+    });
+
+    test('recipe parameter defaults to recipe.toml if not provided', () => {
+        // Should use default 'recipe.toml' path when parameter is undefined
+        const config = new TJBotConfig({}, undefined);
+
+        expect(config).toBeDefined();
+        expect(config.recipe).toBeDefined();
+    });
+});
