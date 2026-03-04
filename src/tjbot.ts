@@ -144,6 +144,18 @@ class TJBot {
     }
 
     /**
+     * Get recipe-specific configuration. This method can be used before calling `TJBot.getInstance().initialize()`
+     * in case a recipe needs to dynamically determine which hardware components should be configured.
+     * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
+     * @return {Record<string, unknown>} The recipe configuration as a key-value object. If no recipe configuration file is found, returns an empty object.
+     *
+     */
+    static getRecipeConfig(recipeConfigPath: string = 'recipe.toml'): Record<string, unknown> {
+        let config = new TJBotConfig(undefined, recipeConfigPath);
+        return config.recipe;
+    }
+
+    /**
      * Initialize TJBot with configuration. Can be called multiple times to reconfigure.
      * Performs cleanup of previous initialization, loads configuration, detects hardware,
      * initializes all configured hardware and AI models eagerly.
@@ -376,8 +388,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.LISTEN)) {
                     throw new TJBotError(
                         'TJBot is not configured to listen. ' +
-                            'Please check that you included the ' +
-                            `${Hardware.MICROPHONE} hardware in TJBot's configuration.`
+                        'Please check that you included the ' +
+                        `${Hardware.MICROPHONE} hardware in TJBot's configuration.`
                     );
                 }
                 break;
@@ -386,8 +398,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.SEE)) {
                     throw new TJBotError(
                         'TJBot is not configured to see. ' +
-                            'Please check that you included the ' +
-                            `${Hardware.CAMERA} hardware in TJBot's configuration.`
+                        'Please check that you included the ' +
+                        `${Hardware.CAMERA} hardware in TJBot's configuration.`
                     );
                 }
                 break;
@@ -396,9 +408,9 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.SHINE)) {
                     throw new TJBotError(
                         'TJBot is not configured with an LED. ' +
-                            'Please check that you included the ' +
-                            `${Hardware.LED_NEOPIXEL} or ${Hardware.LED_COMMON_ANODE} ` +
-                            "hardware in TJBot's configuration."
+                        'Please check that you included the ' +
+                        `${Hardware.LED_NEOPIXEL} or ${Hardware.LED_COMMON_ANODE} ` +
+                        "hardware in TJBot's configuration."
                     );
                 }
                 break;
@@ -407,8 +419,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.SPEAK)) {
                     throw new TJBotError(
                         'TJBot is not configured to speak. ' +
-                            'Please check that you included the ' +
-                            `${Hardware.SPEAKER} hardware in TJBot's configuration.`
+                        'Please check that you included the ' +
+                        `${Hardware.SPEAKER} hardware in TJBot's configuration.`
                     );
                 }
                 break;
@@ -417,8 +429,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.WAVE)) {
                     throw new TJBotError(
                         'TJBot is not configured with an arm. ' +
-                            'Please check that you included the ' +
-                            `${Hardware.SERVO} hardware in TJBot's configuration.`
+                        'Please check that you included the ' +
+                        `${Hardware.SERVO} hardware in TJBot's configuration.`
                     );
                 }
                 break;
