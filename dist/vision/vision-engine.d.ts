@@ -121,3 +121,4 @@ export declare abstract class VisionEngine {
     abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
 }
 export declare function createVisionEngine(config: SeeBackendConfig): Promise<VisionEngine>;
+//# sourceMappingURL=vision-engine.d.ts.map

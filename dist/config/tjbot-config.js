@@ -87,12 +87,11 @@ export class TJBotConfig {
     loadInternalConfig(configFile) {
         const configPath = resolve(configFile, import.meta.url);
         winston.debug(`loading default TJBot configuration TOML from ${configPath}`);
-        let config = {};
+        let config;
         try {
             const configData = fs.readFileSync(new URL(configPath), 'utf8');
-            config = TOML.parse(configData);
             // Clean up the config to remove any Symbol keys
-            config = this.cleanConfig(config);
+            config = this.cleanConfig(TOML.parse(configData));
         }
         catch (err) {
             throw new TJBotError(`unable to read TOML from ${configFile}: ${err}`);

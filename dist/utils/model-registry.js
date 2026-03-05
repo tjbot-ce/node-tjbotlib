@@ -138,7 +138,7 @@ export class ModelRegistry {
      * @returns List of model metadata of the specified type
      */
     lookupModels(modelType, installedOnly = false) {
-        let models = [];
+        let models;
         if (installedOnly) {
             models = Array.from(this.registeredModels.values()).filter((m) => m.type === modelType && this.isModelDownloaded(m.key));
         }

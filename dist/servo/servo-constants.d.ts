@@ -24,3 +24,4 @@ export declare enum ServoPosition {
     ARM_UP = 1400,
     ARM_DOWN = 2300
 }
+//# sourceMappingURL=servo-constants.d.ts.map

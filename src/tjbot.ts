@@ -151,7 +151,7 @@ class TJBot {
      *
      */
     static getRecipeConfig(recipeConfigPath: string = 'recipe.toml'): Record<string, unknown> {
-        let config = new TJBotConfig(undefined, recipeConfigPath);
+        const config = new TJBotConfig(undefined, recipeConfigPath);
         return config.recipe;
     }
 
@@ -388,8 +388,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.LISTEN)) {
                     throw new TJBotError(
                         'TJBot is not configured to listen. ' +
-                        'Please check that you included the ' +
-                        `${Hardware.MICROPHONE} hardware in TJBot's configuration.`
+                            'Please check that you included the ' +
+                            `${Hardware.MICROPHONE} hardware in TJBot's configuration.`
                     );
                 }
                 break;
@@ -398,8 +398,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.SEE)) {
                     throw new TJBotError(
                         'TJBot is not configured to see. ' +
-                        'Please check that you included the ' +
-                        `${Hardware.CAMERA} hardware in TJBot's configuration.`
+                            'Please check that you included the ' +
+                            `${Hardware.CAMERA} hardware in TJBot's configuration.`
                     );
                 }
                 break;
@@ -408,9 +408,9 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.SHINE)) {
                     throw new TJBotError(
                         'TJBot is not configured with an LED. ' +
-                        'Please check that you included the ' +
-                        `${Hardware.LED_NEOPIXEL} or ${Hardware.LED_COMMON_ANODE} ` +
-                        "hardware in TJBot's configuration."
+                            'Please check that you included the ' +
+                            `${Hardware.LED_NEOPIXEL} or ${Hardware.LED_COMMON_ANODE} ` +
+                            "hardware in TJBot's configuration."
                     );
                 }
                 break;
@@ -419,8 +419,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.SPEAK)) {
                     throw new TJBotError(
                         'TJBot is not configured to speak. ' +
-                        'Please check that you included the ' +
-                        `${Hardware.SPEAKER} hardware in TJBot's configuration.`
+                            'Please check that you included the ' +
+                            `${Hardware.SPEAKER} hardware in TJBot's configuration.`
                     );
                 }
                 break;
@@ -429,8 +429,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.WAVE)) {
                     throw new TJBotError(
                         'TJBot is not configured with an arm. ' +
-                        'Please check that you included the ' +
-                        `${Hardware.SERVO} hardware in TJBot's configuration.`
+                            'Please check that you included the ' +
+                            `${Hardware.SERVO} hardware in TJBot's configuration.`
                     );
                 }
                 break;
@@ -459,13 +459,28 @@ class TJBot {
     /** ------------------------------------------------------------------------ */
 
     /**
-     * Listen for a spoken utterance.
+     * Listen for a spoken utterance (offline mode - returns transcript).
      * @returns {Promise<string>} The transcribed text
      * @throws {TJBotError} if the microphone hardware is not initialized
      * @async
      * @public
      */
-    async listen(callback?: (text: string) => void): Promise<string | void> {
+    listen(): Promise<string>;
+    /**
+     * Listen for a spoken utterance (streaming mode - uses callbacks).
+     * @param onPartialResult Callback for partial transcription results
+     * @param onFinalResult Callback for final transcription result
+     * @returns {Promise<void>} Promise that resolves when transcription completes
+     * @throws {TJBotError} if the microphone hardware is not initialized
+     * @async
+     * @public
+     */
+    listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void): Promise<void>;
+
+    async listen(
+        onPartialResult?: (text: string) => void,
+        onFinalResult?: (text: string) => void
+    ): Promise<string | void> {
         // make sure we can listen
         this.assertCapability(Capability.LISTEN);
 
@@ -475,21 +490,21 @@ class TJBot {
         const modelName =
             (listenConfig.backend?.local as Record<string, unknown>)?.model ?? listenConfig.model ?? '<unknown>';
 
-        if (mode === 'streaming' && !callback) {
+        if (mode === 'streaming' && !onPartialResult) {
             throw new TJBotError(
-                `STT model "${modelName}" is streaming. Call listen(callback) so TJBot can deliver partial/final transcripts.`
+                `STT model "${modelName}" is streaming. Call listen(onPartialResult, onFinalResult) so TJBot can deliver partial/final transcripts.`
             );
         }
 
-        if (mode === 'offline' && callback) {
+        if (mode === 'offline' && onPartialResult) {
             throw new TJBotError(`STT model "${modelName}" is offline. Call await listen() without a callback.`);
         }
 
         if (mode === 'streaming') {
             // Streaming: deliver partial/final via the provided callback. The promise resolves when the backend signals completion.
             return await this.rpiDriver.listenForTranscript({
-                onPartialResult: (text) => callback?.(text),
-                onFinalResult: (text) => callback?.(text),
+                onPartialResult: (text) => onPartialResult?.(text),
+                onFinalResult: (text) => onFinalResult?.(text),
             });
         }
 

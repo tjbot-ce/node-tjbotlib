@@ -19,9 +19,11 @@
 
 import { execSync } from 'node:child_process';
 import { select } from '@inquirer/prompts';
-import { TJBot } from '../../dist/tjbot.js';
+import { TJBot } from '../../src/tjbot.js';
 import { initWinston } from './utils.js';
 import { isCommandAvailable, formatTitle, formatSection } from './utils.js';
+import { ModelRegistry } from '../../src/utils/index.js';
+import type { SpeakConfig, TTSBackendConfig } from '../../src/config/config-types.js';
 
 // ANSI color codes for output
 const COLORS = {
@@ -41,7 +43,17 @@ const BACKENDS = [
     { id: 'azure-tts', label: 'Azure' },
 ];
 
-async function runTest() {
+interface AlsaDevice {
+    name: string;
+    value: string;
+}
+
+interface BackendConfig {
+    model?: string;
+    voice?: string;
+}
+
+async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot TTS Test'));
 
@@ -83,7 +95,7 @@ async function runTest() {
 
     // Setup graceful shutdown
     let isShuttingDown = false;
-    const handleSigint = () => {
+    const handleSigint = (): void => {
         if (!isShuttingDown) {
             isShuttingDown = true;
             console.log(`\n${COLORS.YELLOW}Shutting down...${COLORS.RESET}`);
@@ -107,27 +119,29 @@ async function runTest() {
                 }
             } catch (error) {
                 // Check if this is a SIGINT error from the prompt
-                if (error?.message?.includes('SIGINT') || error?.name === 'ExitPromptError') {
+                if (error instanceof Error && (error.message.includes('SIGINT') || error.name === 'ExitPromptError')) {
                     isShuttingDown = true;
                     break;
                 }
                 if (!isShuttingDown) {
-                    console.error(`${COLORS.YELLOW}Error during synthesis: ${error?.message ?? error}${COLORS.RESET}`);
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`${COLORS.YELLOW}Error during synthesis: ${errorMessage}${COLORS.RESET}`);
                 }
             }
         }
     } catch (error) {
         if (!isShuttingDown) {
-            console.error('✗ TTS test failed:', error?.message ?? error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('✗ TTS test failed:', errorMessage);
             process.exit(1);
         }
     }
 }
 
-function listAlsaOutputDevices() {
+function listAlsaOutputDevices(): AlsaDevice[] {
     try {
         const output = execSync('aplay -l', { encoding: 'utf8' });
-        const devices = [];
+        const devices: AlsaDevice[] = [];
         const lines = output.split('\n');
 
         for (const line of lines) {
@@ -150,7 +164,7 @@ function listAlsaOutputDevices() {
     }
 }
 
-async function promptOutputDeviceChoice() {
+async function promptOutputDeviceChoice(): Promise<string | undefined> {
     const devices = listAlsaOutputDevices();
     if (devices.length === 0) {
         console.log('ℹ️  No ALSA output devices found; using system default');
@@ -169,7 +183,7 @@ async function promptOutputDeviceChoice() {
     return deviceValue;
 }
 
-async function promptBackendChoice() {
+async function promptBackendChoice(): Promise<string> {
     const backendKey = await select({
         message: 'Select a TTS backend to test:',
         choices: BACKENDS.map((b) => ({ name: b.label, value: b.id })),
@@ -178,11 +192,11 @@ async function promptBackendChoice() {
     return backendKey;
 }
 
-async function promptBackendSpecificOptions(selectedBackend, manager) {
-    const config = {};
+async function promptBackendSpecificOptions(selectedBackend: string): Promise<BackendConfig> {
+    const config: BackendConfig = {};
 
     if (selectedBackend === 'local') {
-        return await promptSherpaONNXTTSOptions(manager);
+        return await promptSherpaONNXTTSOptions();
     } else if (selectedBackend === 'ibm-watson-tts') {
         return await promptIBMWatsonTTSOptions();
     } else if (selectedBackend === 'google-cloud-tts') {
@@ -194,38 +208,39 @@ async function promptBackendSpecificOptions(selectedBackend, manager) {
     return config;
 }
 
-async function promptSherpaONNXTTSOptions() {
+async function promptSherpaONNXTTSOptions(): Promise<BackendConfig> {
     // Get available models from metadata
-    const tjbot = TJBot.getInstance();
-    const models = await tjbot.supportedTTSModels();
+    const registry = ModelRegistry.getInstance();
+    const models = registry.lookupModels('tts', false);
 
     // Get installed models once (outside the loop for efficiency)
-    // Note: installedTTSModels() returns an array of model keys (strings), not full model objects
-    const installedModelKeys = tjbot.installedTTSModels();
+    const tjbot = TJBot.getInstance();
+    const installedModelKeys = tjbot.getLocalModels('tts', true);
     const installedModels = new Set(installedModelKeys);
+
     const choices = models.map((m) => {
-        const downloaded = installedModels.has(m.model);
+        const downloaded = installedModels.has(m.key);
         const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
         return {
-            name: `${m.label || m.model} ${status}`,
-            value: m.model,
-            short: m.label || m.model,
+            name: `${m.label || m.key} ${status}`,
+            value: m.key,
+            short: m.label || m.key,
         };
     });
 
     const modelKey = await select({
         message: 'Select a Sherpa-ONNX TTS model:',
         choices,
-        default: models[0].model,
+        default: models[0].key,
     });
 
-    const selectedModel = models.find((m) => m.model === modelKey);
+    const selectedModel = models.find((m) => m.key === modelKey);
     return {
-        model: selectedModel.model,
+        model: selectedModel?.key,
     };
 }
 
-async function promptIBMWatsonTTSOptions() {
+async function promptIBMWatsonTTSOptions(): Promise<BackendConfig> {
     const voice = await select({
         message: 'Select IBM Watson voice:',
         choices: [
@@ -241,7 +256,7 @@ async function promptIBMWatsonTTSOptions() {
     return { voice };
 }
 
-async function promptGoogleCloudTTSOptions() {
+async function promptGoogleCloudTTSOptions(): Promise<BackendConfig> {
     const voice = await select({
         message: 'Select Google Cloud voice:',
         choices: [
@@ -257,7 +272,7 @@ async function promptGoogleCloudTTSOptions() {
     return { voice };
 }
 
-async function promptAzureTTSOptions() {
+async function promptAzureTTSOptions(): Promise<BackendConfig> {
     const voice = await select({
         message: 'Select Azure voice:',
         choices: [
@@ -273,7 +288,7 @@ async function promptAzureTTSOptions() {
     return { voice };
 }
 
-async function promptTextToSynthesize() {
+async function promptTextToSynthesize(): Promise<string> {
     // Use command-line prompts with inquirer
     const { input } = await import('@inquirer/prompts');
     const text = await input({
@@ -283,38 +298,43 @@ async function promptTextToSynthesize() {
     return text;
 }
 
-function buildSpeakConfig(selectedBackend, backendConfig, outputDevice) {
-    const baseConfig = {
-        backend: {
-            type: selectedBackend,
-        },
+function buildSpeakConfig(selectedBackend: string, backendConfig: BackendConfig, outputDevice?: string): SpeakConfig {
+    // Build backend-specific configuration dynamically based on selected backend
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const backend: Record<string, any> = {
+        type: selectedBackend,
+    };
+
+    // Build backend-specific configuration
+    if (selectedBackend === 'local') {
+        backend.local = {
+            model: backendConfig.model,
+        };
+    } else if (selectedBackend === 'ibm-watson-tts') {
+        backend['ibm-watson-tts'] = {
+            voice: backendConfig.voice,
+        };
+    } else if (selectedBackend === 'google-cloud-tts') {
+        backend['google-cloud-tts'] = {
+            voice: backendConfig.voice,
+        };
+    } else if (selectedBackend === 'azure-tts') {
+        backend['azure-tts'] = {
+            voice: backendConfig.voice,
+        };
+    }
+
+    // Assemble and return the final SpeakConfig
+    const speakConfig: SpeakConfig = {
+        backend: backend as TTSBackendConfig,
     };
 
     // Add output device if specified
     if (outputDevice) {
-        baseConfig.device = outputDevice;
+        speakConfig.device = outputDevice;
     }
 
-    // Build backend-specific configuration
-    if (selectedBackend === 'local') {
-        baseConfig.backend.local = {
-            model: backendConfig.model,
-        };
-    } else if (selectedBackend === 'ibm-watson-tts') {
-        baseConfig.backend['ibm-watson-tts'] = {
-            voice: backendConfig.voice,
-        };
-    } else if (selectedBackend === 'google-cloud-tts') {
-        baseConfig.backend['google-cloud-tts'] = {
-            voice: backendConfig.voice,
-        };
-    } else if (selectedBackend === 'azure-tts') {
-        baseConfig.backend['azure-tts'] = {
-            voice: backendConfig.voice,
-        };
-    }
-
-    return baseConfig;
+    return speakConfig;
 }
 
 runTest().catch(console.error);

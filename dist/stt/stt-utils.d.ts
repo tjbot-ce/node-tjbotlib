@@ -24,3 +24,4 @@ export type STTModelFlavor = 'streaming-zipformer' | 'streaming-paraformer' | 'o
 export declare function inferLocalModelFlavor(modelName?: string, modelUrl?: string): STTModelFlavor;
 export declare function toModelType(flavor: STTModelFlavor): STTModelType;
 export declare function inferSTTMode(listenConfig: ListenConfig): STTModelType;
+//# sourceMappingURL=stt-utils.d.ts.map

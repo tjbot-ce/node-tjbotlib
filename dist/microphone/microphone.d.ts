@@ -67,3 +67,4 @@ export declare class MicrophoneController {
      */
     cleanup(): void;
 }
+//# sourceMappingURL=microphone.d.ts.map

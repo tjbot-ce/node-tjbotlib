@@ -50,3 +50,4 @@ export declare class TTSController {
      */
     cleanup(): Promise<void>;
 }
+//# sourceMappingURL=tts.d.ts.map

@@ -32,3 +32,4 @@ export declare class AzureSTTEngine extends STTEngine {
     private loadCredentialsFromFile;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
 }
+//# sourceMappingURL=azure-stt.d.ts.map

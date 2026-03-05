@@ -15,17 +15,39 @@
  * limitations under the License.
  */
 
-import { Gpio } from 'pigpio';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
+interface PigpioPin {
+    pwmWrite(value: number): void;
+    digitalWrite(value: number): void;
+}
+
+interface PigpioGpioClass {
+    OUTPUT: number;
+    new (pin: number, options: { mode: number }): PigpioPin;
+}
+
+let pigpioGpioClass: PigpioGpioClass | undefined;
+
+function getPigpioGpioClass(): PigpioGpioClass {
+    if (!pigpioGpioClass) {
+        pigpioGpioClass = (require('pigpio') as { Gpio: PigpioGpioClass }).Gpio;
+    }
+    return pigpioGpioClass;
+}
 
 /**
  * LED controller for Common Anode LEDs using GPIO pins with PWM
  */
 export class LEDCommonAnode {
-    redPin: Gpio;
-    greenPin: Gpio;
-    bluePin: Gpio;
+    redPin: PigpioPin;
+    greenPin: PigpioPin;
+    bluePin: PigpioPin;
 
     constructor(red: number, green: number, blue: number) {
+        const Gpio = getPigpioGpioClass();
         this.redPin = new Gpio(red, { mode: Gpio.OUTPUT });
         this.greenPin = new Gpio(green, { mode: Gpio.OUTPUT });
         this.bluePin = new Gpio(blue, { mode: Gpio.OUTPUT });

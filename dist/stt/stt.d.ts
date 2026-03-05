@@ -47,3 +47,4 @@ export declare class STTController {
      */
     cleanup(): Promise<void>;
 }
+//# sourceMappingURL=stt.d.ts.map

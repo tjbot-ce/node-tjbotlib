@@ -15,3 +15,4 @@
  * limitations under the License.
  */
 export { MicrophoneController } from './microphone.js';
+//# sourceMappingURL=index.d.ts.map

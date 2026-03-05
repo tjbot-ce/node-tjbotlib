@@ -113,3 +113,4 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     initializeTTSEngine(): Promise<void>;
     initializeVisionEngine(): Promise<void>;
 }
+//# sourceMappingURL=rpi-driver.d.ts.map

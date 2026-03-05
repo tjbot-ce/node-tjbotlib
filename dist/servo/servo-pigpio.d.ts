@@ -14,8 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Gpio } from 'pigpio';
 import { ServoPosition } from './servo-constants.js';
+interface PigpioServo {
+    servoWrite(position: number): void;
+    digitalWrite(level: number): void;
+}
 /**
  * Servo controller using pigpio GPIO library
  * Used on Raspberry Pi 3 and 4
@@ -31,9 +34,11 @@ export declare class PiGPIOServoController {
     /**
      * Get the servo instance (for direct access if needed)
      */
-    getServo(): Gpio | undefined;
+    getServo(): PigpioServo | undefined;
     /**
      * Clean up resources
      */
     cleanup(): void;
 }
+export {};
+//# sourceMappingURL=servo-pigpio.d.ts.map

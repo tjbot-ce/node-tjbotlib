@@ -73,6 +73,14 @@ declare class TJBot {
      */
     static getInstance(): TJBot;
     /**
+     * Get recipe-specific configuration. This method can be used before calling `TJBot.getInstance().initialize()`
+     * in case a recipe needs to dynamically determine which hardware components should be configured.
+     * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
+     * @return {Record<string, unknown>} The recipe configuration as a key-value object. If no recipe configuration file is found, returns an empty object.
+     *
+     */
+    static getRecipeConfig(recipeConfigPath?: string): Record<string, unknown>;
+    /**
      * Initialize TJBot with configuration. Can be called multiple times to reconfigure.
      * Performs cleanup of previous initialization, loads configuration, detects hardware,
      * initializes all configured hardware and AI models eagerly.
@@ -126,13 +134,23 @@ declare class TJBot {
     /** LISTEN                                                                   */
     /** ------------------------------------------------------------------------ */
     /**
-     * Listen for a spoken utterance.
+     * Listen for a spoken utterance (offline mode - returns transcript).
      * @returns {Promise<string>} The transcribed text
      * @throws {TJBotError} if the microphone hardware is not initialized
      * @async
      * @public
      */
-    listen(callback?: (text: string) => void): Promise<string | void>;
+    listen(): Promise<string>;
+    /**
+     * Listen for a spoken utterance (streaming mode - uses callbacks).
+     * @param onPartialResult Callback for partial transcription results
+     * @param onFinalResult Callback for final transcription result
+     * @returns {Promise<void>} Promise that resolves when transcription completes
+     * @throws {TJBotError} if the microphone hardware is not initialized
+     * @async
+     * @public
+     */
+    listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void): Promise<void>;
     /** ------------------------------------------------------------------------ */
     /** SEE                                                                      */
     /** ------------------------------------------------------------------------ */
@@ -283,3 +301,4 @@ declare class TJBot {
  */
 export { TJBot };
 export default TJBot;
+//# sourceMappingURL=tjbot.d.ts.map

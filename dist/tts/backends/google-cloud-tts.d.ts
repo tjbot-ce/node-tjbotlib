@@ -38,3 +38,4 @@ export declare class GoogleCloudTTSEngine extends TTSEngine {
      */
     private addWavHeader;
 }
+//# sourceMappingURL=google-cloud-tts.d.ts.map

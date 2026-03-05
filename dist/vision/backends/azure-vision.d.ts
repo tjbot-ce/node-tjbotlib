@@ -28,3 +28,4 @@ export declare class AzureVisionEngine extends VisionEngine {
     }>;
     describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
 }
+//# sourceMappingURL=azure-vision.d.ts.map

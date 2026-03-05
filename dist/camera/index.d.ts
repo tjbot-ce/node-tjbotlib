@@ -15,3 +15,4 @@
  * limitations under the License.
  */
 export { CameraController } from './camera.js';
+//# sourceMappingURL=index.d.ts.map

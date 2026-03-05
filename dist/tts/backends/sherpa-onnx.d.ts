@@ -65,3 +65,4 @@ export declare class SherpaONNXTTSEngine extends TTSEngine {
      */
     private float32ToPcm16;
 }
+//# sourceMappingURL=sherpa-onnx.d.ts.map

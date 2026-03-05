@@ -32,3 +32,4 @@ export declare class AzureTTSEngine extends TTSEngine {
     private loadCredentialsFromFile;
     synthesize(text: string): Promise<Buffer>;
 }
+//# sourceMappingURL=azure-tts.d.ts.map

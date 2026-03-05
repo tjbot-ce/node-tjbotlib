@@ -220,7 +220,7 @@ export class ModelRegistry {
         modelType?: ModelType,
         installedOnly: boolean = false
     ): T[] {
-        let models: BaseModelMetadata[] = [];
+        let models: BaseModelMetadata[];
         if (installedOnly) {
             models = Array.from(this.registeredModels.values()).filter(
                 (m) => m.type === modelType && this.isModelDownloaded(m.key)

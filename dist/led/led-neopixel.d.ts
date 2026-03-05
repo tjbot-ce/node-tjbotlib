@@ -31,3 +31,4 @@ export declare class LEDNeopixel {
      */
     cleanup(): void;
 }
+//# sourceMappingURL=led-neopixel.d.ts.map

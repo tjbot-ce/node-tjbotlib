@@ -16,3 +16,4 @@
 export { VisionController } from './vision.js';
 export { createVisionEngine } from './vision-engine.js';
 export type { ObjectDetectionResult, Landmark, FaceDetectionMetadata, FaceDetectionResult, ImageClassificationResult, ImageDescriptionResult, VisionEngine, } from './vision-engine.js';
+//# sourceMappingURL=index.d.ts.map

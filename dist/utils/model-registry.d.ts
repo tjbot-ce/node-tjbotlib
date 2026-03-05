@@ -139,3 +139,4 @@ export declare class ModelRegistry {
         cachePath: string;
     } | undefined>;
 }
+//# sourceMappingURL=model-registry.d.ts.map

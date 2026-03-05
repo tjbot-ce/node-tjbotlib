@@ -18,7 +18,7 @@ import winston from 'winston';
 import { Hardware } from '../utils/index.js';
 import { RPiBaseHardwareDriver } from './rpi-driver.js';
 import { LEDCommonAnode, LEDNeopixelSPI } from '../led/index.js';
-import { LibGPIOServoController } from '../servo/index.js';
+import { LGPIOServoController } from '../servo/index.js';
 class RPi5Driver extends RPiBaseHardwareDriver {
     constructor() {
         super();
@@ -42,7 +42,7 @@ class RPi5Driver extends RPiBaseHardwareDriver {
     setupServo(config) {
         const pin = config.servoPin ?? 18;
         const chipNumber = config.gpioChip ?? 0;
-        this.servo = new LibGPIOServoController(chipNumber, pin);
+        this.servo = new LGPIOServoController(chipNumber, pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
     renderLEDCommonAnode(rgbColor) {
@@ -65,7 +65,7 @@ class RPi5Driver extends RPiBaseHardwareDriver {
         if (this.servo) {
             // Convert ServoPosition (500-2300 microseconds) to pulse width in milliseconds
             // ServoPosition uses pigpio servo pulse format: 500-2500 microseconds
-            // LibGPIOServoController expects pulse width: 0.5-2.5 milliseconds
+            // LGPIOServoController expects pulse width: 0.5-2.5 milliseconds
             const pulseMs = position / 1000;
             winston.verbose(`setting servo position to ${position} μs (${pulseMs} ms)`);
             this.servo.setPulseWidth(pulseMs);

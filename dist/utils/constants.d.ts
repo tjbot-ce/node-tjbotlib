@@ -39,3 +39,4 @@ export declare enum Hardware {
     SERVO = "servo",
     SPEAKER = "speaker"
 }
+//# sourceMappingURL=constants.d.ts.map

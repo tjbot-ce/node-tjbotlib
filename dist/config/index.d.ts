@@ -16,3 +16,4 @@
  */
 export { LEDCommonAnodeConfig, LEDNeopixelConfig, ListenConfig, LogConfig, SeeConfig, ShineConfig, SpeakConfig, STTBackendConfig, STTBackendIBMWatsonConfig, STTBackendLocalConfig, STTBackendType, STTEngineConfig, TJBotConfigSchema, TTSBackendConfig, TTSBackendIBMWatsonConfig, TTSBackendLocalConfig, TTSBackendType, TTSEngineConfig, WaveConfig, } from './config-types.js';
 export { TJBotConfig } from './tjbot-config.js';
+//# sourceMappingURL=index.d.ts.map

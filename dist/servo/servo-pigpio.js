@@ -14,13 +14,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Gpio } from 'pigpio';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+let pigpioGpioClass;
+function getPigpioGpioClass() {
+    if (!pigpioGpioClass) {
+        pigpioGpioClass = require('pigpio').Gpio;
+    }
+    return pigpioGpioClass;
+}
 /**
  * Servo controller using pigpio GPIO library
  * Used on Raspberry Pi 3 and 4
  */
 export class PiGPIOServoController {
     constructor(pin) {
+        const Gpio = getPigpioGpioClass();
         this.servo = new Gpio(pin, { mode: Gpio.OUTPUT });
     }
     /**

@@ -20,17 +20,17 @@ import TJBot from '../../dist/tjbot.js';
 import { Hardware } from '../../dist/utils/index.js';
 
 test('instantiate TJBot', () => {
-    const tjbot = new TJBot();
+    const tjbot = TJBot.getInstance();
     expect(tjbot).toBeDefined();
 });
 
 test('TJBot initializes with no hardware configured', () => {
-    const tjbot = new TJBot({ hardware: {} });
+    const tjbot = TJBot.getInstance().initialize({ hardware: {} });
     expect(tjbot).toBeDefined();
 });
 
 test('TJBot initializes with all hardware configured', () => {
-    const tjbot = new TJBot({
+    const tjbot = TJBot.getInstance().initialize({
         hardware: {
             camera: true,
             microphone: true,

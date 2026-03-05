@@ -316,11 +316,7 @@ export class ONNXVisionEngine extends VisionEngine {
             winston.debug(`Output shape: [${outputTensor.dims.join(', ')}], size: ${outputTensor.size}`);
 
             // Postprocess face detection output
-            const metadata = this.postprocessFaceDetection(
-                results,
-                confidenceThreshold,
-                [width, height]
-            );
+            const metadata = this.postprocessFaceDetection(results, confidenceThreshold, [width, height]);
             return {
                 isFaceDetected: metadata.length > 0,
                 metadata,
@@ -573,7 +569,7 @@ export class ONNXVisionEngine extends VisionEngine {
                 const boxH = y2 - y1;
 
                 const landmarks: Landmark[] = [];
-                if (kps && kps.length >= (i * 10 + 10)) {
+                if (kps && kps.length >= i * 10 + 10) {
                     const landmarkTypes = ['eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'];
                     for (let j = 0; j < 5; j++) {
                         const kx = (kps[i * 10 + j * 2] * scale.stride + anchorX) / modelWidth;
@@ -600,7 +596,11 @@ export class ONNXVisionEngine extends VisionEngine {
     /**
      * Preprocess face image for SCRFD input requirements.
      */
-    private async preprocessFaceImage(image: Buffer | string, size: [number, number], _modelName: string): Promise<ort.Tensor> {
+    private async preprocessFaceImage(
+        image: Buffer | string,
+        size: [number, number],
+        _modelName: string
+    ): Promise<ort.Tensor> {
         let imgBuf: Buffer;
         if (typeof image === 'string') {
             imgBuf = fs.readFileSync(image);

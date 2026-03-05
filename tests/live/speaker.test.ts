@@ -18,13 +18,13 @@
  */
 
 import { writeFileSync, unlinkSync } from 'fs';
-import { AudioPlayer } from '../../dist/speaker/audio-player.js';
+import { AudioPlayer } from '../../src/speaker/audio-player.js';
 import { isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
 import { confirm } from '@inquirer/prompts';
 
 const LOG_LEVEL = 'info';
 
-async function runTest() {
+async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot Speaker Hardware Test'));
 
@@ -89,8 +89,8 @@ async function runTest() {
         console.log(`Playing test audio: ${testAudioPath}`);
 
         // Play the audio using AudioPlayer directly
-        await new Promise((resolve, reject) => {
-            audioPlayer.once('complete', resolve);
+        await new Promise<void>((resolve, reject) => {
+            audioPlayer.once('complete', () => resolve());
             audioPlayer.once('error', reject);
             audioPlayer.play(testAudioPath);
         });
@@ -103,10 +103,10 @@ async function runTest() {
             unlinkSync(testAudioPath);
             console.log('✓ Test audio file cleaned up');
         } catch (err) {
-            console.log('Warning: Could not delete test audio file:', err.message);
+            console.log('Warning: Could not delete test audio file:', (err as Error).message);
         }
     } catch (error) {
-        console.error('\n✗ Error during speaker test:', error.message);
+        console.error('\n✗ Error during speaker test:', (error as Error).message);
         console.error('\nMake sure:');
         console.error('  1. You are running on a Raspberry Pi');
         console.error('  2. Optional hardware dependencies are installed');

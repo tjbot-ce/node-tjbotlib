@@ -85,3 +85,4 @@ export declare class TJBotConfig {
      */
     private validateVisionLocalModels;
 }
+//# sourceMappingURL=tjbot-config.d.ts.map

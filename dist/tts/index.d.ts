@@ -16,3 +16,4 @@
 export { TTSController } from './tts.js';
 export { createTTSEngine } from './tts-engine.js';
 export type { TTSEngine } from './tts-engine.js';
+//# sourceMappingURL=index.d.ts.map

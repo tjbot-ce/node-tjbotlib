@@ -42,3 +42,4 @@ export declare class LEDNeopixelSPI {
      */
     cleanup(): void;
 }
+//# sourceMappingURL=led-neopixel-spi.d.ts.map

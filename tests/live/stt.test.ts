@@ -19,9 +19,11 @@
 
 import { select } from '@inquirer/prompts';
 import { execSync } from 'child_process';
-import { TJBot } from '../../dist/tjbot.js';
+import { TJBot } from '../../src/tjbot.js';
 import { initWinston, formatTitle, formatSection } from './utils.js';
-import { inferSTTMode } from '../../dist/stt/stt-utils.js';
+import { inferSTTMode } from '../../src/stt/stt-utils.js';
+import type { ListenConfig, STTBackendConfig } from '../../src/config/config-types.js';
+import { ModelRegistry } from '../../src/utils/index.js';
 
 // ANSI color codes for output
 const COLORS = {
@@ -42,7 +44,20 @@ const BACKENDS = [
     { key: 'azure-stt', label: 'Azure' },
 ];
 
-async function runTest() {
+interface AlsaDevice {
+    name: string;
+    value: string;
+}
+
+interface BackendConfig {
+    model?: string;
+    vad?: { enabled: boolean };
+    backgroundAudioSuppression?: number;
+    languageCode?: string;
+    language?: string;
+}
+
+async function runTest(): Promise<void> {
     // Note: Sherpa-ONNX native stderr output is suppressed at the module level
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot STT Test'));
@@ -73,26 +88,26 @@ async function runTest() {
     console.log('Start speaking. Press Ctrl+C when you are finished with the test.');
 
     let lastPartial = '';
-    const onPartialResult = (text) => {
+    const onPartialResult = (text: string): void => {
         if (text && text !== lastPartial) {
             lastPartial = text;
             console.log(`${COLORS.DIM}Partial: ${text}${COLORS.RESET}`);
         }
     };
 
-    const onFinalResult = (text) => {
+    const onFinalResult = (text: string): void => {
         if (text) {
             console.log(`${COLORS.BRIGHT}${COLORS.GREEN}Final: ${text}${COLORS.RESET}`);
         }
     };
 
     // Detect if model is streaming or offline
-    const mode = inferSTTMode(listenConfig);
+    const mode = inferSTTMode(listenConfig) as string;
     const isStreaming = mode === 'streaming' || mode === 'streaming-zipformer';
 
     // Setup graceful shutdown
     let isShuttingDown = false;
-    const handleSigint = () => {
+    const handleSigint = (): void => {
         if (!isShuttingDown) {
             isShuttingDown = true;
             console.log(`\n${COLORS.YELLOW}Shutting down...${COLORS.RESET}`);
@@ -118,9 +133,8 @@ async function runTest() {
                 lastPartial = '';
             } catch (error) {
                 if (!isShuttingDown) {
-                    console.error(
-                        `${COLORS.YELLOW}Error during transcription: ${error?.message ?? error}${COLORS.RESET}`
-                    );
+                    const message = error instanceof Error ? error.message : String(error);
+                    console.error(`${COLORS.YELLOW}Error during transcription: ${message}${COLORS.RESET}`);
                     // Exit if there's an error (likely backend initialization failure)
                     isShuttingDown = true;
                     process.exit(1);
@@ -129,16 +143,17 @@ async function runTest() {
         }
     } catch (error) {
         if (!isShuttingDown) {
-            console.error('✗ STT test failed:', error?.message ?? error);
+            const message = (error as Error)?.message ?? String(error);
+            console.error('✗ STT test failed:', message);
             process.exit(1);
         }
     }
 }
 
-function listAlsaDevices() {
+function listAlsaDevices(): AlsaDevice[] {
     try {
         const output = execSync('arecord -l', { encoding: 'utf8' });
-        const devices = [];
+        const devices: AlsaDevice[] = [];
         const lines = output.split('\n');
 
         for (const line of lines) {
@@ -161,7 +176,7 @@ function listAlsaDevices() {
     }
 }
 
-async function promptDeviceChoice() {
+async function promptDeviceChoice(): Promise<string | undefined> {
     const devices = listAlsaDevices();
     if (devices.length === 0) {
         console.log('ℹ️  No ALSA devices found; using system default');
@@ -180,7 +195,7 @@ async function promptDeviceChoice() {
     return deviceValue;
 }
 
-async function promptBackendChoice() {
+async function promptBackendChoice(): Promise<string> {
     const backendKey = await select({
         message: 'Select an STT backend to test:',
         choices: BACKENDS.map((b) => ({ name: b.label, value: b.key })),
@@ -189,11 +204,11 @@ async function promptBackendChoice() {
     return backendKey;
 }
 
-async function promptBackendSpecificOptions(selectedBackend, manager) {
-    const config = {};
+async function promptBackendSpecificOptions(selectedBackend: string): Promise<BackendConfig> {
+    const config: BackendConfig = {};
 
     if (selectedBackend === 'local') {
-        return await promptSherpaONNXOptions(manager);
+        return await promptSherpaONNXOptions();
     } else if (selectedBackend === 'ibm-watson-stt') {
         return await promptIBMWatsonOptions();
     } else if (selectedBackend === 'google-cloud-stt') {
@@ -205,14 +220,14 @@ async function promptBackendSpecificOptions(selectedBackend, manager) {
     return config;
 }
 
-async function promptSherpaONNXOptions() {
+async function promptSherpaONNXOptions(): Promise<BackendConfig> {
     // Get available models from metadata
-    const tjbot = TJBot.getInstance();
-    const models = await tjbot.supportedSTTModels();
+    const registry = ModelRegistry.getInstance();
+    const models = registry.lookupModels('stt', false);
 
     // Get installed models once (outside the loop for efficiency)
-    // Note: installedSTTModels() returns an array of model keys (strings), not full model objects
-    const installedModelKeys = tjbot.installedSTTModels();
+    const tjbot = TJBot.getInstance();
+    const installedModelKeys = tjbot.getLocalModels('stt', true);
     const installedModels = new Set(installedModelKeys);
     const choices = models.map((m) => {
         const downloaded = installedModels.has(m.key);
@@ -231,7 +246,7 @@ async function promptSherpaONNXOptions() {
     });
 
     const selectedModel = models.find((m) => m.key === modelKey);
-    const config = {
+    const config: BackendConfig = {
         model: selectedModel.key,
     };
 
@@ -252,7 +267,7 @@ async function promptSherpaONNXOptions() {
     return config;
 }
 
-async function promptIBMWatsonOptions() {
+async function promptIBMWatsonOptions(): Promise<BackendConfig> {
     const modelChoice = await select({
         message: 'Select IBM Watson model:',
         choices: [
@@ -282,7 +297,7 @@ async function promptIBMWatsonOptions() {
     };
 }
 
-async function promptGoogleCloudOptions() {
+async function promptGoogleCloudOptions(): Promise<BackendConfig> {
     const languageCode = await select({
         message: 'Select language:',
         choices: [
@@ -316,7 +331,7 @@ async function promptGoogleCloudOptions() {
     };
 }
 
-async function promptAzureOptions() {
+async function promptAzureOptions(): Promise<BackendConfig> {
     const language = await select({
         message: 'Select language:',
         choices: [
@@ -336,47 +351,52 @@ async function promptAzureOptions() {
     return { language };
 }
 
-function buildListenConfig(selectedBackend, backendConfig, device) {
-    const baseConfig = {
-        microphoneRate: 16000,
-        microphoneChannels: 1,
-        backend: {
-            type: selectedBackend,
-        },
+function buildListenConfig(selectedBackend: string, backendConfig: BackendConfig, device?: string): ListenConfig {
+    // Build backend-specific configuration dynamically based on selected backend
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const backend: Record<string, any> = {
+        type: selectedBackend,
     };
 
-    if (device) {
-        baseConfig.device = device;
-    }
-
-    // Build backend-specific configuration
     if (selectedBackend === 'local') {
-        baseConfig.backend.local = {
+        backend.local = {
             model: backendConfig.model,
         };
         if (backendConfig.vad !== undefined) {
-            baseConfig.backend.local.vad = backendConfig.vad;
+            backend.local.vad = backendConfig.vad;
         }
     } else if (selectedBackend === 'ibm-watson-stt') {
-        baseConfig.backend['ibm-watson-stt'] = {
+        backend['ibm-watson-stt'] = {
             model: backendConfig.model,
             backgroundAudioSuppression: backendConfig.backgroundAudioSuppression,
         };
     } else if (selectedBackend === 'google-cloud-stt') {
-        baseConfig.backend['google-cloud-stt'] = {
+        backend['google-cloud-stt'] = {
             languageCode: backendConfig.languageCode,
             model: backendConfig.model,
         };
     } else if (selectedBackend === 'azure-stt') {
-        baseConfig.backend['azure-stt'] = {
+        backend['azure-stt'] = {
             language: backendConfig.language,
         };
     }
 
-    return baseConfig;
+    // Assemble and return the final ListenConfig
+    const listenConfig: ListenConfig = {
+        microphoneRate: 16000,
+        microphoneChannels: 1,
+        backend: backend as STTBackendConfig,
+    };
+
+    if (device) {
+        listenConfig.device = device;
+    }
+
+    return listenConfig;
 }
 
-runTest().catch((error) => {
-    console.error('✗ STT test failed:', error?.message ?? error);
+runTest().catch((error: Error) => {
+    const message = (error as Error)?.message ?? String(error);
+    console.error('✗ STT test failed:', message);
     process.exit(1);
 });

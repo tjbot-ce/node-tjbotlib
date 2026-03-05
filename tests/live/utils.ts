@@ -20,10 +20,10 @@ import winston from 'winston';
 
 /**
  * Check if a command-line tool is available in PATH
- * @param {string} command - The command to check for
- * @returns {boolean} - True if command is available, false otherwise
+ * @param command - The command to check for
+ * @returns True if command is available, false otherwise
  */
-export function isCommandAvailable(command) {
+export function isCommandAvailable(command: string): boolean {
     try {
         execSync(`command -v ${command}`, { stdio: 'ignore' });
         return true;
@@ -34,19 +34,19 @@ export function isCommandAvailable(command) {
 
 /**
  * Sleep for a specified number of milliseconds
- * @param {number} ms - Milliseconds to sleep
- * @returns {Promise<void>}
+ * @param ms - Milliseconds to sleep
+ * @returns Promise that resolves after the specified time
  */
-export function sleep(ms) {
+export function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Check if a module is available (can be imported)
- * @param {string} moduleName - Name of the module to check
- * @returns {Promise<boolean>} - True if module is available, false otherwise
+ * @param moduleName - Name of the module to check
+ * @returns True if module is available, false otherwise
  */
-export async function isModuleAvailable(moduleName) {
+export async function isModuleAvailable(moduleName: string): Promise<boolean> {
     try {
         await import(moduleName);
         return true;
@@ -57,41 +57,46 @@ export async function isModuleAvailable(moduleName) {
 
 /**
  * Format text as a test title with decorative borders
- * @param {string} text - The title text
- * @returns {string} - Formatted title string
+ * @param text - The title text
+ * @returns Formatted title string
  */
-export function formatTitle(text) {
+export function formatTitle(text: string): string {
     const line = '='.repeat(text.length + 4);
     return `\n${line}\n  ${text}\n${line}\n`;
 }
 
 /**
  * Format text as a section header
- * @param {string} text - The section text
- * @returns {string} - Formatted section header string
+ * @param text - The section text
+ * @returns Formatted section header string
  */
-export function formatSection(text) {
+export function formatSection(text: string): string {
     return `\n--- ${text} ---`;
 }
 
 /**
  * Initialize Winston logging for tests to ensure a console transport exists.
  * Safe to call multiple times; only configures when no transports are present.
- * @param {('error'|'warn'|'info'|'verbose'|'debug')} [level='info'] - Log level
+ * @param level - Log level
  */
-export function initWinston(level = 'info') {
-    if (!globalThis.__TJ_TEST_LOGGER_INITIALIZED__) {
+export function initWinston(level: 'error' | 'warn' | 'info' | 'verbose' | 'debug' = 'info'): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (!(globalThis as any).__TJ_TEST_LOGGER_INITIALIZED__) {
         // Custom formatter for pretty-printing error objects with color
-        const prettyErrorFormat = winston.format.printf((info) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const prettyErrorFormat = winston.format.printf((info: any) => {
             let message = `${info.level}: ${info.message}`;
 
             // If there are additional metadata fields (like error objects), pretty-print them
             const metadata = { ...info };
             delete metadata.level;
             delete metadata.message;
-            delete metadata[Symbol.for('level')];
-            delete metadata[Symbol.for('message')];
-            delete metadata[Symbol.for('splat')];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (metadata as any)[Symbol.for('level')];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (metadata as any)[Symbol.for('message')];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            delete (metadata as any)[Symbol.for('splat')];
 
             if (Object.keys(metadata).length > 0) {
                 // Pretty-print the metadata as colored JSON
@@ -108,7 +113,8 @@ export function initWinston(level = 'info') {
             format: winston.format.combine(winston.format.colorize(), prettyErrorFormat),
             transports: [new winston.transports.Console()],
         });
-        globalThis.__TJ_TEST_LOGGER_INITIALIZED__ = true;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (globalThis as any).__TJ_TEST_LOGGER_INITIALIZED__ = true;
     } else if (level) {
         winston.level = level;
     }

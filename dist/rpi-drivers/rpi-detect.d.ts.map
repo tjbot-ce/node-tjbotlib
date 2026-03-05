@@ -1,0 +1,1 @@
+{"version":3,"file":"rpi-detect.d.ts","sourceRoot":"","sources":["../../src/rpi-drivers/rpi-detect.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;;;;;GAeG;AAIH,cAAM,SAAS;IACX,MAAM,CAAC,KAAK,IAAI,MAAM;IAkBtB,MAAM,CAAC,KAAK,IAAI,OAAO;IAKvB,MAAM,CAAC,KAAK,IAAI,OAAO;IAKvB,MAAM,CAAC,KAAK,IAAI,OAAO;CAI1B;AAED,eAAe,SAAS,CAAC"}

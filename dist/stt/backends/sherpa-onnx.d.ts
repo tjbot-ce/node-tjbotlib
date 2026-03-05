@@ -99,3 +99,4 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
      */
     private getRMS;
 }
+//# sourceMappingURL=sherpa-onnx.d.ts.map

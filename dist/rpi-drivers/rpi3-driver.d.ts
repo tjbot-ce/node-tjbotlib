@@ -33,3 +33,4 @@ declare class RPi3Driver extends RPiBaseHardwareDriver {
     speak(message: string): Promise<void>;
 }
 export default RPi3Driver;
+//# sourceMappingURL=rpi3-driver.d.ts.map

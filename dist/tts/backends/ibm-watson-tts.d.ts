@@ -42,3 +42,4 @@ export declare class IBMTTSEngine extends TTSEngine {
      */
     synthesize(text: string): Promise<Buffer>;
 }
+//# sourceMappingURL=ibm-watson-tts.d.ts.map

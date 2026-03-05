@@ -17,8 +17,8 @@
  */
 
 import { select } from '@inquirer/prompts';
-import { TJBot } from '../../dist/tjbot.js';
-import { ModelRegistry } from '../../dist/utils/model-registry.js';
+import { TJBot } from '../../src/tjbot.js';
+import { ModelRegistry } from '../../src/utils/model-registry.js';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
@@ -32,7 +32,24 @@ const BACKENDS = [
     { id: 'azure-vision', label: 'Azure Vision' },
 ];
 
-async function runTest() {
+interface VisionResult {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    metadata?: any[];
+}
+
+interface Landmark {
+    x: number;
+    y: number;
+    type: string;
+}
+
+interface BoundingBoxItem {
+    boundingBox?: number[];
+    confidence?: number;
+    landmarks?: Landmark[];
+}
+
+async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot Vision Test'));
 
@@ -44,9 +61,11 @@ async function runTest() {
     // Build see config from user choices
     const seeConfig = buildSeeConfig(selectedBackend);
 
-    console.log(
-        formatSection(`Initializing TJBot with Vision (${BACKENDS.find((b) => b.id === selectedBackend).label})`)
-    );
+    // Get the selected backend info
+    const selectedBackendInfo = BACKENDS.find((b) => b.id === selectedBackend);
+    const backendLabel = selectedBackendInfo?.label ?? 'Unknown';
+
+    console.log(formatSection(`Initializing TJBot with Vision (${backendLabel})`));
 
     const tj = await TJBot.getInstance().initialize({
         hardware: { [TJBot.Hardware.CAMERA]: true },
@@ -62,7 +81,8 @@ async function runTest() {
     const imgBuf = fs.readFileSync(imgPath);
 
     // Run selected CV task
-    let result;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let result: any;
     if (task === 'detectObjects') {
         result = await tj.detectObjects(imgBuf);
     } else if (task === 'classifyImage') {
@@ -87,7 +107,7 @@ async function runTest() {
     console.log('\n✓ Vision test complete');
 }
 
-async function promptBackendChoice() {
+async function promptBackendChoice(): Promise<string> {
     const backendId = await select({
         message: 'Select a Vision backend to test:',
         choices: BACKENDS.map((b) => ({ name: b.label, value: b.id })),
@@ -96,8 +116,10 @@ async function promptBackendChoice() {
     return backendId;
 }
 
-async function promptBackendSpecificOptions(selectedBackend, task) {
-    const config = {};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function promptBackendSpecificOptions(selectedBackend: string, task: string): Promise<Record<string, any>> {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const config: Record<string, any> = {};
 
     if (selectedBackend === 'local') {
         return await promptONNXVisionOptions(task);
@@ -110,9 +132,10 @@ async function promptBackendSpecificOptions(selectedBackend, task) {
     return config;
 }
 
-async function promptONNXVisionOptions(task) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function promptONNXVisionOptions(task: string): Promise<Record<string, any>> {
     // Map task to model type
-    const modelTypeMap = {
+    const modelTypeMap: Record<string, string> = {
         detectObjects: 'vision.object-recognition',
         classifyImage: 'vision.classification',
         detectFaces: 'vision.face-detection',
@@ -125,7 +148,8 @@ async function promptONNXVisionOptions(task) {
 
     // Get available models from registry
     const registry = ModelRegistry.getInstance();
-    const models = registry.lookupModels(modelType, false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const models = registry.lookupModels(modelType as any, false);
 
     if (models.length === 0) {
         console.log(`\nNo models available for task: ${task}`);
@@ -142,19 +166,21 @@ async function promptONNXVisionOptions(task) {
     return {};
 }
 
-async function promptGoogleCloudVisionOptions() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function promptGoogleCloudVisionOptions(): Promise<Record<string, any>> {
     // Google Cloud Vision uses credentials from environment or config file
     console.log('\nUsing Google Cloud Vision with default credentials');
     return {};
 }
 
-async function promptAzureVisionOptions() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function promptAzureVisionOptions(): Promise<Record<string, any>> {
     // Azure Vision uses credentials from environment or config file
     console.log('\nUsing Azure Computer Vision with default credentials');
     return {};
 }
 
-async function promptTaskChoice(selectedBackend) {
+async function promptTaskChoice(selectedBackend: string): Promise<string> {
     // Get model information from registry
     const registry = ModelRegistry.getInstance();
 
@@ -201,8 +227,10 @@ async function promptTaskChoice(selectedBackend) {
     return task;
 }
 
-function buildSeeConfig(selectedBackend) {
-    const baseConfig = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildSeeConfig(selectedBackend: string): any {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const baseConfig: any = {
         backend: {
             type: selectedBackend,
         },
@@ -218,7 +246,8 @@ function buildSeeConfig(selectedBackend) {
         const classificationModels = registry.lookupModels('vision.classification', false);
         const faceDetectionModels = registry.lookupModels('vision.face-detection', false);
 
-        const localConfig = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const localConfig: any = {};
         if (detectionModels.length > 0) {
             localConfig.objectDetectionModel = detectionModels[0].key;
         }
@@ -243,22 +272,25 @@ function buildSeeConfig(selectedBackend) {
 
 /**
  * Annotates an image with bounding boxes from vision detection results
- * @param {string} imgPath - Path to the image to annotate
- * @param {object} result - Vision detection result with metadata containing bounding boxes
- * @param {string} task - The vision task ('detectFaces' or 'detectObjects')
- * @returns {Promise<string>} Path to the annotated image
+ * @param imgPath - Path to the image to annotate
+ * @param result - Vision detection result with metadata containing bounding boxes
+ * @returns Path to the annotated image
  */
-async function annotateImageWithBoundingBoxes(imgPath, result, task) {
+async function annotateImageWithBoundingBoxes(imgPath: string, result: VisionResult): Promise<string> {
     try {
         // Get image metadata to know dimensions
         const metadata = await sharp(imgPath).metadata();
         const { width, height } = metadata;
 
+        if (!width || !height) {
+            throw new Error('Could not determine image dimensions');
+        }
+
         // Create SVG overlay with bounding boxes
         let svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">`;
 
         if (result.metadata && Array.isArray(result.metadata)) {
-            result.metadata.forEach((item, index) => {
+            result.metadata.forEach((item: BoundingBoxItem, _index: number) => {
                 if (item.boundingBox && Array.isArray(item.boundingBox)) {
                     // Bounding box is [x, y, w, h] in normalized coordinates (0-1)
                     // where x, y are top-left corner and w, h are width/height
@@ -293,7 +325,7 @@ async function annotateImageWithBoundingBoxes(imgPath, result, task) {
 
                     // Draw landmarks if available (for face detection)
                     if (item.landmarks && Array.isArray(item.landmarks)) {
-                        item.landmarks.forEach((landmark) => {
+                        item.landmarks.forEach((landmark: Landmark) => {
                             // Landmarks are normalized coordinates (0-1)
                             const lx = Math.round(landmark.x * width);
                             const ly = Math.round(landmark.y * height);

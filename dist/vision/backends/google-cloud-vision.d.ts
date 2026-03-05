@@ -30,3 +30,4 @@ export declare class GoogleCloudVisionEngine extends VisionEngine {
     }>;
     describeImage(_image: Buffer | string): Promise<ImageDescriptionResult>;
 }
+//# sourceMappingURL=google-cloud-vision.d.ts.map

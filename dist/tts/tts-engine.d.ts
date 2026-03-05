@@ -68,3 +68,4 @@ export declare abstract class TTSEngine {
  * @public
  */
 export declare function createTTSEngine(config: Record<string, unknown>): Promise<TTSEngine>;
+//# sourceMappingURL=tts-engine.d.ts.map

@@ -17,14 +17,14 @@
  * limitations under the License.
  */
 
-import TJBot from '../../dist/tjbot.js';
-import RPiDetect from '../../dist/rpi-drivers/rpi-detect.js';
+import TJBot from '../../src/tjbot.js';
+import RPiDetect from '../../src/rpi-drivers/rpi-detect.js';
 import { select, input, confirm } from '@inquirer/prompts';
 import { formatTitle, formatSection, initWinston } from './utils.js';
 
 const LOG_LEVEL = 'info';
 
-async function runTest() {
+async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot LED Hardware Test'));
 
@@ -39,7 +39,8 @@ async function runTest() {
     });
     const isNeoPixel = ledType === 'neopixel';
 
-    const config = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const config: any = {
         log: { level: LOG_LEVEL },
         hardware: {},
         shine: {},
@@ -47,7 +48,8 @@ async function runTest() {
 
     if (isNeoPixel) {
         // NeoPixel setup - configuration varies by Pi model
-        let neopixelConfig = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let neopixelConfig: any;
 
         if (RPiDetect.isPi5()) {
             // RPi5 uses SPI interface
@@ -62,7 +64,7 @@ async function runTest() {
             const gpioPin = await input({
                 message: 'Enter GPIO pin for NeoPixel LED (default: 21):',
                 default: '21',
-                validate: (value) => {
+                validate: (value: string) => {
                     const num = parseInt(value);
                     return !isNaN(num) ? true : 'Please enter a valid number';
                 },
@@ -79,7 +81,7 @@ async function runTest() {
         const redPin = await input({
             message: 'Enter GPIO pin for Red LED (default: 19):',
             default: '19',
-            validate: (value) => {
+            validate: (value: string) => {
                 const num = parseInt(value);
                 return !isNaN(num) ? true : 'Please enter a valid number';
             },
@@ -87,7 +89,7 @@ async function runTest() {
         const greenPin = await input({
             message: 'Enter GPIO pin for Green LED (default: 13):',
             default: '13',
-            validate: (value) => {
+            validate: (value: string) => {
                 const num = parseInt(value);
                 return !isNaN(num) ? true : 'Please enter a valid number';
             },
@@ -95,7 +97,7 @@ async function runTest() {
         const bluePin = await input({
             message: 'Enter GPIO pin for Blue LED (default: 12):',
             default: '12',
-            validate: (value) => {
+            validate: (value: string) => {
                 const num = parseInt(value);
                 return !isNaN(num) ? true : 'Please enter a valid number';
             },
@@ -161,7 +163,7 @@ async function runTest() {
 
         console.log(formatTitle('LED Test Complete'));
     } catch (error) {
-        console.error('\n✗ Error during LED test:', error.message);
+        console.error('\n✗ Error during LED test:', (error as Error).message);
         process.exit(1);
     }
 }

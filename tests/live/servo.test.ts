@@ -17,13 +17,13 @@
  * limitations under the License.
  */
 
-import TJBot from '../../dist/tjbot.js';
+import TJBot from '../../src/tjbot.js';
 import { formatTitle, formatSection, initWinston } from './utils.js';
 import { input, confirm } from '@inquirer/prompts';
 
 const LOG_LEVEL = 'info';
 
-async function runTest() {
+async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot Servo Hardware Test'));
 
@@ -78,7 +78,7 @@ async function runTest() {
 
         console.log(formatTitle('Servo Test Complete'));
     } catch (error) {
-        console.error('\n✗ Error during servo test:', error.message);
+        console.error('\n✗ Error during servo test:', (error as Error).message);
         process.exit(1);
     }
 }

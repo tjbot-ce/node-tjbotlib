@@ -19,12 +19,12 @@
 
 import { strict as assert } from 'assert';
 import { existsSync } from 'fs';
-import { TJBot } from '../../dist/tjbot.js';
+import { TJBot } from '../../src/tjbot.js';
 import { isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
 
 const LOG_LEVEL = 'info';
 
-async function runTest() {
+async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
     console.log(formatTitle('TJBot Camera Hardware Test'));
 
@@ -51,7 +51,7 @@ async function runTest() {
     try {
         // Test 1: Take photo with default path
         console.log('Test 1: Taking a photo via tjbot.look() (default path)');
-        const photoPath1 = await tjbot.look();
+        const photoPath1: string = await tjbot.look();
         console.log(`Photo saved to: ${photoPath1}`);
         assert(existsSync(photoPath1), 'Photo file was not created at default path');
         console.log('✓ PASS - Photo file created at default path');
@@ -59,7 +59,7 @@ async function runTest() {
         // Test 2: Take photo with custom path
         console.log('\nTest 2: Taking a photo via tjbot.look() (custom path)');
         const customPath = '/tmp/tjbot-test-photo.jpg';
-        const photoPath2 = await tjbot.look(customPath);
+        const photoPath2: string = await tjbot.look(customPath);
         console.log(`Photo saved to: ${photoPath2}`);
         assert(existsSync(photoPath2), 'Photo file was not created at custom path');
         assert.strictEqual(photoPath2, customPath, 'Photo path does not match requested custom path');
@@ -69,7 +69,7 @@ async function runTest() {
         console.log('Note: Check the captured images to verify quality and settings.');
         console.log('Photo paths have been displayed above.\n');
     } catch (error) {
-        console.error('\n✗ Error during TJBot.look() test:', error.message);
+        console.error('\n✗ Error during TJBot.look() test:', (error as Error).message);
         console.error('\nMake sure:');
         console.error('  1. You are running on a Raspberry Pi');
         console.error('  2. rpicam-still command-line tool is installed');
@@ -80,7 +80,7 @@ async function runTest() {
     }
 }
 
-runTest().catch((err) => {
+runTest().catch((err: Error) => {
     console.error('Unhandled error in camera test:', err);
     process.exit(1);
 });

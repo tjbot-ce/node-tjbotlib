@@ -15,17 +15,39 @@
  * limitations under the License.
  */
 
-import { Gpio } from 'pigpio';
+import { createRequire } from 'module';
 import { ServoPosition } from './servo-constants.js';
+
+const require = createRequire(import.meta.url);
+
+interface PigpioServo {
+    servoWrite(position: number): void;
+    digitalWrite(level: number): void;
+}
+
+interface PigpioGpioClass {
+    OUTPUT: number;
+    new (pin: number, options: { mode: number }): PigpioServo;
+}
+
+let pigpioGpioClass: PigpioGpioClass | undefined;
+
+function getPigpioGpioClass(): PigpioGpioClass {
+    if (!pigpioGpioClass) {
+        pigpioGpioClass = (require('pigpio') as { Gpio: PigpioGpioClass }).Gpio;
+    }
+    return pigpioGpioClass;
+}
 
 /**
  * Servo controller using pigpio GPIO library
  * Used on Raspberry Pi 3 and 4
  */
 export class PiGPIOServoController {
-    private servo: Gpio | undefined;
+    private servo: PigpioServo | undefined;
 
     constructor(pin: number) {
+        const Gpio = getPigpioGpioClass();
         this.servo = new Gpio(pin, { mode: Gpio.OUTPUT });
     }
 
@@ -42,7 +64,7 @@ export class PiGPIOServoController {
     /**
      * Get the servo instance (for direct access if needed)
      */
-    getServo(): Gpio | undefined {
+    getServo(): PigpioServo | undefined {
         return this.servo;
     }
 

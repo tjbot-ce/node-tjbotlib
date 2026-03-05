@@ -30,3 +30,4 @@ export declare class IBMWatsonSTTEngine extends STTEngine {
     private loadCredentials;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
 }
+//# sourceMappingURL=ibm-watson-stt.d.ts.map

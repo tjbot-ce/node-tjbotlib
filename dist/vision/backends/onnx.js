@@ -454,7 +454,7 @@ export class ONNXVisionEngine extends VisionEngine {
                 const boxW = x2 - x1;
                 const boxH = y2 - y1;
                 const landmarks = [];
-                if (kps && kps.length >= (i * 10 + 10)) {
+                if (kps && kps.length >= i * 10 + 10) {
                     const landmarkTypes = ['eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'];
                     for (let j = 0; j < 5; j++) {
                         const kx = (kps[i * 10 + j * 2] * scale.stride + anchorX) / modelWidth;

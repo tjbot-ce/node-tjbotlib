@@ -21,3 +21,4 @@ declare class RPiDetect {
     static isPi5(): boolean;
 }
 export default RPiDetect;
+//# sourceMappingURL=rpi-detect.d.ts.map

@@ -19,8 +19,7 @@ import fs from 'fs';
 
 class RPiDetect {
     static model(): string {
-        let cpuInfo = '';
-
+        let cpuInfo: string;
         try {
             cpuInfo = fs.readFileSync('/proc/cpuinfo', { encoding: 'utf8' });
         } catch {

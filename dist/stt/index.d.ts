@@ -17,3 +17,4 @@
 export { STTController } from './stt.js';
 export { createSTTEngine } from './stt-engine.js';
 export type { STTEngine, STTRequestOptions } from './stt-engine.js';
+//# sourceMappingURL=index.d.ts.map

@@ -15,14 +15,15 @@
  * limitations under the License.
  */
 /**
- * Servo controller using libgpiod for Raspberry Pi 5
- * Uses a worker thread to manage PWM via GPIO character devices
+ * Servo controller using lgpio for Raspberry Pi 5
+ * Uses lgpio software PWM on GPIO character devices
  */
 export declare class LibGPIOServoController {
     private chipNumber;
     private pin;
     private freq;
-    private worker?;
+    private chipHandle?;
+    private claimed;
     private currentPulseMs;
     private running;
     private autoStopTimer?;
@@ -34,7 +35,8 @@ export declare class LibGPIOServoController {
      * @param freq PWM frequency in Hz (default 50 for standard servos)
      */
     constructor(chipNumber: number, pin: number, freq?: number, autoStopDelayMs?: number);
-    private resolveWorkerPath;
+    private ensureStarted;
+    private setServoPulse;
     /**
      * Start the servo controller worker
      */
@@ -72,3 +74,4 @@ export declare class LibGPIOServoController {
      */
     cleanup(): Promise<void>;
 }
+//# sourceMappingURL=servo-libgpio.d.ts.map

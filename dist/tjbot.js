@@ -88,6 +88,17 @@ class TJBot {
         return TJBot.instance;
     }
     /**
+     * Get recipe-specific configuration. This method can be used before calling `TJBot.getInstance().initialize()`
+     * in case a recipe needs to dynamically determine which hardware components should be configured.
+     * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
+     * @return {Record<string, unknown>} The recipe configuration as a key-value object. If no recipe configuration file is found, returns an empty object.
+     *
+     */
+    static getRecipeConfig(recipeConfigPath = 'recipe.toml') {
+        const config = new TJBotConfig(undefined, recipeConfigPath);
+        return config.recipe;
+    }
+    /**
      * Initialize TJBot with configuration. Can be called multiple times to reconfigure.
      * Performs cleanup of previous initialization, loads configuration, detects hardware,
      * initializes all configured hardware and AI models eagerly.
@@ -338,33 +349,23 @@ class TJBot {
         const models = registry.lookupModels(modelType, installedOnly);
         return models.map((model) => model.key);
     }
-    /** ------------------------------------------------------------------------ */
-    /** LISTEN                                                                   */
-    /** ------------------------------------------------------------------------ */
-    /**
-     * Listen for a spoken utterance.
-     * @returns {Promise<string>} The transcribed text
-     * @throws {TJBotError} if the microphone hardware is not initialized
-     * @async
-     * @public
-     */
-    async listen(callback) {
+    async listen(onPartialResult, onFinalResult) {
         // make sure we can listen
         this.assertCapability(Capability.LISTEN);
         const listenConfig = this.config.listen ?? {};
         const mode = inferSTTMode(listenConfig);
         const modelName = listenConfig.backend?.local?.model ?? listenConfig.model ?? '<unknown>';
-        if (mode === 'streaming' && !callback) {
-            throw new TJBotError(`STT model "${modelName}" is streaming. Call listen(callback) so TJBot can deliver partial/final transcripts.`);
+        if (mode === 'streaming' && !onPartialResult) {
+            throw new TJBotError(`STT model "${modelName}" is streaming. Call listen(onPartialResult, onFinalResult) so TJBot can deliver partial/final transcripts.`);
         }
-        if (mode === 'offline' && callback) {
+        if (mode === 'offline' && onPartialResult) {
             throw new TJBotError(`STT model "${modelName}" is offline. Call await listen() without a callback.`);
         }
         if (mode === 'streaming') {
             // Streaming: deliver partial/final via the provided callback. The promise resolves when the backend signals completion.
             return await this.rpiDriver.listenForTranscript({
-                onPartialResult: (text) => callback?.(text),
-                onFinalResult: (text) => callback?.(text),
+                onPartialResult: (text) => onPartialResult?.(text),
+                onFinalResult: (text) => onFinalResult?.(text),
             });
         }
         // Offline / single-shot: return the transcript

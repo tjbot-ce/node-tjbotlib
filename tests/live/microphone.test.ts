@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-import { MicrophoneController } from '../../dist/microphone/index.js';
+import { MicrophoneController } from '../../src/microphone/index.js';
 import { sleep, isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
 import fs from 'fs';
 import os from 'os';
@@ -25,7 +25,7 @@ import path from 'path';
 
 const LOG_LEVEL = 'info';
 
-async function runTest() {
+async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
 
     console.log(formatTitle('TJBot Microphone Hardware Test'));
@@ -81,8 +81,8 @@ async function runTest() {
         microphone.stop();
 
         // Wait for the write stream to finish
-        await new Promise((resolve) => {
-            writeStream.end(resolve);
+        await new Promise<void>((resolve) => {
+            writeStream.end(() => resolve());
         });
 
         console.log('Recording complete.\n');
@@ -131,7 +131,7 @@ async function runTest() {
                 fs.unlinkSync(audioFile);
                 console.log('✓ Temporary file cleaned up');
             } catch (err) {
-                console.log('Warning: Could not delete temporary file:', err.message);
+                console.log('Warning: Could not delete temporary file:', (err as Error).message);
             }
         } else {
             console.log('✗ File was not created');
@@ -151,7 +151,7 @@ async function runTest() {
             process.exit(1);
         }
     } catch (error) {
-        console.error('\n✗ Error during microphone test:', error.message);
+        console.error('\n✗ Error during microphone test:', (error as Error).message);
         process.exit(1);
     }
 }

@@ -570,3 +570,4 @@ export declare const tjbotConfigSchema: z.ZodObject<{
 }, z.core.$loose>;
 export type TJBotConfigSchema = z.infer<typeof tjbotConfigSchema>;
 export {};
+//# sourceMappingURL=config-types.d.ts.map

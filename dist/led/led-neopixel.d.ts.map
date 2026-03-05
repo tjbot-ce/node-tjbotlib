@@ -1,0 +1,1 @@
+{"version":3,"file":"led-neopixel.d.ts","sourceRoot":"","sources":["../../src/led/led-neopixel.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;;;;;GAeG;AAIH;;;GAGG;AACH,qBAAa,WAAW;IAEpB,QAAQ,EAAE,GAAG,CAAC;gBAEF,GAAG,EAAE,MAAM;IAuCvB;;;OAGG;IACH,MAAM,CAAC,KAAK,EAAE,MAAM,GAAG,IAAI;IAM3B;;OAEG;IACH,OAAO,IAAI,IAAI;CAGlB"}

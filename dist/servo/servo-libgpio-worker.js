@@ -21,7 +21,7 @@ class LibGPIOServoWorker {
         this.running = false;
         this.currentPulseMs = 1.5;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        this.line = null;
+        this.gpioState = null;
     }
     busyWaitNs(ns) {
         const start = process.hrtime.bigint();
@@ -31,17 +31,25 @@ class LibGPIOServoWorker {
     }
     async handleStart(chipNum, pin, pulseMs, periodMs) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let gpiod;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let chip;
+        let lg;
+        let chipHandle;
         try {
-            gpiod = await import('node-libgpiod');
-            chip = new gpiod.Chip(chipNum);
-            this.line = chip.getLine(pin);
-            this.line.requestOutputMode();
+            const lgModule = await import('lgpio');
+            lg = lgModule.default ?? lgModule;
+            chipHandle = lg.gpiochipOpen(chipNum);
+            lg.gpioClaimOutput(chipHandle, pin);
+            this.gpioState = { lg, chipHandle, pin };
         }
         catch (err) {
-            parentPort?.postMessage({ error: `Failed to load node-libgpiod: ${err}` });
+            if (chipHandle !== undefined && lg) {
+                try {
+                    lg.gpiochipClose(chipHandle);
+                }
+                catch (_e) {
+                    // ignore cleanup errors
+                }
+            }
+            parentPort?.postMessage({ error: `Failed to initialize lgpio: ${err}` });
             return;
         }
         this.running = true;
@@ -49,11 +57,12 @@ class LibGPIOServoWorker {
         try {
             while (this.running) {
                 const periodStart = process.hrtime.bigint();
+                const { lg: lgpio, chipHandle: handle, pin: gpioPin } = this.gpioState;
                 // high
-                this.line.setValue(1);
+                lgpio.gpioWrite(handle, gpioPin, true);
                 this.busyWaitNs(BigInt(Math.floor(this.currentPulseMs * 1000000)));
                 // low
-                this.line.setValue(0);
+                lgpio.gpioWrite(handle, gpioPin, false);
                 const elapsed = Number(process.hrtime.bigint() - periodStart) / 1000000;
                 const remaining = periodMs - elapsed;
                 if (remaining > 1) {
@@ -73,15 +82,17 @@ class LibGPIOServoWorker {
         parentPort?.postMessage({ stopped: true });
     }
     cleanup() {
-        if (this.line) {
+        if (this.gpioState) {
             try {
-                this.line.setValue(0);
-                this.line.release();
+                const { lg, chipHandle, pin } = this.gpioState;
+                lg.gpioWrite(chipHandle, pin, false);
+                lg.gpioFree(chipHandle, pin);
+                lg.gpiochipClose(chipHandle);
             }
             catch (_e) {
                 // ignore cleanup errors
             }
-            this.line = null;
+            this.gpioState = null;
         }
     }
     async run() {

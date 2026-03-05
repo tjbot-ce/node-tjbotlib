@@ -59,3 +59,4 @@ export declare class CameraController {
      */
     cleanup(): void;
 }
+//# sourceMappingURL=camera.d.ts.map

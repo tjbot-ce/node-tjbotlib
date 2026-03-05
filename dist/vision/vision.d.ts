@@ -54,3 +54,4 @@ export declare class VisionController {
      */
     cleanup(): Promise<void>;
 }
+//# sourceMappingURL=vision.d.ts.map

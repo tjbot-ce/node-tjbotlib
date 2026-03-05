@@ -29,3 +29,4 @@ export declare class GoogleCloudSTTEngine extends STTEngine {
     private resolveCredentialsPath;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
 }
+//# sourceMappingURL=google-cloud-stt.d.ts.map

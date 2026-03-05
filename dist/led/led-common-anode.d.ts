@@ -14,14 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Gpio } from 'pigpio';
+interface PigpioPin {
+    pwmWrite(value: number): void;
+    digitalWrite(value: number): void;
+}
 /**
  * LED controller for Common Anode LEDs using GPIO pins with PWM
  */
 export declare class LEDCommonAnode {
-    redPin: Gpio;
-    greenPin: Gpio;
-    bluePin: Gpio;
+    redPin: PigpioPin;
+    greenPin: PigpioPin;
+    bluePin: PigpioPin;
     constructor(red: number, green: number, blue: number);
     /**
      * Render the LED to a specific RGB color.
@@ -34,3 +37,5 @@ export declare class LEDCommonAnode {
      */
     cleanup(): void;
 }
+export {};
+//# sourceMappingURL=led-common-anode.d.ts.map

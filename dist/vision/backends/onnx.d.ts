@@ -109,3 +109,4 @@ export declare class ONNXVisionEngine extends VisionEngine {
      */
     private preprocessImage;
 }
+//# sourceMappingURL=onnx.d.ts.map

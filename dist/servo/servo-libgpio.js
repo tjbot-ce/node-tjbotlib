@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Worker } from 'worker_threads';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
 import winston from 'winston';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+// lgpio is published as CommonJS; createRequire avoids ESM namespace interop issues.
+const lgpio = require('lgpio');
 const MIN_PULSE_MS = 0.5;
 const MID_PULSE_MS = 1.5;
 const MAX_PULSE_MS = 2.5;
 /**
- * Servo controller using libgpiod for Raspberry Pi 5
- * Uses a worker thread to manage PWM via GPIO character devices
+ * Servo controller using lgpio for Raspberry Pi 5
+ * Uses lgpio software PWM on GPIO character devices
  */
 export class LibGPIOServoController {
     /**
@@ -34,6 +34,7 @@ export class LibGPIOServoController {
      * @param freq PWM frequency in Hz (default 50 for standard servos)
      */
     constructor(chipNumber, pin, freq = 50, autoStopDelayMs = 2000) {
+        this.claimed = false;
         this.chipNumber = chipNumber;
         this.pin = pin;
         this.freq = freq;
@@ -41,46 +42,36 @@ export class LibGPIOServoController {
         this.running = false;
         this.autoStopDelayMs = autoStopDelayMs;
     }
-    resolveWorkerPath() {
-        const baseDir = path.dirname(fileURLToPath(import.meta.url));
-        // Worker might be in the same directory (src/servo/) or in dist
-        const candidate1 = path.join(baseDir, 'servo-libgpio-worker.js');
-        if (fs.existsSync(candidate1))
-            return candidate1;
-        const candidate2 = path.join(path.dirname(baseDir), 'dist', 'servo', 'servo-libgpio-worker.js');
-        if (fs.existsSync(candidate2))
-            return candidate2;
-        return candidate1;
+    ensureStarted() {
+        if (this.running)
+            return;
+        const handle = lgpio.gpiochipOpen(this.chipNumber);
+        lgpio.gpioClaimOutput(handle, this.pin);
+        this.chipHandle = handle;
+        this.claimed = true;
+        this.running = true;
+    }
+    setServoPulse(pulseMs) {
+        if (this.chipHandle === undefined) {
+            throw new Error('Servo GPIO is not initialized');
+        }
+        const periodMs = 1000 / this.freq;
+        const dutyCycle = Math.max(0, Math.min(100, (pulseMs / periodMs) * 100));
+        // 0 cycles means continuous output until changed.
+        lgpio.txPwm(this.chipHandle, this.pin, this.freq, dutyCycle, 0, 0);
     }
     /**
      * Start the servo controller worker
      */
     start() {
-        if (this.running)
-            return;
-        this.running = true;
-        const workerPath = this.resolveWorkerPath();
-        this.worker = new Worker(workerPath, { execArgv: [] });
-        this.worker.on('message', (m) => {
-            const msg = m;
-            if (msg.error) {
-                winston.error('ServoController worker error:', msg.error);
-            }
-            if (msg.debug) {
-                winston.debug('ServoController worker:', msg.debug);
-            }
-        });
-        this.worker.on('error', (err) => {
-            winston.error('ServoController worker thread error:', err);
-        });
-        const periodMs = 1000 / this.freq;
-        this.worker.postMessage({
-            cmd: 'start',
-            chip: this.chipNumber,
-            pin: this.pin,
-            pulseMs: this.currentPulseMs,
-            periodMs,
-        });
+        try {
+            this.ensureStarted();
+            this.setServoPulse(this.currentPulseMs);
+        }
+        catch (err) {
+            winston.error('ServoController failed to start:', err);
+            throw err;
+        }
     }
     /**
      * Stop the servo controller and clean up resources
@@ -91,26 +82,20 @@ export class LibGPIOServoController {
             clearTimeout(this.autoStopTimer);
             this.autoStopTimer = undefined;
         }
-        if (this.worker) {
-            // Send stop command and wait for worker to clean up
-            await new Promise((resolve) => {
-                const timeout = setTimeout(() => {
-                    winston.warn('ServoController: Worker did not stop gracefully, forcing termination');
-                    resolve();
-                }, 1000);
-                if (this.worker) {
-                    this.worker.once('message', (m) => {
-                        const msg = m;
-                        if (msg.stopped) {
-                            clearTimeout(timeout);
-                            resolve();
-                        }
-                    });
-                    this.worker.postMessage({ cmd: 'stop' });
-                }
-            });
-            await this.worker.terminate();
-            this.worker = undefined;
+        if (this.claimed && this.chipHandle !== undefined) {
+            try {
+                lgpio.txPwm(this.chipHandle, this.pin, this.freq, 0, 0, 0);
+                lgpio.gpioWrite(this.chipHandle, this.pin, false);
+                lgpio.gpioFree(this.chipHandle, this.pin);
+                lgpio.gpiochipClose(this.chipHandle);
+            }
+            catch (err) {
+                winston.warn('ServoController cleanup warning:', err);
+            }
+            finally {
+                this.claimed = false;
+                this.chipHandle = undefined;
+            }
         }
     }
     /**
@@ -120,12 +105,8 @@ export class LibGPIOServoController {
      */
     setPulseWidth(pulseMs) {
         this.currentPulseMs = Math.max(MIN_PULSE_MS, Math.min(MAX_PULSE_MS, pulseMs));
-        if (!this.running) {
-            this.start();
-        }
-        else if (this.worker) {
-            this.worker.postMessage({ cmd: 'update', pulseMs: this.currentPulseMs });
-        }
+        this.ensureStarted();
+        this.setServoPulse(this.currentPulseMs);
         // Reset auto-stop timer
         if (this.autoStopTimer) {
             clearTimeout(this.autoStopTimer);

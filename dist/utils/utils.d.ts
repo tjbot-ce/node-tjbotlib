@@ -42,3 +42,4 @@ export declare function convertHexToRgbColor(hexColor: string): [number, number,
  * @private
  */
 export declare function normalizeColor(color: string): string;
+//# sourceMappingURL=utils.d.ts.map

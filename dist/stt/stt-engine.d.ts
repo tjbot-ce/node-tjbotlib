@@ -64,3 +64,4 @@ export declare abstract class STTEngine {
  * @public
  */
 export declare function createSTTEngine(listenConfig: ListenConfig): Promise<STTEngine>;
+//# sourceMappingURL=stt-engine.d.ts.map

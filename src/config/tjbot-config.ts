@@ -74,11 +74,7 @@ export class TJBotConfig {
         const recipeConfig = this.loadRecipeConfig(recipeConfigPath ?? 'recipe.toml');
 
         // Merge general configuration in cascade order: default -> home -> overrides
-        const mergedConfig = this.deepMerge(
-            defaultConfig,
-            homeConfig ?? {},
-            overrideConfig ?? {}
-        );
+        const mergedConfig = this.deepMerge(defaultConfig, homeConfig ?? {}, overrideConfig ?? {});
 
         // Merge recipe config into the recipe section
         if (recipeConfig) {
@@ -123,12 +119,11 @@ export class TJBotConfig {
         const configPath = resolve(configFile, import.meta.url);
         winston.debug(`loading default TJBot configuration TOML from ${configPath}`);
 
-        let config: TOML.JsonMap = {};
+        let config: TOML.JsonMap;
         try {
             const configData = fs.readFileSync(new URL(configPath), 'utf8');
-            config = TOML.parse(configData);
             // Clean up the config to remove any Symbol keys
-            config = this.cleanConfig(config) as TOML.JsonMap;
+            config = this.cleanConfig(TOML.parse(configData)) as TOML.JsonMap;
         } catch (err) {
             throw new TJBotError(`unable to read TOML from ${configFile}: ${err}`);
         }
