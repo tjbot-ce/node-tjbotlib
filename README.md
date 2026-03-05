@@ -1,14 +1,14 @@
 # TJBot Library (Node.js)
 
-[![Node.js Version](https://img.shields.io/badge/Node.js-18%2B-green)](https://nodejs.org/)
-[![Raspberry Pi Support](https://img.shields.io/badge/Raspberry%20Pi-3%2C%204%2C%205-red)](https://www.raspberrypi.org/)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/Node.js-20%2B-yellow)](https://nodejs.org/)
+[![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-3B+-cc342d)](https://www.raspberrypi.org/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 
 > 🤖 Node.js library for programming TJBot recipes!
 
 ## What is TJBot?
 
-[TJBot](http://ibm.biz/mytjbot) is an open-source robot created by IBM for
+[TJBot](https://tjbot-ce.github.io) is an open-source robot created by IBM for
 learning how to program artificial intelligence applications. This library
 provides a simple, high-level interface to control TJBot running on a
 Raspberry Pi.
@@ -63,10 +63,11 @@ This example initializes a NeoPixel LED and sets its color:
 ```js
 import TJBot from 'tjbot';
 
-const tj = new TJBot();
-
-// Initialize with NeoPixel LED
-tj.initialize([TJBot.Hardware.LED_NEOPIXEL]);
+const tj = TJBot.getInstance().initialize({
+   hardware: {
+      led_neopixel: true
+   }
+});
 
 // Set LED to red
 tj.shine('red');
