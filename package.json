@@ -59,8 +59,10 @@
     "wav": "^1.0.2"
   },
   "main": "./dist/tjbot.js",
+  "types": "./dist/tjbot.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/tjbot.d.ts",
       "import": "./dist/tjbot.js"
     }
   },
