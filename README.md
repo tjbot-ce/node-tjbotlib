@@ -30,13 +30,13 @@ vision).
 
 ## System Dependencies
 
-Install the system camera package:
+Install additional system packages:
 
 ```bash
-sudo apt-get install rpicam-apps-lite
+sudo apt-get install libgpiod-dev liblgpiod-dev rpicam-apps-lite tidy
 ```
 
-> Note: This package is installed as part of TJBot's bootstrap script.
+> 💡 These packages are installed as part of TJBot's bootstrap script.
 
 ## Installation
 
