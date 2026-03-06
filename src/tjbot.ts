@@ -684,7 +684,7 @@ class TJBot {
      * @public
      */
     shineColors(): string[] {
-        if (this._shineColors === undefined) {
+        if (this._shineColors.length === 0) {
             this._shineColors = colorToHex.all().map((elt) => elt.name);
         }
         return this._shineColors;
