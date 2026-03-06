@@ -44,6 +44,35 @@ import winston from 'winston';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
 
+// Configure winston logging at module load time
+// Custom formatter for pretty-printing error objects with color
+const prettyErrorFormat = winston.format.printf((info) => {
+    let message = `${info.message}`;
+
+    // If there are additional metadata fields (like error objects), pretty-print them
+    const metadata: Record<string, unknown> = { ...info };
+    delete metadata.level;
+    delete metadata.message;
+    delete metadata[Symbol.for('level') as unknown as string];
+    delete metadata[Symbol.for('message') as unknown as string];
+    delete metadata[Symbol.for('splat') as unknown as string];
+
+    if (Object.keys(metadata).length > 0) {
+        // Pretty-print the metadata as colored JSON
+        const jsonString = JSON.stringify(metadata, null, 2);
+        // Add cyan color to the JSON output
+        message += ' \x1b[36m' + jsonString + '\x1b[0m';
+    }
+
+    return message;
+});
+
+winston.configure({
+    level: 'info',
+    format: winston.format.combine(winston.format.colorize(), prettyErrorFormat),
+    transports: [new winston.transports.Console()],
+});
+
 /**
  * Class representing a TJBot
  */
@@ -93,40 +122,11 @@ class TJBot {
     private _initialized: boolean = false;
 
     /**
-     * Private constructor. Sets up Winston logger configuration.
+     * Private constructor.
      * @constructor
      * @private
      */
     private constructor() {
-        // set up logging -- start with the 'info' level
-        // Custom formatter for pretty-printing error objects with color
-        const prettyErrorFormat = winston.format.printf((info) => {
-            let message = `${info.message}`;
-
-            // If there are additional metadata fields (like error objects), pretty-print them
-            const metadata: Record<string, unknown> = { ...info };
-            delete metadata.level;
-            delete metadata.message;
-            delete metadata[Symbol.for('level') as unknown as string];
-            delete metadata[Symbol.for('message') as unknown as string];
-            delete metadata[Symbol.for('splat') as unknown as string];
-
-            if (Object.keys(metadata).length > 0) {
-                // Pretty-print the metadata as colored JSON
-                const jsonString = JSON.stringify(metadata, null, 2);
-                // Add cyan color to the JSON output
-                message += ' \x1b[36m' + jsonString + '\x1b[0m';
-            }
-
-            return message;
-        });
-
-        winston.configure({
-            level: 'info',
-            format: winston.format.combine(winston.format.colorize(), prettyErrorFormat),
-            transports: [new winston.transports.Console()],
-        });
-
         // automatically track and clean up temporary files
         temp.track();
     }

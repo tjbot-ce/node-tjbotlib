@@ -61,7 +61,7 @@ declare class TJBot {
      */
     private _initialized;
     /**
-     * Private constructor. Sets up Winston logger configuration.
+     * Private constructor.
      * @constructor
      * @private
      */

@@ -102,7 +102,7 @@ type = 'local'
 [listen.backend.local]
 # DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
 # See model-registry.yaml for other available models.
-model = 'sherpa-onnx-whisper-base.en'
+model = 'whisper-base'
 
 [listen.backend.local.vad]
 # Voice activity detection (VAD) is used for local OFFLINE models (e.g. whisper, moonshine).
