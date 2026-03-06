@@ -18,8 +18,8 @@ import type { TJBotConfigSchema } from './config/config-types.js';
 import { TJBotConfig } from './config/tjbot-config.js';
 import { RPiHardwareDriver } from './rpi-drivers/index.js';
 import { Hardware } from './utils/index.js';
-import { ObjectDetectionResult, ImageClassificationResult, FaceDetectionMetadata, ImageDescriptionResult } from './vision/index.js';
 import { ModelType } from './utils/model-registry.js';
+import { FaceDetectionMetadata, ImageClassificationResult, ImageDescriptionResult, ObjectDetectionResult } from './vision/index.js';
 /**
  * Class representing a TJBot
  */

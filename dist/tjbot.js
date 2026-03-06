@@ -18,7 +18,7 @@ import { TJBotConfig } from './config/tjbot-config.js';
 import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
-import { Capability, Hardware, normalizeColor, ModelRegistry, sleep, TJBotError } from './utils/index.js';
+import { Capability, Hardware, ModelRegistry, normalizeColor, sleep, TJBotError } from './utils/index.js';
 // node modules
 import cm from 'color-model';
 import colorToHex from 'colornames';

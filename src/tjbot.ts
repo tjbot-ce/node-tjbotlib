@@ -21,12 +21,13 @@ import { TJBotConfig } from './config/tjbot-config.js';
 import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect, RPiHardwareDriver } from './rpi-drivers/index.js';
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
-import { Capability, Hardware, normalizeColor, ModelRegistry, sleep, TJBotError } from './utils/index.js';
+import { Capability, Hardware, ModelRegistry, normalizeColor, sleep, TJBotError } from './utils/index.js';
+import { ModelType } from './utils/model-registry.js';
 import {
-    ObjectDetectionResult,
-    ImageClassificationResult,
     FaceDetectionMetadata,
+    ImageClassificationResult,
     ImageDescriptionResult,
+    ObjectDetectionResult,
 } from './vision/index.js';
 
 // node modules
@@ -38,7 +39,6 @@ import { dirname, join } from 'path';
 import temp from 'temp';
 import { fileURLToPath } from 'url';
 import winston from 'winston';
-import { ModelType } from './utils/model-registry.js';
 
 // Read version from package.json
 const __dirname = dirname(fileURLToPath(import.meta.url));
