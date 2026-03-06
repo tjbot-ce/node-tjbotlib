@@ -16,8 +16,8 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { TJBotConfig } from '../../dist/config/tjbot-config.js';
-import { tjbotConfigSchema, sttBackendTypeSchema, ttsBackendTypeSchema } from '../../dist/config/config-types.js';
+import { TJBotConfig } from '../../src/config/tjbot-config.js';
+import { tjbotConfigSchema, sttBackendTypeSchema, ttsBackendTypeSchema } from '../../src/config/config-types.js';
 
 // ============================================================================
 // Zod Schema Tests (only those exported from config-types)

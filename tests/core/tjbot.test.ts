@@ -153,6 +153,81 @@ describe('TJBot - Constructor and Initialization', () => {
         tj.setLogLevel('debug');
         expect(true).toBe(true);
     });
+
+    test('applies configuration overrides', async () => {
+        // Pass custom config as override
+        const customConfig = {
+            log: {
+                level: 'debug',
+            },
+            listen: {
+                microphoneRate: 48000,
+                microphoneChannels: 1,
+            },
+            see: {
+                cameraResolution: [1280, 720] as [number, number],
+                verticalFlip: true,
+                horizontalFlip: true,
+            },
+            speak: {
+                backend: {
+                    type: 'local' as const,
+                    local: {
+                        model: 'vits-piper-en_US-lessac-low',
+                    },
+                },
+            },
+            wave: {
+                gpioChip: 1,
+                servoPin: 17,
+            },
+        };
+
+        // Create TJBot with override config using singleton pattern
+        const tj = TJBot.getInstance();
+        await tj.initialize(customConfig);
+
+        // Verify that the instance was created
+        expect(tj).toBeDefined();
+        expect(tj.config).toBeDefined();
+
+        // Verify specific config values were applied from the override
+        const logConfig = tj.config.log;
+        expect(logConfig).toBeDefined();
+        expect(logConfig.level).toBe('debug');
+
+        const listenConfig = tj.config.listen;
+        expect(listenConfig).toBeDefined();
+        expect(listenConfig.microphoneRate).toBe(48000);
+        expect(listenConfig.microphoneChannels).toBe(1);
+
+        const seeConfig = tj.config.see;
+        expect(seeConfig).toBeDefined();
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(Array.isArray(seeConfig!.cameraResolution!)).toBe(true);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(seeConfig!.cameraResolution![0]).toBe(1280);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(seeConfig!.cameraResolution![1]).toBe(720);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(seeConfig!.verticalFlip).toBe(true);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(seeConfig!.horizontalFlip).toBe(true);
+
+        const speakConfig = tj.config.speak;
+        expect(speakConfig).toBeDefined();
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(speakConfig!.backend).toBeDefined();
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(speakConfig!.backend!.type).toBe('local');
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        expect(speakConfig!.backend!.local!.model).toBe('vits-piper-en_US-lessac-low');
+
+        const waveConfig = tj.config.wave;
+        expect(waveConfig).toBeDefined();
+        expect(waveConfig.gpioChip).toBe(1);
+        expect(waveConfig.servoPin).toBe(17);
+    });
 });
 
 describe('TJBot - Color Methods', () => {
