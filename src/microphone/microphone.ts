@@ -21,19 +21,28 @@ import { Transform } from 'stream';
 import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 import { execSync } from 'child_process';
 
+interface MicInstance {
+    start(): void;
+    stop(): void;
+    pause(): void;
+    resume(): void;
+    getAudioStream(): Transform;
+}
+
+type MicParams = Record<string, string | number | boolean>;
+
 /**
  * Microphone controller for TJBot
  * Handles microphone initialization and audio stream management
  */
 export class MicrophoneController {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private mic: any;
+    private mic: MicInstance;
     private micInputStream: Transform;
 
     constructor() {
-        const params = {};
-        this.mic = Mic(params);
-        this.micInputStream = this.mic.getAudioStream() as unknown as Transform;
+        const params: MicParams = {};
+        this.mic = Mic(params) as unknown as MicInstance;
+        this.micInputStream = this.mic.getAudioStream();
     }
 
     /**
@@ -80,7 +89,7 @@ export class MicrophoneController {
             selectedDevice = this.detectMicrophoneDevice();
         }
 
-        const params: Record<string, unknown> = {
+        const params: MicParams = {
             rate: String(rate),
             channels: String(channels),
             bitwidth: '16',
@@ -105,8 +114,7 @@ export class MicrophoneController {
         this.mic = Mic(params);
 
         // save the input stream so we can pipe it to STT
-        // the weird typecasting is because we're using super legacy js code :)
-        this.micInputStream = this.mic.getAudioStream() as unknown as Transform;
+        this.micInputStream = this.mic.getAudioStream();
 
         // event handlers
         this.micInputStream.on('startComplete', () => {

@@ -18,9 +18,10 @@ import fs from 'fs';
 import { VisionEngine, } from '../vision-engine.js';
 export class GoogleCloudVisionEngine extends VisionEngine {
     constructor(config) {
-        super(config);
-        this.credentialsPath = config.credentialsPath;
-        this.model = config.model;
+        super(config ?? {});
+        const configObj = config ?? {};
+        this.credentialsPath = configObj.credentialsPath;
+        this.model = configObj.model;
         this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
     }
     async initialize() {

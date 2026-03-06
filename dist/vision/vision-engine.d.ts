@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { SeeBackendConfig } from '../config/config-types.js';
+import { SeeBackendConfig, VisionEngineConfig } from '../config/config-types.js';
 export interface ObjectDetectionResult {
     label: string;
     confidence: number;
@@ -64,8 +64,8 @@ export interface FaceDetectionResult {
  * @public
  */
 export declare abstract class VisionEngine {
-    protected config: SeeBackendConfig;
-    constructor(config?: SeeBackendConfig);
+    protected config: VisionEngineConfig;
+    constructor(config?: VisionEngineConfig);
     /**
      * Initialize the Vision engine.
      * This method may perform setup tasks such as loading models or authenticating with services.

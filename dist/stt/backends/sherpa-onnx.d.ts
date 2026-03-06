@@ -32,7 +32,7 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
     private modelPaths?;
     private vadPath?;
     private recognizer?;
-    private vad;
+    private vad?;
     constructor(config?: STTBackendLocalConfig);
     initialize(): Promise<void>;
     /**
@@ -50,6 +50,26 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
      * Setup recognizer and VAD based on model configuration
      */
     private setupRecognizer;
+    /**
+     * Extract and validate required paths for Paraformer online recognizer.
+     * @throws {TJBotError} if required paths are missing
+     */
+    private validateParaformerPaths;
+    /**
+     * Extract and validate required paths for Zipformer online recognizer.
+     * @throws {TJBotError} if required paths are missing
+     */
+    private validateZipformerPaths;
+    /**
+     * Extract and validate required paths for Moonshine offline recognizer.
+     * @throws {TJBotError} if required paths are missing
+     */
+    private validateMoonshinePaths;
+    /**
+     * Extract and validate required paths for Whisper offline recognizer.
+     * @throws {TJBotError} if required paths are missing
+     */
+    private validateWhisperPaths;
     /**
      * Create online recognizer for streaming Paraformer models
      */

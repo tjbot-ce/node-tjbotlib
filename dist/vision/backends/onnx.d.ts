@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { SeeBackendConfig } from '../../config/config-types.js';
+import type { VisionEngineConfig } from '../../config/config-types.js';
 import { ImageClassificationResult, ObjectDetectionResult, VisionEngine, FaceDetectionMetadata, ImageDescriptionResult } from '../vision-engine.js';
 export declare class ONNXVisionEngine extends VisionEngine {
     private manager;
     private models;
-    constructor(config?: SeeBackendConfig);
+    constructor(config?: VisionEngineConfig);
+    private getLocalConfig;
     /**
      * Initialize the ONNX vision engine.
      */
@@ -35,6 +36,7 @@ export declare class ONNXVisionEngine extends VisionEngine {
      * Get a model, loading it if necessary
      */
     private getOrLoadModel;
+    private requireModelName;
     /**
      * Detect objects in an image.
      */

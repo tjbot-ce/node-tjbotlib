@@ -88,7 +88,6 @@ export class MicrophoneController {
         // create the microphone
         this.mic = Mic(params);
         // save the input stream so we can pipe it to STT
-        // the weird typecasting is because we're using super legacy js code :)
         this.micInputStream = this.mic.getAudioStream();
         // event handlers
         this.micInputStream.on('startComplete', () => {

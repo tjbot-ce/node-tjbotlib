@@ -19,7 +19,7 @@
  * This uses the native pigpio library for ws281x support
  */
 export declare class LEDNeopixel {
-    neopixel: any;
+    private neopixel;
     constructor(pin: number);
     /**
      * Render the NeoPixel to a specific color

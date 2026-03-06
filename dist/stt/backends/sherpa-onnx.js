@@ -19,7 +19,6 @@ import winston from 'winston';
 import { ModelRegistry, TJBotError } from '../../utils/index.js';
 import { STTEngine } from '../stt-engine.js';
 // Lazy require sherpa-onnx to avoid hard dependency issues
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sherpa;
 /**
  * Sherpa-ONNX Speech-to-Text Engine
@@ -47,7 +46,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
             if (!sherpa) {
                 const module = await import('sherpa-onnx-node');
                 // CommonJS module imported as ES module has exports in .default
-                sherpa = module.default || module;
+                sherpa = (module.default || module);
                 winston.debug('Successfully loaded sherpa-onnx-node module');
             }
             // Load STT model from registry
@@ -167,15 +166,83 @@ export class SherpaONNXSTTEngine extends STTEngine {
         }
     }
     /**
+     * Extract and validate required paths for Paraformer online recognizer.
+     * @throws {TJBotError} if required paths are missing
+     */
+    validateParaformerPaths(modelPaths) {
+        if (!modelPaths.decoder) {
+            throw new TJBotError('Paraformer model requires decoder path');
+        }
+        return {
+            encoder: modelPaths.encoder,
+            decoder: modelPaths.decoder,
+        };
+    }
+    /**
+     * Extract and validate required paths for Zipformer online recognizer.
+     * @throws {TJBotError} if required paths are missing
+     */
+    validateZipformerPaths(modelPaths) {
+        if (!modelPaths.decoder) {
+            throw new TJBotError('Zipformer model requires decoder path');
+        }
+        if (!modelPaths.joiner) {
+            throw new TJBotError('Zipformer model requires joiner path');
+        }
+        return {
+            encoder: modelPaths.encoder,
+            decoder: modelPaths.decoder,
+            joiner: modelPaths.joiner,
+        };
+    }
+    /**
+     * Extract and validate required paths for Moonshine offline recognizer.
+     * @throws {TJBotError} if required paths are missing
+     */
+    validateMoonshinePaths(modelPaths) {
+        if (!modelPaths.preprocessor) {
+            throw new TJBotError('Moonshine model requires preprocessor path');
+        }
+        if (!modelPaths.uncachedDecoder) {
+            throw new TJBotError('Moonshine model requires uncachedDecoder path');
+        }
+        if (!modelPaths.cachedDecoder) {
+            throw new TJBotError('Moonshine model requires cachedDecoder path');
+        }
+        return {
+            preprocessor: modelPaths.preprocessor,
+            encoder: modelPaths.encoder,
+            uncachedDecoder: modelPaths.uncachedDecoder,
+            cachedDecoder: modelPaths.cachedDecoder,
+        };
+    }
+    /**
+     * Extract and validate required paths for Whisper offline recognizer.
+     * @throws {TJBotError} if required paths are missing
+     */
+    validateWhisperPaths(modelPaths) {
+        if (!modelPaths.decoder) {
+            throw new TJBotError('Whisper model requires decoder path');
+        }
+        return {
+            encoder: modelPaths.encoder,
+            decoder: modelPaths.decoder,
+        };
+    }
+    /**
      * Create online recognizer for streaming Paraformer models
      */
     createOnlineRecognizer(modelPaths) {
+        if (!sherpa) {
+            throw new TJBotError('Sherpa-ONNX not initialized');
+        }
+        const paths = this.validateParaformerPaths(modelPaths);
         const config = {
             featConfig: { sampleRate: 16000, featureDim: 80 },
             modelConfig: {
                 paraformer: {
-                    encoder: modelPaths.encoder,
-                    decoder: modelPaths.decoder,
+                    encoder: paths.encoder,
+                    decoder: paths.decoder,
                 },
                 tokens: modelPaths.tokens,
                 numThreads: 2,
@@ -195,13 +262,17 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Create Zipformer recognizer for streaming transducer models
      */
     createZipformerRecognizer(modelPaths) {
+        if (!sherpa) {
+            throw new TJBotError('Sherpa-ONNX not initialized');
+        }
+        const paths = this.validateZipformerPaths(modelPaths);
         const config = {
             featConfig: { sampleRate: 16000, featureDim: 80 },
             modelConfig: {
                 transducer: {
-                    encoder: modelPaths.encoder,
-                    decoder: modelPaths.decoder,
-                    joiner: modelPaths.joiner,
+                    encoder: paths.encoder,
+                    decoder: paths.decoder,
+                    joiner: paths.joiner,
                 },
                 tokens: modelPaths.tokens,
                 numThreads: 2,
@@ -228,14 +299,18 @@ export class SherpaONNXSTTEngine extends STTEngine {
         winston.debug(`  uncachedDecoder: ${modelPaths.uncachedDecoder} (exists: ${fs.existsSync(modelPaths.uncachedDecoder ?? '')})`);
         winston.debug(`  cachedDecoder: ${modelPaths.cachedDecoder} (exists: ${fs.existsSync(modelPaths.cachedDecoder ?? '')})`);
         winston.debug(`  tokens: ${modelPaths.tokens} (exists: ${fs.existsSync(modelPaths.tokens)})`);
+        if (!sherpa) {
+            throw new TJBotError('Sherpa-ONNX not initialized');
+        }
+        const paths = this.validateMoonshinePaths(modelPaths);
         const config = {
             featConfig: { sampleRate: 16000, featureDim: 80 },
             modelConfig: {
                 moonshine: {
-                    preprocessor: modelPaths.preprocessor,
-                    encoder: modelPaths.encoder,
-                    uncachedDecoder: modelPaths.uncachedDecoder,
-                    cachedDecoder: modelPaths.cachedDecoder,
+                    preprocessor: paths.preprocessor,
+                    encoder: paths.encoder,
+                    uncachedDecoder: paths.uncachedDecoder,
+                    cachedDecoder: paths.cachedDecoder,
                 },
                 tokens: modelPaths.tokens,
                 numThreads: 2,
@@ -264,12 +339,16 @@ export class SherpaONNXSTTEngine extends STTEngine {
         winston.debug(`  encoder: ${modelPaths.encoder} (exists: ${fs.existsSync(modelPaths.encoder)})`);
         winston.debug(`  decoder: ${modelPaths.decoder} (exists: ${fs.existsSync(modelPaths.decoder ?? '')})`);
         winston.debug(`  tokens: ${modelPaths.tokens} (exists: ${fs.existsSync(modelPaths.tokens)})`);
+        if (!sherpa) {
+            throw new TJBotError('Sherpa-ONNX not initialized');
+        }
+        const paths = this.validateWhisperPaths(modelPaths);
         const config = {
             featConfig: { sampleRate: 16000, featureDim: 80 },
             modelConfig: {
                 whisper: {
-                    encoder: modelPaths.encoder,
-                    decoder: modelPaths.decoder,
+                    encoder: paths.encoder,
+                    decoder: paths.decoder,
                 },
                 tokens: modelPaths.tokens,
                 numThreads: 2,
@@ -293,6 +372,9 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Create Silero VAD instance
      */
     createSileroVad(modelPath) {
+        if (!sherpa) {
+            throw new TJBotError('Sherpa-ONNX not initialized');
+        }
         const config = {
             sileroVad: {
                 model: modelPath,
@@ -312,8 +394,13 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Transcribe using streaming recognition
      */
     async transcribeStreaming(micStream, sampleRate, options) {
+        if (!this.recognizer) {
+            throw new TJBotError('Recognizer not initialized. Ensure initialize() was called.');
+        }
         return new Promise((resolve, reject) => {
-            const stream = this.recognizer.createStream();
+            // For streaming (online) recognizers, narrow type to OnlineRecognizer
+            const recognizer = this.recognizer;
+            const stream = recognizer.createStream();
             let lastText = '';
             let finalText = '';
             const cleanup = () => {
@@ -330,11 +417,11 @@ export class SherpaONNXSTTEngine extends STTEngine {
                 try {
                     const samples = this.bufferToFloat32LE(chunk);
                     stream.acceptWaveform({ sampleRate, samples });
-                    while (this.recognizer.isReady(stream)) {
-                        this.recognizer.decode(stream);
+                    while (recognizer.isReady(stream)) {
+                        recognizer.decode(stream);
                     }
-                    const isEndpoint = this.recognizer.isEndpoint(stream);
-                    let text = this.recognizer.getResult(stream).text.trim().toLowerCase();
+                    const isEndpoint = recognizer.isEndpoint(stream);
+                    let text = recognizer.getResult(stream).text.trim().toLowerCase();
                     if (isEndpoint) {
                         // Add tail padding for better recognition
                         const tailPadding = new Float32Array(sampleRate * 1.5);
@@ -342,10 +429,10 @@ export class SherpaONNXSTTEngine extends STTEngine {
                             samples: tailPadding,
                             sampleRate,
                         });
-                        while (this.recognizer.isReady(stream)) {
-                            this.recognizer.decode(stream);
+                        while (recognizer.isReady(stream)) {
+                            recognizer.decode(stream);
                         }
-                        text = this.recognizer.getResult(stream).text.trim().toLowerCase();
+                        text = recognizer.getResult(stream).text.trim().toLowerCase();
                     }
                     if (text && text !== lastText) {
                         lastText = text;
@@ -360,7 +447,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
                         }
                     }
                     if (isEndpoint) {
-                        this.recognizer.reset(stream);
+                        recognizer.reset(stream);
                         cleanup();
                         resolve(finalText);
                     }
@@ -395,9 +482,22 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Transcribe offline with Silero VAD
      */
     async transcribeOfflineWithVad(micStream, sampleRate, options) {
+        if (!this.recognizer) {
+            throw new TJBotError('Recognizer not initialized');
+        }
+        if (!this.vad) {
+            throw new TJBotError('VAD not initialized');
+        }
+        if (!sherpa) {
+            throw new TJBotError('Sherpa-ONNX not initialized');
+        }
+        // Narrow types for use in Promise callbacks
+        const recognizer = this.recognizer;
+        const vad = this.vad;
+        const module = sherpa;
         return new Promise((resolve, reject) => {
             const bufferSizeInSeconds = 30;
-            const buffer = new sherpa.CircularBuffer(bufferSizeInSeconds * this.vad.config.sampleRate);
+            const buffer = new module.CircularBuffer(bufferSizeInSeconds * vad.config.sampleRate);
             const transcripts = [];
             const cleanup = () => {
                 micStream.removeAllListeners();
@@ -413,22 +513,22 @@ export class SherpaONNXSTTEngine extends STTEngine {
                 try {
                     const samples = this.bufferToFloat32LE(chunk);
                     buffer.push(samples);
-                    const windowSize = this.vad.config.sileroVad.windowSize;
+                    const windowSize = vad.config.sileroVad.windowSize;
                     while (buffer.size() > windowSize) {
                         const windowSamples = buffer.get(buffer.head(), windowSize);
                         buffer.pop(windowSize);
-                        this.vad.acceptWaveform(windowSamples);
+                        vad.acceptWaveform(windowSamples);
                     }
-                    while (!this.vad.isEmpty()) {
-                        const segment = this.vad.front();
-                        this.vad.pop();
-                        const stream = this.recognizer.createStream();
+                    while (!vad.isEmpty()) {
+                        const segment = vad.front();
+                        vad.pop();
+                        const stream = recognizer.createStream();
                         stream.acceptWaveform({
                             samples: segment.samples,
                             sampleRate,
                         });
-                        this.recognizer.decode(stream);
-                        const result = this.recognizer.getResult(stream);
+                        recognizer.decode(stream);
+                        const result = recognizer.getResult(stream);
                         const text = result.text.trim().toLowerCase();
                         if (text) {
                             transcripts.push(text);
@@ -461,7 +561,12 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Transcribe offline with simple energy-based silence detection
      */
     async transcribeOfflineEnergy(micStream, sampleRate, options) {
+        if (!this.recognizer) {
+            throw new TJBotError('Recognizer not initialized');
+        }
         return new Promise((resolve, reject) => {
+            // Narrow recognizer to OfflineRecognizer for offline methods
+            const recognizer = this.recognizer;
             const speechChunks = [];
             let silenceMs = 0;
             const silenceLimitMs = 700;
@@ -498,10 +603,10 @@ export class SherpaONNXSTTEngine extends STTEngine {
                             combined.set(arr, offset);
                             offset += arr.length;
                         }
-                        const stream = this.recognizer.createStream();
+                        const stream = recognizer.createStream();
                         stream.acceptWaveform({ samples: combined, sampleRate });
-                        this.recognizer.decode(stream);
-                        const result = this.recognizer.getResult(stream);
+                        recognizer.decode(stream);
+                        const result = recognizer.getResult(stream);
                         const text = result.text.trim().toLowerCase();
                         if (text) {
                             transcripts.push(text);

@@ -18,7 +18,7 @@ import { VisionEngine, type ImageClassificationResult, type ObjectDetectionResul
 export declare class AzureVisionEngine extends VisionEngine {
     private apiKey?;
     private url?;
-    constructor(config: SeeBackendAzureConfig);
+    constructor(config?: SeeBackendAzureConfig);
     initialize(): Promise<void>;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;

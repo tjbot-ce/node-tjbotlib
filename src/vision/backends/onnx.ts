@@ -18,7 +18,7 @@ import fs from 'fs';
 import * as ort from 'onnxruntime-node';
 import sharp from 'sharp';
 import winston from 'winston';
-import type { SeeBackendConfig } from '../../config/config-types.js';
+import type { VisionEngineConfig, SeeBackendLocalConfig } from '../../config/config-types.js';
 import { TJBotError, ModelRegistry } from '../../utils/index.js';
 import type { VisionModelMetadata } from '../../utils/model-registry.js';
 import {
@@ -42,8 +42,13 @@ export class ONNXVisionEngine extends VisionEngine {
     private manager: ModelRegistry = ModelRegistry.getInstance();
     private models: Map<string, LoadedModel> = new Map();
 
-    constructor(config?: SeeBackendConfig) {
+    constructor(config?: VisionEngineConfig) {
         super(config);
+    }
+
+    private getLocalConfig(): SeeBackendLocalConfig {
+        // Config is already the extracted local config from the helper function
+        return this.config as SeeBackendLocalConfig;
     }
 
     /**
@@ -52,11 +57,10 @@ export class ONNXVisionEngine extends VisionEngine {
     async initialize(): Promise<void> {
         try {
             // Validate that configuration is present
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const localConfig = (this.config as any) ?? {};
-            const detectionModelName = localConfig.objectDetectionModel as string;
-            const classificationModelName = localConfig.imageClassificationModel as string;
-            const faceDetectionModelName = localConfig.faceDetectionModel as string;
+            const localConfig = this.getLocalConfig();
+            const detectionModelName = localConfig.objectDetectionModel;
+            const classificationModelName = localConfig.imageClassificationModel;
+            const faceDetectionModelName = localConfig.faceDetectionModel;
 
             if (!detectionModelName || !classificationModelName || !faceDetectionModelName) {
                 throw new TJBotError(
@@ -228,14 +232,20 @@ export class ONNXVisionEngine extends VisionEngine {
         return model;
     }
 
+    private requireModelName(modelName: string | undefined, configKey: string): string {
+        if (!modelName) {
+            throw new TJBotError(`ONNX vision engine missing required config field: ${configKey}`);
+        }
+        return modelName;
+    }
+
     /**
      * Detect objects in an image.
      */
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const localConfig = (this.config as any) ?? {};
-        const detectionModelName = localConfig.objectDetectionModel as string;
-        const confidenceThreshold = (localConfig.objectDetectionConfidence as number) ?? 0.8;
+        const localConfig = this.getLocalConfig();
+        const detectionModelName = this.requireModelName(localConfig.objectDetectionModel, 'objectDetectionModel');
+        const confidenceThreshold = localConfig.objectDetectionConfidence ?? 0.8;
 
         // Lazy load model if needed
         const model = await this.getOrLoadModel(detectionModelName);
@@ -261,11 +271,13 @@ export class ONNXVisionEngine extends VisionEngine {
      * Classify an image.
      */
     async classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const localConfig = (this.config as any) ?? {};
-        const classificationModelName = localConfig.imageClassificationModel as string;
+        const localConfig = this.getLocalConfig();
+        const classificationModelName = this.requireModelName(
+            localConfig.imageClassificationModel,
+            'imageClassificationModel'
+        );
         // Use provided threshold, fall back to config, then default to 0.8
-        const threshold = confidenceThreshold ?? (localConfig.imageClassificationConfidence as number) ?? 0.8;
+        const threshold = confidenceThreshold ?? localConfig.imageClassificationConfidence ?? 0.8;
 
         // Lazy load model if needed
         const model = await this.getOrLoadModel(classificationModelName);
@@ -291,10 +303,9 @@ export class ONNXVisionEngine extends VisionEngine {
      * Detect faces in an image.
      */
     async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const localConfig = (this.config as any) ?? {};
-        const faceDetectionModelName = localConfig.faceDetectionModel as string;
-        const confidenceThreshold = (localConfig.faceDetectionConfidence as number) ?? 0.35;
+        const localConfig = this.getLocalConfig();
+        const faceDetectionModelName = this.requireModelName(localConfig.faceDetectionModel, 'faceDetectionModel');
+        const confidenceThreshold = localConfig.faceDetectionConfidence ?? 0.35;
 
         winston.info(`👁️  Running face detection with confidence threshold: ${confidenceThreshold}`);
 

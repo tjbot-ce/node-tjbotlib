@@ -19,6 +19,14 @@
 import { select } from '@inquirer/prompts';
 import { TJBot } from '../../src/tjbot.js';
 import { ModelRegistry } from '../../src/utils/model-registry.js';
+import type { ModelType } from '../../src/utils/model-registry.js';
+import type { SeeConfig } from '../../src/config/config-types.js';
+import type {
+    FaceDetectionResult,
+    ImageClassificationResult,
+    ImageDescriptionResult,
+    ObjectDetectionResult,
+} from '../../src/vision/index.js';
 import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
@@ -30,17 +38,25 @@ const BACKENDS = [
     { id: 'local', label: 'Local (ONNX)' },
     { id: 'google-cloud-vision', label: 'Google Cloud Vision' },
     { id: 'azure-vision', label: 'Azure Vision' },
-];
+] as const;
+
+type BackendId = (typeof BACKENDS)[number]['id'];
+type VisionTask = 'detectObjects' | 'classifyImage' | 'detectFaces' | 'describeImage';
+type PromptedBackendOptions = Record<string, never>;
+type VisionTaskResult =
+    | ObjectDetectionResult[]
+    | ImageClassificationResult[]
+    | FaceDetectionResult
+    | ImageDescriptionResult;
 
 interface VisionResult {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    metadata?: any[];
+    metadata?: BoundingBoxItem[];
 }
 
 interface Landmark {
     x: number;
     y: number;
-    type: string;
+    type?: string;
 }
 
 interface BoundingBoxItem {
@@ -81,8 +97,7 @@ async function runTest(): Promise<void> {
     const imgBuf = fs.readFileSync(imgPath);
 
     // Run selected CV task
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let result: any;
+    let result: VisionTaskResult | undefined;
     if (task === 'detectObjects') {
         result = await tj.detectObjects(imgBuf);
     } else if (task === 'classifyImage') {
@@ -96,8 +111,13 @@ async function runTest(): Promise<void> {
     console.log(JSON.stringify(result, null, 2));
 
     // Annotate image with bounding boxes if applicable
-    if ((task === 'detectFaces' || task === 'detectObjects') && result?.metadata) {
-        const annotatedPath = await annotateImageWithBoundingBoxes(imgPath, result, task);
+    if (
+        (task === 'detectFaces' || task === 'detectObjects') &&
+        result &&
+        'metadata' in result &&
+        Array.isArray(result.metadata)
+    ) {
+        const annotatedPath = await annotateImageWithBoundingBoxes(imgPath, result);
         console.log(`\n✓ Original image saved to: ${imgPath}`);
         console.log(`✓ Annotated image saved to: ${annotatedPath}`);
     } else {
@@ -107,8 +127,8 @@ async function runTest(): Promise<void> {
     console.log('\n✓ Vision test complete');
 }
 
-async function promptBackendChoice(): Promise<string> {
-    const backendId = await select({
+async function promptBackendChoice(): Promise<BackendId> {
+    const backendId = await select<BackendId>({
         message: 'Select a Vision backend to test:',
         choices: BACKENDS.map((b) => ({ name: b.label, value: b.id })),
         default: 'local',
@@ -116,40 +136,42 @@ async function promptBackendChoice(): Promise<string> {
     return backendId;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function promptBackendSpecificOptions(selectedBackend: string, task: string): Promise<Record<string, any>> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const config: Record<string, any> = {};
-
+async function promptBackendSpecificOptions(
+    selectedBackend: BackendId,
+    task: VisionTask
+): Promise<PromptedBackendOptions> {
     if (selectedBackend === 'local') {
         return await promptONNXVisionOptions(task);
-    } else if (selectedBackend === 'google-cloud-vision') {
+    }
+
+    if (selectedBackend === 'google-cloud-vision') {
         return await promptGoogleCloudVisionOptions();
-    } else if (selectedBackend === 'azure-vision') {
+    }
+
+    if (selectedBackend === 'azure-vision') {
         return await promptAzureVisionOptions();
     }
 
-    return config;
+    return {};
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function promptONNXVisionOptions(task: string): Promise<Record<string, any>> {
+async function promptONNXVisionOptions(task: VisionTask): Promise<PromptedBackendOptions> {
     // Map task to model type
-    const modelTypeMap: Record<string, string> = {
+    const modelTypeMap: Record<Exclude<VisionTask, 'describeImage'>, ModelType> = {
         detectObjects: 'vision.object-recognition',
         classifyImage: 'vision.classification',
         detectFaces: 'vision.face-detection',
     };
 
-    const modelType = modelTypeMap[task];
-    if (!modelType) {
+    if (task === 'describeImage') {
         return {};
     }
 
+    const modelType = modelTypeMap[task];
+
     // Get available models from registry
     const registry = ModelRegistry.getInstance();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const models = registry.lookupModels(modelType as any, false);
+    const models = registry.lookupModels(modelType, false);
 
     if (models.length === 0) {
         console.log(`\nNo models available for task: ${task}`);
@@ -166,21 +188,19 @@ async function promptONNXVisionOptions(task: string): Promise<Record<string, any
     return {};
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function promptGoogleCloudVisionOptions(): Promise<Record<string, any>> {
+async function promptGoogleCloudVisionOptions(): Promise<PromptedBackendOptions> {
     // Google Cloud Vision uses credentials from environment or config file
     console.log('\nUsing Google Cloud Vision with default credentials');
     return {};
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function promptAzureVisionOptions(): Promise<Record<string, any>> {
+async function promptAzureVisionOptions(): Promise<PromptedBackendOptions> {
     // Azure Vision uses credentials from environment or config file
     console.log('\nUsing Azure Computer Vision with default credentials');
     return {};
 }
 
-async function promptTaskChoice(selectedBackend: string): Promise<string> {
+async function promptTaskChoice(selectedBackend: BackendId): Promise<VisionTask> {
     // Get model information from registry
     const registry = ModelRegistry.getInstance();
 
@@ -199,7 +219,7 @@ async function promptTaskChoice(selectedBackend: string): Promise<string> {
     const classificationLabel = classificationModels[0].label || classificationModels[0].key;
     const faceDetectionLabel = faceDetectionModels[0].label || faceDetectionModels[0].key;
 
-    const tasks = [
+    const tasks: Array<{ name: string; value: VisionTask }> = [
         {
             name: `Object detection (${detectionLabel})`,
             value: 'detectObjects',
@@ -219,7 +239,7 @@ async function promptTaskChoice(selectedBackend: string): Promise<string> {
         tasks.push({ name: 'Image description', value: 'describeImage' });
     }
 
-    const task = await select({
+    const task = await select<VisionTask>({
         message: 'Choose a vision task:',
         choices: tasks,
     });
@@ -227,10 +247,8 @@ async function promptTaskChoice(selectedBackend: string): Promise<string> {
     return task;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildSeeConfig(selectedBackend: string): any {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const baseConfig: any = {
+function buildSeeConfig(selectedBackend: BackendId): SeeConfig {
+    const baseConfig: SeeConfig = {
         backend: {
             type: selectedBackend,
         },
@@ -246,8 +264,7 @@ function buildSeeConfig(selectedBackend: string): any {
         const classificationModels = registry.lookupModels('vision.classification', false);
         const faceDetectionModels = registry.lookupModels('vision.face-detection', false);
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const localConfig: any = {};
+        const localConfig: NonNullable<NonNullable<SeeConfig['backend']>['local']> = {};
         if (detectionModels.length > 0) {
             localConfig.objectDetectionModel = detectionModels[0].key;
         }
@@ -258,13 +275,16 @@ function buildSeeConfig(selectedBackend: string): any {
             localConfig.faceDetectionModel = faceDetectionModels[0].key;
         }
 
-        baseConfig.backend.local = localConfig;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        baseConfig.backend!.local = localConfig;
     } else if (selectedBackend === 'google-cloud-vision') {
         // Google Cloud Vision will use credentials from environment
-        baseConfig.backend['google-cloud-vision'] = {};
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        baseConfig.backend!['google-cloud-vision'] = {};
     } else if (selectedBackend === 'azure-vision') {
         // Azure will use credentials from environment or tjbot.toml
-        baseConfig.backend['azure-vision'] = {};
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        baseConfig.backend!['azure-vision'] = {};
     }
 
     return baseConfig;

@@ -19,7 +19,6 @@ import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
 import { TJBotError, ModelRegistry } from '../../utils/index.js';
 // Lazy require sherpa-onnx to avoid hard dependency issues
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sherpa;
 /**
  * Sherpa-ONNX Local Text-to-Speech Engine
@@ -47,7 +46,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             if (!sherpa) {
                 const module = await import('sherpa-onnx-node');
                 // CommonJS module imported as ES module has exports in .default
-                sherpa = module.default || module;
+                sherpa = (module.default || module);
                 winston.debug('Successfully loaded sherpa-onnx-node module');
             }
             // Load TTS model from registry
@@ -83,6 +82,9 @@ export class SherpaONNXTTSEngine extends TTSEngine {
     async setupTTSEngine() {
         if (!this.modelPath) {
             throw new TJBotError('Model path not set. Ensure initialize() was called.');
+        }
+        if (!sherpa) {
+            throw new TJBotError('Sherpa-ONNX not initialized');
         }
         // Determine the correct dataDir path (should be espeak-ng-data subdirectory if it exists)
         const espeakDataDir = path.join(path.dirname(this.modelPath), 'espeak-ng-data');
@@ -147,11 +149,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             winston.debug(`💬 Synthesizing with sherpa-onnx: model=${this.config.model}`);
             this.validateText(text);
             // Perform synthesis
-            const audio = this.ttsEngine.generate({
-                text,
-                sid: 0,
-                speed: 1.0,
-            });
+            const audio = this.ttsEngine.generate(text, 0, 1.0);
             // Convert audio data to WAV buffer
             const wavBuffer = this.audioToWav(audio.samples, audio.sampleRate);
             winston.debug(`🔈 Sherpa-ONNX synthesis complete: ${wavBuffer.length} bytes`);

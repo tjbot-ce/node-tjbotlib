@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { TTSEngineConfig } from '../config/index.js';
+import { SpeakConfig, TTSEngineConfig } from '../config/index.js';
 /**
  * Abstract Text-to-Speech Engine Base Class
  *
@@ -62,10 +62,10 @@ export declare abstract class TTSEngine {
 /**
  * Create a TTS engine instance based on the configuration.
  * Uses dynamic imports to lazily load backend implementations only when needed.
- * @param config - Configuration for the TTS engine with backend settings
+ * @param speakConfig - Configuration for the TTS engine with backend settings
  * @returns {Promise<TTSEngine>} Initialized TTS engine instance
  * @throws {TJBotError} if backend type is unknown or dependencies are not installed
  * @public
  */
-export declare function createTTSEngine(config: Record<string, unknown>): Promise<TTSEngine>;
+export declare function createTTSEngine(speakConfig: SpeakConfig): Promise<TTSEngine>;
 //# sourceMappingURL=tts-engine.d.ts.map

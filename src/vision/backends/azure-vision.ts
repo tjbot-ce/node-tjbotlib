@@ -46,12 +46,13 @@ export class AzureVisionEngine extends VisionEngine {
     private apiKey?: string;
     private url?: string;
 
-    constructor(config: SeeBackendAzureConfig) {
-        super(config);
-        this.apiKey = typeof config.apiKey === 'string' ? config.apiKey : undefined;
+    constructor(config?: SeeBackendAzureConfig) {
+        super(config ?? {});
+        const configObj = config ?? {};
+        this.apiKey = typeof configObj.apiKey === 'string' ? configObj.apiKey : undefined;
         this.url =
-            typeof config.url === 'string'
-                ? config.url
+            typeof configObj.url === 'string'
+                ? configObj.url
                 : 'https://<region>.api.cognitive.microsoft.com/vision/v3.2/analyze';
     }
 

@@ -48,10 +48,11 @@ export class GoogleCloudVisionEngine extends VisionEngine {
     private endpoint: string;
     private apiKey?: string; // Only for legacy fallback, not used if credentialsPath is set
 
-    constructor(config: SeeBackendGoogleCloudConfig) {
-        super(config);
-        this.credentialsPath = config.credentialsPath as string | undefined;
-        this.model = config.model as string | undefined;
+    constructor(config?: SeeBackendGoogleCloudConfig) {
+        super(config ?? {});
+        const configObj = config ?? {};
+        this.credentialsPath = configObj.credentialsPath as string | undefined;
+        this.model = configObj.model as string | undefined;
         this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
     }
 

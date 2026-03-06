@@ -16,15 +16,23 @@
 
 import fs from 'fs';
 import path from 'path';
+import type { OfflineTts } from 'sherpa-onnx-node';
 import winston from 'winston';
 import { TTSEngine } from '../tts-engine.js';
 import { TJBotError, ModelRegistry } from '../../utils/index.js';
 import type { TTSBackendLocalConfig } from '../../config/config-types.js';
 import type { TTSModelMetadata } from '../../utils/model-registry.js';
 
+/**
+ * Interface for the loaded sherpa-onnx-node module.
+ * Only exposes classes needed by TTS backend.
+ */
+interface SherpaTTSModule {
+    OfflineTts: typeof OfflineTts;
+}
+
 // Lazy require sherpa-onnx to avoid hard dependency issues
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let sherpa: any;
+let sherpa: SherpaTTSModule | undefined;
 
 /**
  * Sherpa-ONNX Local Text-to-Speech Engine
@@ -36,8 +44,7 @@ let sherpa: any;
 export class SherpaONNXTTSEngine extends TTSEngine {
     private manager: ModelRegistry = ModelRegistry.getInstance();
     private modelPath: string | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private ttsEngine?: any;
+    private ttsEngine?: OfflineTts;
 
     constructor(config?: TTSBackendLocalConfig) {
         super(config);
@@ -58,7 +65,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             if (!sherpa) {
                 const module = await import('sherpa-onnx-node');
                 // CommonJS module imported as ES module has exports in .default
-                sherpa = module.default || module;
+                sherpa = (module.default || module) as unknown as SherpaTTSModule;
                 winston.debug('Successfully loaded sherpa-onnx-node module');
             }
 
@@ -98,6 +105,10 @@ export class SherpaONNXTTSEngine extends TTSEngine {
     private async setupTTSEngine(): Promise<void> {
         if (!this.modelPath) {
             throw new TJBotError('Model path not set. Ensure initialize() was called.');
+        }
+
+        if (!sherpa) {
+            throw new TJBotError('Sherpa-ONNX not initialized');
         }
 
         // Determine the correct dataDir path (should be espeak-ng-data subdirectory if it exists)
@@ -171,11 +182,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             this.validateText(text);
 
             // Perform synthesis
-            const audio = this.ttsEngine.generate({
-                text,
-                sid: 0,
-                speed: 1.0,
-            });
+            const audio = this.ttsEngine.generate(text, 0, 1.0);
 
             // Convert audio data to WAV buffer
             const wavBuffer = this.audioToWav(audio.samples, audio.sampleRate);

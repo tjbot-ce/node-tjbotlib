@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { getSeeBackendConfig } from '../config/config-types.js';
 import { TJBotError } from '../utils/index.js';
 /**
  * Abstract Vision Engine Base Class
@@ -27,28 +28,31 @@ export class VisionEngine {
     }
 }
 export async function createVisionEngine(config) {
-    const backend = config.type ?? 'local';
+    const backend = (config.type ?? 'local');
     try {
         if (backend === 'local') {
             const module = await import('./backends/onnx.js');
             if (!module?.ONNXVisionEngine) {
                 throw new TJBotError('Vision backend "local" is unavailable (missing ONNXVisionEngine export).');
             }
-            return new module.ONNXVisionEngine(config.local ?? {});
+            const engineConfig = getSeeBackendConfig(config, backend);
+            return new module.ONNXVisionEngine(engineConfig);
         }
         if (backend === 'google-cloud-vision') {
             const module = await import('./backends/google-cloud-vision.js');
             if (!module?.GoogleCloudVisionEngine) {
                 throw new TJBotError('Vision backend "google-cloud-vision" is unavailable (missing GoogleCloudVisionEngine export).');
             }
-            return new module.GoogleCloudVisionEngine(config['google-cloud-vision'] ?? {});
+            const engineConfig = getSeeBackendConfig(config, backend);
+            return new module.GoogleCloudVisionEngine(engineConfig);
         }
         if (backend === 'azure-vision') {
             const module = await import('./backends/azure-vision.js');
             if (!module?.AzureVisionEngine) {
                 throw new TJBotError('Vision backend "azure-vision" is unavailable (missing AzureVisionEngine export).');
             }
-            return new module.AzureVisionEngine(config['azure-vision'] ?? {});
+            const engineConfig = getSeeBackendConfig(config, backend);
+            return new module.AzureVisionEngine(engineConfig);
         }
         throw new TJBotError(`Unknown Vision backend type: ${backend}`);
     }

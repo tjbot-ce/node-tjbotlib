@@ -20,6 +20,7 @@ export {
     LEDNeopixelConfig,
     ListenConfig,
     LogConfig,
+    NoneBackendConfig,
     SeeConfig,
     ShineConfig,
     SpeakConfig,
@@ -35,6 +36,9 @@ export {
     TTSBackendType,
     TTSEngineConfig,
     WaveConfig,
+    getSTTBackendConfig,
+    getTTSBackendConfig,
+    getSeeBackendConfig,
 } from './config-types.js';
 
 export { TJBotConfig } from './tjbot-config.js';

@@ -28,9 +28,9 @@ const logConfigSchema = z
 export type LogConfig = z.infer<typeof logConfigSchema>;
 
 /**
- * STT Backend configuration
+ * STT Backend configuration with discriminated union based on type field
  */
-export const sttBackendTypeSchema = z.enum(['local', 'ibm-watson-stt', 'google-cloud-stt', 'azure-stt']);
+export const sttBackendTypeSchema = z.enum(['none', 'local', 'ibm-watson-stt', 'google-cloud-stt', 'azure-stt']);
 export type STTBackendType = z.infer<typeof sttBackendTypeSchema>;
 
 export const vadConfigSchema = z
@@ -83,16 +83,45 @@ export const sttBackendAzureConfigSchema = z
     .loose();
 export type STTBackendAzureConfig = z.infer<typeof sttBackendAzureConfigSchema>;
 
+/** Empty config for 'none' backend */
+export const noneBackendConfigSchema = z.object({}).strict();
+export type NoneBackendConfig = z.infer<typeof noneBackendConfigSchema>;
+
+/** Discriminated union for STT backend configs */
+export type STTBackendConfig =
+    | ({
+          type: 'none';
+      } & NoneBackendConfig)
+    | ({
+          type: 'local';
+      } & STTBackendLocalConfig)
+    | ({
+          type: 'ibm-watson-stt';
+      } & STTBackendIBMWatsonConfig)
+    | ({
+          type: 'google-cloud-stt';
+      } & STTBackendGoogleCloudConfig)
+    | ({
+          type: 'azure-stt';
+      } & STTBackendAzureConfig);
+
 export const sttBackendConfigSchema = z
     .object({
-        type: sttBackendTypeSchema.optional(),
+        type: sttBackendTypeSchema,
         local: sttBackendLocalConfigSchema.optional(),
         'ibm-watson-stt': sttBackendIBMWatsonConfigSchema.optional(),
         'google-cloud-stt': sttBackendGoogleCloudConfigSchema.optional(),
         'azure-stt': sttBackendAzureConfigSchema.optional(),
     })
-    .loose();
-export type STTBackendConfig = z.infer<typeof sttBackendConfigSchema>;
+    .strict()
+    .refine((config) => {
+        // If type is 'none', no additional config needed
+        if (config.type === 'none') {
+            return true;
+        }
+        // For other types, we don't enforce anything here
+        return true;
+    });
 
 /**
  * Speech-to-text (Listen) configuration
@@ -110,7 +139,7 @@ export const listenConfigSchema = z
 export type ListenConfig = z.infer<typeof listenConfigSchema>;
 
 /**
- * SEE (CV) Backend configuration
+ * SEE (CV) Backend configuration with discriminated union based on type field
  */
 export const seeBackendTypeSchema = z.enum(['local', 'google-cloud-vision', 'azure-vision']);
 export type SeeBackendType = z.infer<typeof seeBackendTypeSchema>;
@@ -143,15 +172,26 @@ export const seeBackendAzureConfigSchema = z
     .loose();
 export type SeeBackendAzureConfig = z.infer<typeof seeBackendAzureConfigSchema>;
 
+/** Discriminated union for Vision backend configs */
+export type SeeBackendConfig =
+    | ({
+          type: 'local';
+      } & SeeBackendLocalConfig)
+    | ({
+          type: 'google-cloud-vision';
+      } & SeeBackendGoogleCloudConfig)
+    | ({
+          type: 'azure-vision';
+      } & SeeBackendAzureConfig);
+
 export const seeBackendConfigSchema = z
     .object({
-        type: seeBackendTypeSchema.optional(),
+        type: seeBackendTypeSchema,
         local: seeBackendLocalConfigSchema.optional(),
         'google-cloud-vision': seeBackendGoogleCloudConfigSchema.optional(),
         'azure-vision': seeBackendAzureConfigSchema.optional(),
     })
-    .loose();
-export type SeeBackendConfig = z.infer<typeof seeBackendConfigSchema>;
+    .strict();
 
 /**
  * Camera (See) configuration
@@ -198,9 +238,9 @@ export const shineConfigSchema = z
 export type ShineConfig = z.infer<typeof shineConfigSchema>;
 
 /**
- * TTS Backend configuration
+ * TTS Backend configuration with discriminated union based on type field
  */
-export const ttsBackendTypeSchema = z.enum(['local', 'ibm-watson-tts', 'google-cloud-tts', 'azure-tts']);
+export const ttsBackendTypeSchema = z.enum(['none', 'local', 'ibm-watson-tts', 'google-cloud-tts', 'azure-tts']);
 export type TTSBackendType = z.infer<typeof ttsBackendTypeSchema>;
 
 export const ttsBackendLocalConfigSchema = z
@@ -234,16 +274,41 @@ export const ttsBackendAzureConfigSchema = z
     .loose();
 export type TTSBackendAzureConfig = z.infer<typeof ttsBackendAzureConfigSchema>;
 
+/** Discriminated union for TTS backend configs */
+export type TTSBackendConfig =
+    | ({
+          type: 'none';
+      } & NoneBackendConfig)
+    | ({
+          type: 'local';
+      } & TTSBackendLocalConfig)
+    | ({
+          type: 'ibm-watson-tts';
+      } & TTSBackendIBMWatsonConfig)
+    | ({
+          type: 'google-cloud-tts';
+      } & TTSBackendGoogleCloudConfig)
+    | ({
+          type: 'azure-tts';
+      } & TTSBackendAzureConfig);
+
 export const ttsBackendConfigSchema = z
     .object({
-        type: ttsBackendTypeSchema.optional(),
+        type: ttsBackendTypeSchema,
         local: ttsBackendLocalConfigSchema.optional(),
         'ibm-watson-tts': ttsBackendIBMWatsonConfigSchema.optional(),
         'google-cloud-tts': ttsBackendGoogleCloudConfigSchema.optional(),
         'azure-tts': ttsBackendAzureConfigSchema.optional(),
     })
-    .loose();
-export type TTSBackendConfig = z.infer<typeof ttsBackendConfigSchema>;
+    .strict()
+    .refine((config) => {
+        // If type is 'none', no additional config needed
+        if (config.type === 'none') {
+            return true;
+        }
+        // For other types, we don't enforce anything here
+        return true;
+    });
 
 /**
  * Text-to-speech (Speak) configuration
@@ -314,10 +379,107 @@ export type ModelsConfig = z.infer<typeof modelsConfigSchema>;
 
 /**
  * TTS & STT Engine configuration (used for TTSEngine & STTEngine constructors)
+ * These are backend-specific config objects extracted from the discriminated union types
  */
-export type TTSEngineConfig = Record<string, unknown>;
+export type STTEngineConfig =
+    | NoneBackendConfig
+    | STTBackendLocalConfig
+    | STTBackendIBMWatsonConfig
+    | STTBackendGoogleCloudConfig
+    | STTBackendAzureConfig;
 
-export type STTEngineConfig = Record<string, unknown>;
+export type TTSEngineConfig =
+    | NoneBackendConfig
+    | TTSBackendLocalConfig
+    | TTSBackendIBMWatsonConfig
+    | TTSBackendGoogleCloudConfig
+    | TTSBackendAzureConfig;
+
+export type VisionEngineConfig = SeeBackendLocalConfig | SeeBackendGoogleCloudConfig | SeeBackendAzureConfig;
+
+/**
+ * Type guard functions for safe backend config narrowing
+ */
+
+/**
+ * Extract backend-specific config from STTBackendConfig based on type.
+ * Returns the appropriate config object for the backend type, or empty object if no match.
+ */
+export function getSTTBackendConfig(
+    backendConfig: STTBackendConfig | undefined,
+    backendType: STTBackendType
+): STTEngineConfig {
+    if (!backendConfig) {
+        return {} as STTEngineConfig;
+    }
+
+    switch (backendType) {
+        case 'none':
+            return {} as STTEngineConfig;
+        case 'local':
+            return ((backendConfig as Record<string, unknown>).local ?? {}) as STTEngineConfig;
+        case 'ibm-watson-stt':
+            return ((backendConfig as Record<string, unknown>)['ibm-watson-stt'] ?? {}) as STTEngineConfig;
+        case 'google-cloud-stt':
+            return ((backendConfig as Record<string, unknown>)['google-cloud-stt'] ?? {}) as STTEngineConfig;
+        case 'azure-stt':
+            return ((backendConfig as Record<string, unknown>)['azure-stt'] ?? {}) as STTEngineConfig;
+        default:
+            return {} as STTEngineConfig;
+    }
+}
+
+/**
+ * Extract backend-specific config from TTSBackendConfig based on type.
+ * Returns the appropriate config object for the backend type, or empty object if no match.
+ */
+export function getTTSBackendConfig(
+    backendConfig: TTSBackendConfig | undefined,
+    backendType: TTSBackendType
+): TTSEngineConfig {
+    if (!backendConfig) {
+        return {} as TTSEngineConfig;
+    }
+
+    switch (backendType) {
+        case 'none':
+            return {} as TTSEngineConfig;
+        case 'local':
+            return ((backendConfig as Record<string, unknown>).local ?? {}) as TTSEngineConfig;
+        case 'ibm-watson-tts':
+            return ((backendConfig as Record<string, unknown>)['ibm-watson-tts'] ?? {}) as TTSEngineConfig;
+        case 'google-cloud-tts':
+            return ((backendConfig as Record<string, unknown>)['google-cloud-tts'] ?? {}) as TTSEngineConfig;
+        case 'azure-tts':
+            return ((backendConfig as Record<string, unknown>)['azure-tts'] ?? {}) as TTSEngineConfig;
+        default:
+            return {} as TTSEngineConfig;
+    }
+}
+
+/**
+ * Extract backend-specific config from SeeBackendConfig based on type.
+ * Returns the appropriate config object for the backend type, or empty object if no match.
+ */
+export function getSeeBackendConfig(
+    backendConfig: SeeBackendConfig | undefined,
+    backendType: SeeBackendType
+): VisionEngineConfig {
+    if (!backendConfig) {
+        return {} as VisionEngineConfig;
+    }
+
+    switch (backendType) {
+        case 'local':
+            return ((backendConfig as Record<string, unknown>).local ?? {}) as VisionEngineConfig;
+        case 'google-cloud-vision':
+            return ((backendConfig as Record<string, unknown>)['google-cloud-vision'] ?? {}) as VisionEngineConfig;
+        case 'azure-vision':
+            return ((backendConfig as Record<string, unknown>)['azure-vision'] ?? {}) as VisionEngineConfig;
+        default:
+            return {} as VisionEngineConfig;
+    }
+}
 
 /**
  * Complete TJBot configuration

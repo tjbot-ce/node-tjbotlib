@@ -41,12 +41,9 @@ export class LEDNeopixel {
         this.neopixel.init(1, {
             pin,
         });
-        // capture 'this' context so we can reference it in the callback
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        const self = this;
         // reset the LED before the program exits
         process.on('SIGINT', () => {
-            self.neopixel.reset();
+            this.neopixel.reset();
             process.nextTick(() => {
                 process.exit(0);
             });

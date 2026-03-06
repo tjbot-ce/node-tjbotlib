@@ -20,7 +20,7 @@ export declare class GoogleCloudVisionEngine extends VisionEngine {
     private model?;
     private endpoint;
     private apiKey?;
-    constructor(config: SeeBackendGoogleCloudConfig);
+    constructor(config?: SeeBackendGoogleCloudConfig);
     initialize(): Promise<void>;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;

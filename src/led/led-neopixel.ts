@@ -17,13 +17,18 @@
 
 import { spawn } from 'child_process';
 
+interface NeopixelDriver {
+    init(numLeds: number, options: { pin: number }): void;
+    render(colors: Uint32Array): void;
+    reset(): void;
+}
+
 /**
  * LED controller for NeoPixel (WS281x) LEDs
  * This uses the native pigpio library for ws281x support
  */
 export class LEDNeopixel {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    neopixel: any;
+    private neopixel: NeopixelDriver;
 
     constructor(pin: number) {
         // Check if running as root (required for rpi-ws281x-native)
@@ -45,19 +50,15 @@ export class LEDNeopixel {
         }
 
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const ws281x = require('rpi-ws281x-native');
+        const ws281x = require('rpi-ws281x-native') as NeopixelDriver;
         this.neopixel = ws281x;
         this.neopixel.init(1, {
             pin,
         });
 
-        // capture 'this' context so we can reference it in the callback
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        const self = this;
-
         // reset the LED before the program exits
         process.on('SIGINT', () => {
-            self.neopixel.reset();
+            this.neopixel.reset();
             process.nextTick(() => {
                 process.exit(0);
             });

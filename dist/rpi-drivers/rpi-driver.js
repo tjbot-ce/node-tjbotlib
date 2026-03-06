@@ -66,7 +66,7 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const captureTimeout = config.captureTimeout ?? 500;
         const zeroShutterLag = config.zeroShutterLag ?? false;
         this.cameraController.initialize([width, height], verticalFlip, horizontalFlip, captureTimeout, zeroShutterLag);
-        this.visionController = new VisionController(config.backend ?? {});
+        this.visionController = new VisionController(config.backend ?? { type: 'local' });
         this.initializedHardware.add(Hardware.CAMERA);
     }
     setupMicrophone(config) {

@@ -18,6 +18,15 @@
 import { execSync } from 'node:child_process';
 import winston from 'winston';
 
+declare global {
+    var __TJ_TEST_LOGGER_INITIALIZED__: boolean | undefined;
+}
+
+interface LoggerInfo extends Record<PropertyKey, unknown> {
+    level: string;
+    message: string;
+}
+
 /**
  * Check if a command-line tool is available in PATH
  * @param command - The command to check for
@@ -80,23 +89,18 @@ export function formatSection(text: string): string {
  * @param level - Log level
  */
 export function initWinston(level: 'error' | 'warn' | 'info' | 'verbose' | 'debug' = 'info'): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (!(globalThis as any).__TJ_TEST_LOGGER_INITIALIZED__) {
+    if (!globalThis.__TJ_TEST_LOGGER_INITIALIZED__) {
         // Custom formatter for pretty-printing error objects with color
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const prettyErrorFormat = winston.format.printf((info: any) => {
+        const prettyErrorFormat = winston.format.printf(((info: LoggerInfo) => {
             let message = `${info.level}: ${info.message}`;
 
             // If there are additional metadata fields (like error objects), pretty-print them
-            const metadata = { ...info };
+            const metadata: Record<PropertyKey, unknown> = { ...info };
             delete metadata.level;
             delete metadata.message;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            delete (metadata as any)[Symbol.for('level')];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            delete (metadata as any)[Symbol.for('message')];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            delete (metadata as any)[Symbol.for('splat')];
+            delete metadata[Symbol.for('level')];
+            delete metadata[Symbol.for('message')];
+            delete metadata[Symbol.for('splat')];
 
             if (Object.keys(metadata).length > 0) {
                 // Pretty-print the metadata as colored JSON
@@ -106,15 +110,14 @@ export function initWinston(level: 'error' | 'warn' | 'info' | 'verbose' | 'debu
             }
 
             return message;
-        });
+        }) as Parameters<typeof winston.format.printf>[0]);
 
         winston.configure({
             level,
             format: winston.format.combine(winston.format.colorize(), prettyErrorFormat),
             transports: [new winston.transports.Console()],
         });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (globalThis as any).__TJ_TEST_LOGGER_INITIALIZED__ = true;
+        globalThis.__TJ_TEST_LOGGER_INITIALIZED__ = true;
     } else if (level) {
         winston.level = level;
     }
