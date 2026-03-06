@@ -399,6 +399,7 @@ describe('TJBotConfig - Deep Merge Behavior', () => {
             see: {
                 cameraResolution: [1280, 720] as [number, number],
                 backend: {
+                    type: 'local' as const,
                     local: {
                         objectDetectionModel: 'my-model',
                     },
