@@ -19,5 +19,7 @@ export { convertHexToRgbColor, getShineColors, normalizeColor } from './colors.j
 export { TJBotError } from './errors.js';
 export { ModelRegistry } from './model-registry.js';
 export type { STTModelMetadata, TTSModelMetadata, VADModelMetadata, VisionModelMetadata } from './model-registry.js';
+export { initWinston } from './logging.js';
+export type { TJBotLogLevel } from './logging.js';
 export { isCommandAvailable, sleep } from './utils.js';
 //# sourceMappingURL=index.d.ts.map

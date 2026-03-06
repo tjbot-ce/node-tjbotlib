@@ -18,7 +18,7 @@ import { TJBotConfig } from './config/tjbot-config.js';
 import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
-import { Capability, getShineColors, Hardware, ModelRegistry, normalizeColor, sleep, TJBotError, } from './utils/index.js';
+import { Capability, getShineColors, Hardware, initWinston, ModelRegistry, normalizeColor, sleep, TJBotError, } from './utils/index.js';
 // node modules
 import cm from 'color-model';
 import { readFileSync } from 'fs';
@@ -30,30 +30,8 @@ import winston from 'winston';
 // Read version from package.json
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
-// Configure winston logging at module load time
-// Custom formatter for pretty-printing error objects with color
-const prettyErrorFormat = winston.format.printf((info) => {
-    let message = `${info.message}`;
-    // If there are additional metadata fields (like error objects), pretty-print them
-    const metadata = { ...info };
-    delete metadata.level;
-    delete metadata.message;
-    delete metadata[Symbol.for('level')];
-    delete metadata[Symbol.for('message')];
-    delete metadata[Symbol.for('splat')];
-    if (Object.keys(metadata).length > 0) {
-        // Pretty-print the metadata as colored JSON
-        const jsonString = JSON.stringify(metadata, null, 2);
-        // Add cyan color to the JSON output
-        message += ' \x1b[36m' + jsonString + '\x1b[0m';
-    }
-    return message;
-});
-winston.configure({
-    level: 'info',
-    format: winston.format.combine(winston.format.colorize(), prettyErrorFormat),
-    transports: [new winston.transports.Console()],
-});
+// Configure winston logging at module load time so all internals share one logger format.
+initWinston('info');
 /**
  * Class representing a TJBot
  */

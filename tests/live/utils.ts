@@ -16,16 +16,6 @@
  */
 
 import { execSync } from 'node:child_process';
-import winston from 'winston';
-
-declare global {
-    var __TJ_TEST_LOGGER_INITIALIZED__: boolean | undefined;
-}
-
-interface LoggerInfo extends Record<PropertyKey, unknown> {
-    level: string;
-    message: string;
-}
 
 /**
  * Check if a command-line tool is available in PATH
@@ -81,44 +71,4 @@ export function formatTitle(text: string): string {
  */
 export function formatSection(text: string): string {
     return `\n--- ${text} ---`;
-}
-
-/**
- * Initialize Winston logging for tests to ensure a console transport exists.
- * Safe to call multiple times; only configures when no transports are present.
- * @param level - Log level
- */
-export function initWinston(level: 'error' | 'warn' | 'info' | 'verbose' | 'debug' = 'info'): void {
-    if (!globalThis.__TJ_TEST_LOGGER_INITIALIZED__) {
-        // Custom formatter for pretty-printing error objects with color
-        const prettyErrorFormat = winston.format.printf(((info: LoggerInfo) => {
-            let message = `${info.level}: ${info.message}`;
-
-            // If there are additional metadata fields (like error objects), pretty-print them
-            const metadata: Record<PropertyKey, unknown> = { ...info };
-            delete metadata.level;
-            delete metadata.message;
-            delete metadata[Symbol.for('level')];
-            delete metadata[Symbol.for('message')];
-            delete metadata[Symbol.for('splat')];
-
-            if (Object.keys(metadata).length > 0) {
-                // Pretty-print the metadata as colored JSON
-                const jsonString = JSON.stringify(metadata, null, 2);
-                // Add cyan color to the JSON output
-                message += ' \x1b[36m' + jsonString + '\x1b[0m';
-            }
-
-            return message;
-        }) as Parameters<typeof winston.format.printf>[0]);
-
-        winston.configure({
-            level,
-            format: winston.format.combine(winston.format.colorize(), prettyErrorFormat),
-            transports: [new winston.transports.Console()],
-        });
-        globalThis.__TJ_TEST_LOGGER_INITIALIZED__ = true;
-    } else if (level) {
-        winston.level = level;
-    }
 }

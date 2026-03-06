@@ -20,7 +20,8 @@
 import { strict as assert } from 'assert';
 import { existsSync } from 'fs';
 import { TJBot } from '../../src/tjbot.js';
-import { isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
+import { initWinston } from '../../src/utils/logging.js';
+import { isCommandAvailable, formatTitle, formatSection } from './utils.js';
 
 const LOG_LEVEL = 'info';
 

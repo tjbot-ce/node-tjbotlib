@@ -34,9 +34,10 @@ const colorMap = new Map<string, string>();
  * @private
  */
 const colorNames: string[] = [];
+let colorsLoaded = false;
 
 /**
- * Load colors from YAML file at module initialization
+ * Load colors from YAML file
  * @private
  */
 function loadColors(): void {
@@ -61,8 +62,12 @@ function loadColors(): void {
     }
 }
 
-// Load colors at module initialization
-loadColors();
+function ensureColorsLoaded(): void {
+    if (!colorsLoaded) {
+        loadColors();
+        colorsLoaded = true;
+    }
+}
 
 /**
  * Get the list of all colors recognized by TJBot.
@@ -70,6 +75,7 @@ loadColors();
  * @public
  */
 export function getShineColors(): string[] {
+    ensureColorsLoaded();
     return [...colorNames];
 }
 
@@ -107,6 +113,8 @@ export function convertHexToRgbColor(hexColor: string): [number, number, number]
  * @private
  */
 export function normalizeColor(color: string): string {
+    ensureColorsLoaded();
+
     let normColor = color;
 
     // assume undefined == "off"

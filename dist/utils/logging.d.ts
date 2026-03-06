@@ -1,5 +1,4 @@
 /**
- * Copyright 2025 IBM Corp. All Rights Reserved.
  * Copyright 2026-present TJBot Contributors. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,12 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-export { Capability, Hardware } from './constants.js';
-export { convertHexToRgbColor, getShineColors, normalizeColor } from './colors.js';
-export { TJBotError } from './errors.js';
-export { ModelRegistry } from './model-registry.js';
-export type { STTModelMetadata, TTSModelMetadata, VADModelMetadata, VisionModelMetadata } from './model-registry.js';
-export { initWinston } from './logging.js';
-export type { TJBotLogLevel } from './logging.js';
-export { isCommandAvailable, sleep } from './utils.js';
+export type TJBotLogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug';
+/**
+ * Initialize Winston with TJBot's default formatter.
+ * Safe to call repeatedly; only the first call configures transports/format.
+ * Later calls only update log level.
+ */
+export declare function initWinston(level?: TJBotLogLevel): void;
+//# sourceMappingURL=logging.d.ts.map

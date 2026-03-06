@@ -30,8 +30,9 @@ const colorMap = new Map();
  * @private
  */
 const colorNames = [];
+let colorsLoaded = false;
 /**
- * Load colors from YAML file at module initialization
+ * Load colors from YAML file
  * @private
  */
 function loadColors() {
@@ -53,14 +54,19 @@ function loadColors() {
         throw new TJBotError('Failed to load LED color definitions');
     }
 }
-// Load colors at module initialization
-loadColors();
+function ensureColorsLoaded() {
+    if (!colorsLoaded) {
+        loadColors();
+        colorsLoaded = true;
+    }
+}
 /**
  * Get the list of all colors recognized by TJBot.
  * @return {string[]} List of all named colors recognized by `shine()` and `pulse()`.
  * @public
  */
 export function getShineColors() {
+    ensureColorsLoaded();
     return [...colorNames];
 }
 /**
@@ -93,6 +99,7 @@ export function convertHexToRgbColor(hexColor) {
  * @private
  */
 export function normalizeColor(color) {
+    ensureColorsLoaded();
     let normColor = color;
     // assume undefined == "off"
     if (normColor === undefined) {
