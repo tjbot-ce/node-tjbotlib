@@ -181,8 +181,12 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             winston.debug(`💬 Synthesizing with sherpa-onnx: model=${this.config.model}`);
             this.validateText(text);
 
-            // Perform synthesis
-            const audio = this.ttsEngine.generate(text, 0, 1.0);
+            // Perform synthesis - pass parameters as object
+            const audio = this.ttsEngine.generate({
+                text,
+                sid: 0,
+                speed: 1.0,
+            });
 
             // Convert audio data to WAV buffer
             const wavBuffer = this.audioToWav(audio.samples, audio.sampleRate);

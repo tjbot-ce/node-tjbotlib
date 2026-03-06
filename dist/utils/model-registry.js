@@ -365,7 +365,9 @@ export class ModelRegistry {
             await fs.promises.mkdir(modelPath, { recursive: true });
             const fileName = path.basename(model.url).split('?')[0]; // Remove query params
             const targetPath = path.join(modelPath, fileName);
-            await fs.promises.rename(tempArchivePath, targetPath);
+            // Use copy + unlink instead of rename to handle cross-filesystem moves (EXDEV error)
+            await fs.promises.copyFile(tempArchivePath, targetPath);
+            await fs.promises.unlink(tempArchivePath);
         }
         // Download labels file for vision models
         if (typeof model.type === 'string' && model.type.startsWith('vision.')) {

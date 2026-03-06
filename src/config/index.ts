@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-export {
+export type {
     LEDCommonAnodeConfig,
     LEDNeopixelConfig,
     ListenConfig,
@@ -36,9 +36,8 @@ export {
     TTSBackendType,
     TTSEngineConfig,
     WaveConfig,
-    getSTTBackendConfig,
-    getTTSBackendConfig,
-    getSeeBackendConfig,
 } from './config-types.js';
+
+export { getSTTBackendConfig, getTTSBackendConfig, getSeeBackendConfig } from './config-types.js';
 
 export { TJBotConfig } from './tjbot-config.js';

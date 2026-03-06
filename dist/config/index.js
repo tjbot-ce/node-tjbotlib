@@ -14,6 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { getSTTBackendConfig, getTTSBackendConfig, getSeeBackendConfig, } from './config-types.js';
+export { getSTTBackendConfig, getTTSBackendConfig, getSeeBackendConfig } from './config-types.js';
 export { TJBotConfig } from './tjbot-config.js';
 //# sourceMappingURL=index.js.map

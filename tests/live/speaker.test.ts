@@ -107,13 +107,6 @@ async function runTest(): Promise<void> {
         }
     } catch (error) {
         console.error('\n✗ Error during speaker test:', (error as Error).message);
-        console.error('\nMake sure:');
-        console.error('  1. You are running on a Raspberry Pi');
-        console.error('  2. Optional hardware dependencies are installed');
-        console.error('  3. Speaker/audio output is properly connected');
-        console.error('  4. Audio output device is configured correctly');
-        console.error('  5. Check available devices with: aplay -l');
-        console.error('  6. TTS credentials are configured (for speak tests)');
         process.exit(1);
     }
 }

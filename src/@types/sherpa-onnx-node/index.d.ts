@@ -158,11 +158,7 @@ declare module 'sherpa-onnx-node' {
 
     export class OfflineTts {
         constructor(config: OfflineTtsConfig);
-        generate(
-            text: string,
-            sid?: number,
-            speed?: number
-        ): {
+        generate(params: { text: string; sid?: number; speed?: number }): {
             samples: Float32Array;
             sampleRate: number;
         };
