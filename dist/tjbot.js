@@ -36,19 +36,47 @@ const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 
  */
 class TJBot {
     /**
+     * TJBot library version
+     * @readonly
+     */
+    static VERSION = `v${packageJson.version}`;
+    /**
+     * Singleton instance
+     * @private
+     */
+    static instance;
+    /**
+     * Hardware list
+     * @readonly
+     */
+    static Hardware = Hardware;
+    /**
+     * TJBot configuration
+     */
+    config;
+    /**
+     * Raspberry Pi model on which TJBot is running
+     * @example "Raspberry Pi 5"
+     */
+    rpiModel;
+    /**
+     * Raspberry Pi hardware driver
+     */
+    rpiDriver;
+    /**
+     * Cache of the colors recognized by TJBot
+     */
+    _shineColors = [];
+    /**
+     * Flag to track if TJBot has been initialized
+     */
+    _initialized = false;
+    /**
      * Private constructor. Sets up Winston logger configuration.
      * @constructor
      * @private
      */
     constructor() {
-        /**
-         * Cache of the colors recognized by TJBot
-         */
-        this._shineColors = [];
-        /**
-         * Flag to track if TJBot has been initialized
-         */
-        this._initialized = false;
         // set up logging -- start with the 'info' level
         // Custom formatter for pretty-printing error objects with color
         const prettyErrorFormat = winston.format.printf((info) => {
@@ -629,16 +657,6 @@ class TJBot {
         });
     }
 }
-/**
- * TJBot library version
- * @readonly
- */
-TJBot.VERSION = `v${packageJson.version}`;
-/**
- * Hardware list
- * @readonly
- */
-TJBot.Hardware = Hardware;
 /** ------------------------------------------------------------------------ */
 /** MODULE EXPORTS                                                           */
 /** ------------------------------------------------------------------------ */

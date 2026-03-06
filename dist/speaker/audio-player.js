@@ -20,10 +20,7 @@ import { spawn } from 'child_process';
  * Provides the same API surface as sound-player package
  */
 export class AudioPlayer extends EventEmitter {
-    constructor() {
-        super(...arguments);
-        this.process = null;
-    }
+    process = null;
     /**
      * Play an audio file using aplay
      * @param audioPath Path to the audio file to play

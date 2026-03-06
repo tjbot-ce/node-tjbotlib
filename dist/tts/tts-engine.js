@@ -23,6 +23,7 @@ import { TJBotError } from '../utils/index.js';
  * @public
  */
 export class TTSEngine {
+    config;
     constructor(config) {
         // Uses global winston instance
         this.config = config ?? {};

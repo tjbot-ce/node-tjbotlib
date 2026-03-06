@@ -29,6 +29,7 @@ import { TJBotError } from '../../utils/index.js';
  * @public
  */
 export class IBMTTSEngine extends TTSEngine {
+    ttsService;
     constructor(config) {
         super(config);
     }

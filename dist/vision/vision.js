@@ -15,6 +15,8 @@
  */
 import { createVisionEngine } from './vision-engine.js';
 export class VisionController {
+    visionEngine;
+    visionConfig;
     constructor(visionConfig) {
         this.visionConfig = visionConfig;
     }

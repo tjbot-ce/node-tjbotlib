@@ -29,6 +29,7 @@ import { TJBotError } from '../../utils/index.js';
  * @public
  */
 export class IBMWatsonSTTEngine extends STTEngine {
+    sttService;
     constructor(config) {
         super(config);
     }

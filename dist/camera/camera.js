@@ -23,6 +23,11 @@ import { TJBotError } from '../utils/index.js';
  * Handles camera initialization and photo capture using rpi-cam-lib
  */
 export class CameraController {
+    resolution;
+    verticalFlip;
+    horizontalFlip;
+    captureTimeout;
+    zeroShutterLag;
     constructor() {
         this.resolution = [1920, 1080];
         this.verticalFlip = false;

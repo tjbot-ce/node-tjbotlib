@@ -28,9 +28,11 @@ let sherpa;
  * @public
  */
 export class SherpaONNXTTSEngine extends TTSEngine {
+    manager = ModelRegistry.getInstance();
+    modelPath;
+    ttsEngine;
     constructor(config) {
         super(config);
-        this.manager = ModelRegistry.getInstance();
     }
     /**
      * Initialize the sherpa-onnx TTS engine.

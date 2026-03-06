@@ -23,6 +23,7 @@ import { TJBotError } from '../utils/index.js';
  * @public
  */
 export class VisionEngine {
+    config;
     constructor(config) {
         this.config = config ?? {};
     }

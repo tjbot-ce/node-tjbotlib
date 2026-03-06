@@ -25,14 +25,24 @@ import { VisionController } from '../vision/vision.js';
 export class RPiHardwareDriver {
 }
 export class RPiBaseHardwareDriver extends RPiHardwareDriver {
+    // initialized hardware
+    initializedHardware;
+    // controllers for hardware components
+    cameraController;
+    microphoneController;
+    speakerController;
+    // controllers for STT, TTS, CV
+    sttController;
+    ttsController;
+    visionController;
+    // cached configuration for speak
+    speakConfig = {};
+    // cached configuration for listen
+    listenConfig = {};
+    // cached configuration for see
+    seeConfig = {};
     constructor() {
         super();
-        // cached configuration for speak
-        this.speakConfig = {};
-        // cached configuration for listen
-        this.listenConfig = {};
-        // cached configuration for see
-        this.seeConfig = {};
         this.initializedHardware = new Set();
     }
     getHardware() {

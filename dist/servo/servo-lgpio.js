@@ -27,6 +27,15 @@ const MAX_PULSE_MS = 2.5;
  * Uses lgpio software PWM on GPIO character devices
  */
 export class LGPIOServoController {
+    chipNumber;
+    pin;
+    freq;
+    chipHandle;
+    claimed = false;
+    currentPulseMs;
+    running;
+    autoStopTimer;
+    autoStopDelayMs;
     /**
      * Create a LGPIOServoController instance
      * @param chipNumber GPIO chip number (usually 0)
@@ -34,7 +43,6 @@ export class LGPIOServoController {
      * @param freq PWM frequency in Hz (default 50 for standard servos)
      */
     constructor(chipNumber, pin, freq = 50, autoStopDelayMs = 2000) {
-        this.claimed = false;
         this.chipNumber = chipNumber;
         this.pin = pin;
         this.freq = freq;

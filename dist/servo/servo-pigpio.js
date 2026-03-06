@@ -28,6 +28,7 @@ function getPigpioGpioClass() {
  * Used on Raspberry Pi 3 and 4
  */
 export class PiGPIOServoController {
+    servo;
     constructor(pin) {
         const Gpio = getPigpioGpioClass();
         this.servo = new Gpio(pin, { mode: Gpio.OUTPUT });

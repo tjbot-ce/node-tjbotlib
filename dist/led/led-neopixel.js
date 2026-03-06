@@ -20,6 +20,7 @@ import { spawn } from 'child_process';
  * This uses the native pigpio library for ws281x support
  */
 export class LEDNeopixel {
+    neopixel;
     constructor(pin) {
         // Check if running as root (required for rpi-ws281x-native)
         if (process.getuid && process.getuid() !== 0) {

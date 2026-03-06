@@ -21,10 +21,10 @@ import { TJBotError, ModelRegistry } from '../../utils/index.js';
 import { VisionEngine, } from '../vision-engine.js';
 import path from 'path';
 export class ONNXVisionEngine extends VisionEngine {
+    manager = ModelRegistry.getInstance();
+    models = new Map();
     constructor(config) {
         super(config);
-        this.manager = ModelRegistry.getInstance();
-        this.models = new Map();
     }
     getLocalConfig() {
         // Config is already the extracted local config from the helper function

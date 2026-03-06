@@ -17,6 +17,8 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 import { VisionEngine, } from '../vision-engine.js';
 export class AzureVisionEngine extends VisionEngine {
+    apiKey;
+    url;
     constructor(config) {
         super(config ?? {});
         const configObj = config ?? {};

@@ -27,6 +27,16 @@ import { TJBotError, ModelRegistry } from '../utils/index.js';
  * It provides access to configuration via structured interfaces.
  */
 export class TJBotConfig {
+    config;
+    log;
+    hardware;
+    listen;
+    see;
+    shine;
+    speak;
+    wave;
+    recipe;
+    defaultConfigPath = './tjbot.default.toml';
     /**
      * Creates a TJBotConfig instance.
      * Loads configuration in the following order:
@@ -40,7 +50,6 @@ export class TJBotConfig {
      * @param recipeConfigPath Path to recipe configuration file (default: recipe.toml in current working directory)
      */
     constructor(overrideConfig, recipeConfigPath) {
-        this.defaultConfigPath = './tjbot.default.toml';
         // Load default config
         const defaultConfig = this.loadInternalConfig(this.defaultConfigPath);
         // Load user config from ~/.tjbot/tjbot.toml if it exists

@@ -27,6 +27,9 @@ function getPigpioGpioClass() {
  * LED controller for Common Anode LEDs using GPIO pins with PWM
  */
 export class LEDCommonAnode {
+    redPin;
+    greenPin;
+    bluePin;
     constructor(red, green, blue) {
         const Gpio = getPigpioGpioClass();
         this.redPin = new Gpio(red, { mode: Gpio.OUTPUT });

@@ -28,6 +28,8 @@ import { TJBotError } from '../../utils/index.js';
  * @public
  */
 export class AzureTTSEngine extends TTSEngine {
+    subscriptionKey;
+    region;
     constructor(config) {
         super(config);
     }

@@ -25,6 +25,10 @@ import { createTTSEngine } from './tts-engine.js';
  * Delegates audio playback to SpeakerController.
  */
 export class TTSController {
+    ttsEngine;
+    ttsBackend;
+    speakConfig;
+    speakerController;
     constructor(speakerController) {
         this.ttsEngine = undefined;
         this.ttsBackend = 'local';

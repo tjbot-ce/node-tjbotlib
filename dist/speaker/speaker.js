@@ -23,6 +23,9 @@ import { execSync } from 'child_process';
  * Handles audio playback and text-to-speech synthesis
  */
 export class SpeakerController {
+    device;
+    onPauseCallback;
+    onResumeCallback;
     constructor() {
         this.device = '';
     }

@@ -22,6 +22,8 @@ import { execSync } from 'child_process';
  * Handles microphone initialization and audio stream management
  */
 export class MicrophoneController {
+    mic;
+    micInputStream;
     constructor() {
         const params = {};
         this.mic = Mic(params);

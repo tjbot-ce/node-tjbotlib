@@ -21,6 +21,9 @@ import { createSTTEngine } from './stt-engine.js';
  * Lazy-initializes the STT engine on first transcribe call and caches it for reuse.
  */
 export class STTController {
+    sttEngine;
+    microphoneController;
+    listenConfig;
     constructor(microphoneController, listenConfig) {
         this.sttEngine = undefined;
         this.microphoneController = microphoneController;

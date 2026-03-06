@@ -32,9 +32,14 @@ let sherpa;
  * @public
  */
 export class SherpaONNXSTTEngine extends STTEngine {
+    registry = ModelRegistry.getInstance();
+    modelInfo;
+    modelPaths;
+    vadPath;
+    recognizer;
+    vad;
     constructor(config) {
         super(config);
-        this.registry = ModelRegistry.getInstance();
     }
     async initialize() {
         try {

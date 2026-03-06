@@ -28,6 +28,7 @@ import { TJBotError } from '../../utils/index.js';
  * @public
  */
 export class GoogleCloudTTSEngine extends TTSEngine {
+    client;
     constructor(config) {
         super(config);
     }

@@ -23,6 +23,11 @@ import { TJBotError } from '../utils/errors.js';
  * https://github.com/vanshksingh/Pi5Neo/blob/main/pi5neo/pi5neo.py
  */
 export class LEDNeopixelSPI {
+    spi;
+    useGRBFormat;
+    static HIGH = 0xf8; // possibles: F0, F8, FC
+    static LOW = 0xc0; // possibles: C0
+    static FREQ = 6553600; // 800 KHz * 1024 * 8 = exact WS2812B timing (from pi5neo)
     constructor(spiInterface, useGRB = false) {
         const i = spiInterface || '/dev/spidev0.0';
         this.spi = SPI.initialize(i);
@@ -101,7 +106,4 @@ export class LEDNeopixelSPI {
         // SPI cleanup is handled by the library
     }
 }
-LEDNeopixelSPI.HIGH = 0xf8; // possibles: F0, F8, FC
-LEDNeopixelSPI.LOW = 0xc0; // possibles: C0
-LEDNeopixelSPI.FREQ = 6553600; // 800 KHz * 1024 * 8 = exact WS2812B timing (from pi5neo)
 //# sourceMappingURL=led-neopixel-spi.js.map

@@ -30,9 +30,10 @@ const execFileAsync = promisify(execFile);
  * Handles model metadata, registration, downloading, extraction, and caching
  */
 export class ModelRegistry {
+    static instance;
+    registeredModels = new Map();
+    metadataLoaded = false;
     constructor() {
-        this.registeredModels = new Map();
-        this.metadataLoaded = false;
         this.loadMetadata();
     }
     /**

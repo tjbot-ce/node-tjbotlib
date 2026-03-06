@@ -17,6 +17,10 @@ import fetch from 'node-fetch';
 import fs from 'fs';
 import { VisionEngine, } from '../vision-engine.js';
 export class GoogleCloudVisionEngine extends VisionEngine {
+    credentialsPath;
+    model;
+    endpoint;
+    apiKey; // Only for legacy fallback, not used if credentialsPath is set
     constructor(config) {
         super(config ?? {});
         const configObj = config ?? {};

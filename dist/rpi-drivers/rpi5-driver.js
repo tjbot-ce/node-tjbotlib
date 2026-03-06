@@ -20,6 +20,9 @@ import { RPiBaseHardwareDriver } from './rpi-driver.js';
 import { LEDCommonAnode, LEDNeopixelSPI } from '../led/index.js';
 import { LGPIOServoController } from '../servo/index.js';
 class RPi5Driver extends RPiBaseHardwareDriver {
+    commonAnodeLed;
+    neopixelLed;
+    servo;
     constructor() {
         super();
         winston.debug('🥧 initializing RPi5 hardware driver');

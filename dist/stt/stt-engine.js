@@ -22,6 +22,7 @@ import { TJBotError } from '../utils/index.js';
  * @public
  */
 export class STTEngine {
+    config;
     constructor(config) {
         this.config = config ?? {};
     }

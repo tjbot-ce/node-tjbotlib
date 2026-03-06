@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 export class TJBotError extends Error {
+    code;
+    context;
+    cause;
     constructor(message, options) {
         super(message);
         this.name = 'TJBotError';
