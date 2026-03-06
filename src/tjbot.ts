@@ -21,7 +21,15 @@ import { TJBotConfig } from './config/tjbot-config.js';
 import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect, RPiHardwareDriver } from './rpi-drivers/index.js';
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
-import { Capability, Hardware, ModelRegistry, normalizeColor, sleep, TJBotError } from './utils/index.js';
+import {
+    Capability,
+    getShineColors,
+    Hardware,
+    ModelRegistry,
+    normalizeColor,
+    sleep,
+    TJBotError,
+} from './utils/index.js';
 import { ModelType } from './utils/model-registry.js';
 import {
     FaceDetectionMetadata,
@@ -32,7 +40,6 @@ import {
 
 // node modules
 import cm from 'color-model';
-import colorToHex from 'colornames';
 import { readFileSync } from 'fs';
 import { easeInOutQuad } from 'js-easing-functions';
 import { dirname, join } from 'path';
@@ -685,7 +692,7 @@ class TJBot {
      */
     shineColors(): string[] {
         if (this._shineColors.length === 0) {
-            this._shineColors = colorToHex.all().map((elt) => elt.name);
+            this._shineColors = getShineColors();
         }
         return this._shineColors;
     }

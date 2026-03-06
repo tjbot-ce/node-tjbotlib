@@ -25,21 +25,4 @@ export declare function sleep(sec: number): void;
  * @returns {boolean} - True if command is available, false otherwise
  */
 export declare function isCommandAvailable(command: string): boolean;
-/**
- * Convert hex color to RGB value.
- * @param {string} hexColor Hex color (e.g. FF8888)
- * @return {array} RGB color (e.g. (255, 128, 128))
- * @private
- */
-export declare function convertHexToRgbColor(hexColor: string): [number, number, number];
-/**
- * Normalize the given color to #RRGGBB.
- * @param {string} color The color to shine the LED. May be specified in a number of
- * formats, including: hexadecimal, (e.g. "0xF12AC4", "11FF22", "#AABB24"), "on", "off",
- * or may be a named color in the `colornames` package. Hexadecimal colors
- * follow an #RRGGBB format.
- * @return {string} Hex string corresponding to the given color (e.g. "#RRGGBB")
- * @private
- */
-export declare function normalizeColor(color: string): string;
 //# sourceMappingURL=utils.d.ts.map

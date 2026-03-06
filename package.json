@@ -8,7 +8,6 @@
     "axios": "^1.13.6",
     "cli-progress": "^3.12.0",
     "color-model": "^0.2.2",
-    "colornames": "^1.1.1",
     "fifo": "^2.4.1",
     "import-meta-resolve": "^4.2.0",
     "js-easing-functions": "^1.0.3",
@@ -40,7 +39,6 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/cli-progress": "^3.11.6",
-    "@types/colornames": "^1.1.5",
     "@types/js-yaml": "^4.0.9",
     "@types/pi-spi": "^0.0.31",
     "@types/rpi-ws281x-native": "^1.0.3",

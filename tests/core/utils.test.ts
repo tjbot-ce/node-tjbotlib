@@ -15,9 +15,15 @@
  * limitations under the License.
  */
 
-import { describe, test, expect } from 'vitest';
-import { normalizeColor, convertHexToRgbColor, isCommandAvailable, sleep } from '../../src/utils/index.js';
-import { TJBotError } from '../../src/utils/index.js';
+import { describe, expect, test } from 'vitest';
+import {
+    convertHexToRgbColor,
+    getShineColors,
+    isCommandAvailable,
+    normalizeColor,
+    sleep,
+    TJBotError,
+} from '../../src/utils/index.js';
 
 describe('Utils - normalizeColor', () => {
     test('normalizes "on" to white (FFFFFF)', () => {
@@ -196,5 +202,109 @@ describe('Utils - sleep', () => {
 
     test('sleep accepts numeric argument', () => {
         expect(() => sleep(0.001)).not.toThrow();
+    });
+});
+
+describe('Utils - getShineColors (curated LED colors)', () => {
+    test('returns an array of color names', () => {
+        const colors = getShineColors();
+        expect(Array.isArray(colors)).toBe(true);
+        expect(colors.length).toBeGreaterThan(0);
+    });
+
+    test('returns curated colors list', () => {
+        const colors = getShineColors();
+        expect(colors.length).toBeGreaterThan(0);
+    });
+
+    test('includes basic colors (red, green, blue)', () => {
+        const colors = getShineColors();
+        expect(colors).toContain('red');
+        expect(colors).toContain('green');
+        expect(colors).toContain('blue');
+    });
+
+    test('includes special colors (on, off)', () => {
+        const colors = getShineColors();
+        expect(colors).toContain('on');
+        expect(colors).toContain('off');
+    });
+
+    test('includes multi-word colors (lightpink, darkblue, etc)', () => {
+        const colors = getShineColors();
+        expect(colors).toContain('lightpink');
+        expect(colors).toContain('darkblue');
+        expect(colors).toContain('skyblue');
+    });
+});
+
+describe('Utils - normalizeColor with curated colors', () => {
+    test('normalizes curated color: red', () => {
+        const result = normalizeColor('red');
+        expect(result).toBe('#FF0000');
+    });
+
+    test('normalizes curated color: blue', () => {
+        const result = normalizeColor('blue');
+        expect(result).toBe('#0000FF');
+    });
+
+    test('normalizes curated color: green', () => {
+        const result = normalizeColor('green');
+        expect(result).toBe('#008000');
+    });
+
+    test('normalizes curated color: purple', () => {
+        const result = normalizeColor('purple');
+        expect(result).toBe('#800080');
+    });
+
+    test('normalizes multi-word color without spaces: lightpink', () => {
+        const result = normalizeColor('lightpink');
+        expect(result).toBe('#FFB6C1');
+    });
+
+    test('normalizes multi-word color WITH spaces: light pink', () => {
+        const result = normalizeColor('light pink');
+        expect(result).toBe('#FFB6C1');
+    });
+
+    test('normalizes multi-word color with mixed case: Light Pink', () => {
+        const result = normalizeColor('Light Pink');
+        expect(result).toBe('#FFB6C1');
+    });
+
+    test('normalizes multi-word color all caps with spaces: LIGHT PINK', () => {
+        const result = normalizeColor('LIGHT PINK');
+        expect(result).toBe('#FFB6C1');
+    });
+
+    test('normalizes multi-word color: darkblue vs dark blue', () => {
+        const result1 = normalizeColor('darkblue');
+        const result2 = normalizeColor('dark blue');
+        expect(result1).toBe('#00008B');
+        expect(result2).toBe('#00008B');
+        expect(result1).toBe(result2);
+    });
+
+    test('normalizes multi-word color: skyblue vs sky blue', () => {
+        const result1 = normalizeColor('skyblue');
+        const result2 = normalizeColor('sky blue');
+        expect(result1).toBe('#87CEEB');
+        expect(result2).toBe('#87CEEB');
+        expect(result1).toBe(result2);
+    });
+
+    test('normalizes multi-word color: hotpink vs hot pink', () => {
+        const result1 = normalizeColor('hotpink');
+        const result2 = normalizeColor('hot pink');
+        expect(result1).toBe('#FF69B4');
+        expect(result2).toBe('#FF69B4');
+        expect(result1).toBe(result2);
+    });
+
+    test('throws error for color not in curated list', () => {
+        expect(() => normalizeColor('chartreuse')).toThrow(TJBotError);
+        expect(() => normalizeColor('lavender')).toThrow(TJBotError);
     });
 });
