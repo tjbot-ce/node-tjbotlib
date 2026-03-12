@@ -24,10 +24,14 @@ import { execSync } from 'child_process';
 export class MicrophoneController {
     mic;
     micInputStream;
+    isStarted;
+    isPaused;
     constructor() {
         const params = {};
         this.mic = Mic(params);
         this.micInputStream = this.mic.getAudioStream();
+        this.isStarted = false;
+        this.isPaused = false;
     }
     /**
      * Auto-detect the first available audio recording device
@@ -123,26 +127,34 @@ export class MicrophoneController {
      * Start microphone recording
      */
     start() {
-        if (this.mic !== undefined) {
+        if (this.mic !== undefined && !this.isStarted) {
             this.mic.start();
+            this.isStarted = true;
+            this.isPaused = false;
+        }
+        else if (this.mic !== undefined && this.isPaused) {
+            this.mic.resume();
+            this.isPaused = false;
         }
     }
     /**
      * Pause microphone recording
      */
     pause() {
-        if (this.mic !== undefined) {
+        if (this.mic !== undefined && this.isStarted && !this.isPaused) {
             winston.verbose('🎤 listening paused');
             this.mic.pause();
+            this.isPaused = true;
         }
     }
     /**
      * Resume microphone recording
      */
     resume() {
-        if (this.mic !== undefined) {
+        if (this.mic !== undefined && this.isStarted && this.isPaused) {
             winston.verbose('🎤 listening resumed');
             this.mic.resume();
+            this.isPaused = false;
         }
     }
     /**
@@ -151,6 +163,8 @@ export class MicrophoneController {
     stop() {
         if (this.mic !== undefined) {
             this.mic.stop();
+            this.isStarted = false;
+            this.isPaused = false;
         }
     }
     /**

@@ -23,6 +23,8 @@ import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 export declare class MicrophoneController {
     private mic;
     private micInputStream;
+    private isStarted;
+    private isPaused;
     constructor();
     /**
      * Auto-detect the first available audio recording device

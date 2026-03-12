@@ -66,8 +66,8 @@ export class STTController {
             });
             return transcript;
         } finally {
-            // Always stop microphone to avoid speaker feedback
-            this.microphoneController.stop();
+            // Pause between utterances so repeated listen() calls can reuse the live stream.
+            this.microphoneController.pause();
         }
     }
 

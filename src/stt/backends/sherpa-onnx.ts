@@ -103,11 +103,12 @@ export class SherpaONNXSTTEngine extends STTEngine {
             const vadConfig = this.config.vad as VADConfig;
 
             if (vadConfig && this.modelInfo) {
-                if (this.modelInfo.type.startsWith('offline') && vadConfig.enabled) {
+                if (this.modelInfo.kind.startsWith('offline') && vadConfig.enabled) {
                     const vadModelName = vadConfig.model as string;
                     winston.info(`🎤 Loading VAD model: ${vadModelName}`);
                     const vadInfo = await this.registry.loadModel<VADModelMetadata>(vadModelName);
-                    this.vadPath = path.join(vadInfo.folder, vadModelName);
+                    const vadCacheDir = this.registry.getModelCacheDirForType('vad');
+                    this.vadPath = path.join(vadCacheDir, vadInfo.folder, vadInfo.required[0]);
                 }
             }
 
@@ -586,7 +587,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
         useVad: boolean,
         options: STTRequestOptions
     ): Promise<string> {
-        if (useVad && this.vad) {
+        if (useVad && this.vadPath) {
             return await this.transcribeOfflineWithVad(micStream, sampleRate, options);
         } else {
             return await this.transcribeOfflineEnergy(micStream, sampleRate, options);
@@ -604,8 +605,8 @@ export class SherpaONNXSTTEngine extends STTEngine {
         if (!this.recognizer) {
             throw new TJBotError('Recognizer not initialized');
         }
-        if (!this.vad) {
-            throw new TJBotError('VAD not initialized');
+        if (!this.vadPath) {
+            throw new TJBotError('VAD model path not initialized');
         }
         if (!sherpa) {
             throw new TJBotError('Sherpa-ONNX not initialized');
@@ -613,7 +614,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
 
         // Narrow types for use in Promise callbacks
         const recognizer = this.recognizer as OfflineRecognizer;
-        const vad = this.vad as Vad;
+        const vad = this.createSileroVad(this.vadPath);
         const module = sherpa;
 
         return new Promise((resolve, reject) => {
@@ -665,6 +666,14 @@ export class SherpaONNXSTTEngine extends STTEngine {
                             if (options.onPartialResult) {
                                 options.onPartialResult(text);
                             }
+
+                            // Resolve after first complete utterance (single-shot behavior)
+                            cleanup();
+                            if (options.onFinalResult) {
+                                options.onFinalResult(text);
+                            }
+                            resolve(text);
+                            return;
                         }
                     }
                 } catch (error) {
@@ -759,6 +768,14 @@ export class SherpaONNXSTTEngine extends STTEngine {
                             if (options.onPartialResult) {
                                 options.onPartialResult(text);
                             }
+
+                            // Resolve after first complete utterance (single-shot behavior)
+                            cleanup();
+                            if (options.onFinalResult) {
+                                options.onFinalResult(text);
+                            }
+                            resolve(text);
+                            return;
                         }
 
                         speechChunks.length = 0;

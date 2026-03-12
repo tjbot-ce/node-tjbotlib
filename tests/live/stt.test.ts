@@ -129,7 +129,7 @@ async function runTest(): Promise<void> {
                 } else {
                     const transcript = await tjbot.listen();
                     if (transcript) {
-                        console.log(`${COLORS.BRIGHT}${COLORS.GREEN}Final: ${transcript}${COLORS.RESET}`);
+                        console.log(`${COLORS.BRIGHT}${COLORS.GREEN}Heard: ${transcript}${COLORS.RESET}`);
                     }
                 }
                 lastPartial = '';

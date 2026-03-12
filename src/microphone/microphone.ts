@@ -38,11 +38,15 @@ type MicParams = Record<string, string | number | boolean>;
 export class MicrophoneController {
     private mic: MicInstance;
     private micInputStream: Transform;
+    private isStarted: boolean;
+    private isPaused: boolean;
 
     constructor() {
         const params: MicParams = {};
         this.mic = Mic(params) as unknown as MicInstance;
         this.micInputStream = this.mic.getAudioStream();
+        this.isStarted = false;
+        this.isPaused = false;
     }
 
     /**
@@ -154,8 +158,13 @@ export class MicrophoneController {
      * Start microphone recording
      */
     start(): void {
-        if (this.mic !== undefined) {
+        if (this.mic !== undefined && !this.isStarted) {
             this.mic.start();
+            this.isStarted = true;
+            this.isPaused = false;
+        } else if (this.mic !== undefined && this.isPaused) {
+            this.mic.resume();
+            this.isPaused = false;
         }
     }
 
@@ -163,9 +172,10 @@ export class MicrophoneController {
      * Pause microphone recording
      */
     pause(): void {
-        if (this.mic !== undefined) {
+        if (this.mic !== undefined && this.isStarted && !this.isPaused) {
             winston.verbose('🎤 listening paused');
             this.mic.pause();
+            this.isPaused = true;
         }
     }
 
@@ -173,9 +183,10 @@ export class MicrophoneController {
      * Resume microphone recording
      */
     resume(): void {
-        if (this.mic !== undefined) {
+        if (this.mic !== undefined && this.isStarted && this.isPaused) {
             winston.verbose('🎤 listening resumed');
             this.mic.resume();
+            this.isPaused = false;
         }
     }
 
@@ -185,6 +196,8 @@ export class MicrophoneController {
     stop(): void {
         if (this.mic !== undefined) {
             this.mic.stop();
+            this.isStarted = false;
+            this.isPaused = false;
         }
     }
 

@@ -62,11 +62,12 @@ export class SherpaONNXSTTEngine extends STTEngine {
             // Download VAD model if needed for offline recognition
             const vadConfig = this.config.vad;
             if (vadConfig && this.modelInfo) {
-                if (this.modelInfo.type.startsWith('offline') && vadConfig.enabled) {
+                if (this.modelInfo.kind.startsWith('offline') && vadConfig.enabled) {
                     const vadModelName = vadConfig.model;
                     winston.info(`🎤 Loading VAD model: ${vadModelName}`);
                     const vadInfo = await this.registry.loadModel(vadModelName);
-                    this.vadPath = path.join(vadInfo.folder, vadModelName);
+                    const vadCacheDir = this.registry.getModelCacheDirForType('vad');
+                    this.vadPath = path.join(vadCacheDir, vadInfo.folder, vadInfo.required[0]);
                 }
             }
             // Create the TTS recognizer and VAD as needed
@@ -476,7 +477,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Transcribe using offline recognition with optional VAD
      */
     async transcribeOffline(micStream, sampleRate, useVad, options) {
-        if (useVad && this.vad) {
+        if (useVad && this.vadPath) {
             return await this.transcribeOfflineWithVad(micStream, sampleRate, options);
         }
         else {
@@ -490,15 +491,15 @@ export class SherpaONNXSTTEngine extends STTEngine {
         if (!this.recognizer) {
             throw new TJBotError('Recognizer not initialized');
         }
-        if (!this.vad) {
-            throw new TJBotError('VAD not initialized');
+        if (!this.vadPath) {
+            throw new TJBotError('VAD model path not initialized');
         }
         if (!sherpa) {
             throw new TJBotError('Sherpa-ONNX not initialized');
         }
         // Narrow types for use in Promise callbacks
         const recognizer = this.recognizer;
-        const vad = this.vad;
+        const vad = this.createSileroVad(this.vadPath);
         const module = sherpa;
         return new Promise((resolve, reject) => {
             const bufferSizeInSeconds = 30;
@@ -540,6 +541,13 @@ export class SherpaONNXSTTEngine extends STTEngine {
                             if (options.onPartialResult) {
                                 options.onPartialResult(text);
                             }
+                            // Resolve after first complete utterance (single-shot behavior)
+                            cleanup();
+                            if (options.onFinalResult) {
+                                options.onFinalResult(text);
+                            }
+                            resolve(text);
+                            return;
                         }
                     }
                 }
@@ -618,6 +626,13 @@ export class SherpaONNXSTTEngine extends STTEngine {
                             if (options.onPartialResult) {
                                 options.onPartialResult(text);
                             }
+                            // Resolve after first complete utterance (single-shot behavior)
+                            cleanup();
+                            if (options.onFinalResult) {
+                                options.onFinalResult(text);
+                            }
+                            resolve(text);
+                            return;
                         }
                         speechChunks.length = 0;
                         silenceMs = 0;
