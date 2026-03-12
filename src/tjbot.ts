@@ -250,9 +250,10 @@ class TJBot {
                     const shineConfig = this.config.shine;
                     winston.info(
                         '💡 Setting up NeoPixel LED ' +
-                            (shineConfig?.neopixel?.gpioPin ?? `pin: ${shineConfig?.neopixel?.gpioPin})`) +
+                            '[' +
+                            (shineConfig?.neopixel?.gpioPin ? `pin: ${shineConfig?.neopixel?.gpioPin}` : '') +
                             ' ' +
-                            (shineConfig?.neopixel?.spiInterface ?? `SPI: ${shineConfig.neopixel?.spiInterface}`) +
+                            (shineConfig?.neopixel?.spiInterface ? `SPI: ${shineConfig.neopixel?.spiInterface}` : '') +
                             ']'
                     );
                     this.rpiDriver.setupLEDNeopixel(shineConfig.neopixel ?? {});
