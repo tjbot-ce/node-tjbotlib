@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+import { select } from '@inquirer/prompts';
+import { execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -24,7 +26,97 @@ import { MicrophoneController } from '../../src/microphone/index.js';
 import { initWinston } from '../../src/utils/logging.js';
 import { formatSection, formatTitle, isCommandAvailable, sleep } from './utils.js';
 
+interface AlsaDevice {
+    name: string;
+    value: string;
+}
+
+function listAlsaDevices(): AlsaDevice[] {
+    try {
+        const output = execSync('arecord -l', { encoding: 'utf8' });
+        const devices: AlsaDevice[] = [];
+        for (const line of output.split('\n')) {
+            const match = line.match(/card (\d+):.*?\[(.+?)\].*device (\d+):.*?\[(.+?)\]/);
+            if (match) {
+                const value = `plughw:${match[1]},${match[3]}`;
+                const name = `Card ${match[1]}: ${match[2]} (Device ${match[3]}: ${match[4]})`;
+                devices.push({ name, value });
+            }
+        }
+        return devices;
+    } catch (_err) {
+        return [];
+    }
+}
+
+async function promptDeviceChoice(): Promise<string | undefined> {
+    const devices = listAlsaDevices();
+    if (devices.length === 0) {
+        console.log('ℹ️  No ALSA devices found; using system default');
+        return undefined;
+    }
+    if (devices.length === 1) {
+        console.log(`ℹ️  Using single ALSA device: ${devices[0].name}`);
+        return devices[0].value;
+    }
+    return select({
+        message: 'Select audio input device:',
+        choices: devices,
+        default: devices[0].value,
+    });
+}
+
+// ── VU meter helpers ──────────────────────────────────────────────────────────
+
+const BAR_WIDTH = 40;
+// Gain applied before clamping to [0,1]. Typical USB mic RMS ≈ 0.01–0.05;
+// multiplying by 10 maps quiet speech to the lower third of the bar.
+const GAIN = 10;
+
+/**
+ * Compute RMS of a 16-bit signed little-endian PCM buffer, scaled to [0, 1].
+ */
+function computeRMS(buffer: Buffer): number {
+    const sampleCount = Math.floor(buffer.length / 2);
+    if (sampleCount === 0) return 0;
+    let sumSquares = 0;
+    for (let i = 0; i < sampleCount; i++) {
+        const sample = buffer.readInt16LE(i * 2) / 32768.0;
+        sumSquares += sample * sample;
+    }
+    return Math.min(Math.sqrt(sumSquares / sampleCount) * GAIN, 1.0);
+}
+
+/**
+ * Overwrite the current terminal line with an ASCII VU meter.
+ * @param level  Instantaneous RMS level [0, 1]
+ * @param peak   Peak-hold level [0, 1]
+ * @param secondsLeft Countdown seconds remaining
+ */
+function renderVUMeter(level: number, peak: number, secondsLeft: number): void {
+    const filled = Math.round(level * BAR_WIDTH);
+    const peakPos = Math.min(Math.round(peak * BAR_WIDTH), BAR_WIDTH - 1);
+
+    let bar = '';
+    for (let i = 0; i < BAR_WIDTH; i++) {
+        if (i < filled) {
+            bar += '\u2588'; // █
+        } else if (i === peakPos && peakPos >= filled) {
+            bar += '\u258c'; // ▌ peak-hold marker
+        } else {
+            bar += '\u2591'; // ░
+        }
+    }
+
+    const pct = String(Math.round(level * 100)).padStart(3);
+    const pkPct = String(Math.round(peak * 100)).padStart(3);
+    process.stdout.write(
+        `\r\u23f1  ${String(secondsLeft).padStart(2)}s \u2502 \ud83c\udfa4 [${bar}] ${pct}% \u2502 peak: ${pkPct}%  `
+    );
+}
+
 const LOG_LEVEL = 'info';
+const DURATION_S = 10;
 
 async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
@@ -48,45 +140,56 @@ async function runTest(): Promise<void> {
 
     console.log(formatSection('Testing TJBot microphone'));
 
+    const selectedDevice = await promptDeviceChoice();
+
     // Create and initialize microphone controller directly
     const microphone = new MicrophoneController();
     const rate = 44100;
     const channels = 2;
-    // Auto-detect device (or could pass a specific device like 'plughw:2,0')
-    microphone.initialize(rate, channels);
+    microphone.initialize(rate, channels, selectedDevice);
 
     console.log('✓ Microphone initialized\n');
 
     try {
-        // Record audio to file and verify data was written
-        console.log('Recording 5 seconds of audio to verify data capture...\n');
+        console.log(`Recording ${DURATION_S} seconds of audio. Make some noise (speak, clap, etc.)!\n`);
         const tempDir = os.tmpdir();
-        const audioFile = path.join(tempDir, `tjbot_test_${Date.now()}.raw`);
-        console.log(`Recording to: ${audioFile}`);
+        const audioFile = path.join(tempDir, `tjbot_test_${Date.now()}.wav`);
 
-        // Start microphone and pipe to file
         microphone.start();
-
-        // Get the microphone input stream
         const micStream = microphone.getInputStream();
         const writeStream = fs.createWriteStream(audioFile);
 
-        // Pipe mic data to file
-        micStream.pipe(writeStream);
+        // Peak-hold state: rises instantly, decays slowly per chunk
+        let peak = 0;
+        let remaining = DURATION_S;
 
-        console.log('Recording... Please make some noise (speak, clap, etc.)');
-        await sleep(5000); // Record for 5 seconds
+        const countdownInterval = setInterval(() => {
+            if (remaining > 0) remaining--;
+        }, 1000);
 
-        // Stop recording
-        micStream.unpipe(writeStream);
+        const onData = (chunk: Buffer): void => {
+            writeStream.write(chunk);
+            const rms = computeRMS(chunk);
+            peak = rms > peak ? rms : peak * 0.95;
+            renderVUMeter(rms, peak, remaining);
+        };
+
+        micStream.on('data', onData);
+
+        await sleep(DURATION_S * 1000);
+
+        clearInterval(countdownInterval);
+        // Move cursor to next line so subsequent console.log output is clean
+        process.stdout.write('\n');
+
+        micStream.off('data', onData);
         microphone.stop();
 
-        // Wait for the write stream to finish
         await new Promise<void>((resolve) => {
             writeStream.end(() => resolve());
         });
 
-        console.log('Recording complete.\n');
+        console.log('\nRecording complete.\n');
 
         // Check if file exists and has data
         let testPassed = false;
@@ -128,12 +231,12 @@ async function runTest(): Promise<void> {
             }
 
             // Clean up temp file
-            try {
-                fs.unlinkSync(audioFile);
-                console.log('✓ Temporary file cleaned up');
-            } catch (err) {
-                console.log('Warning: Could not delete temporary file:', (err as Error).message);
-            }
+            // try {
+            //     fs.unlinkSync(audioFile);
+            //     console.log('✓ Temporary file cleaned up');
+            // } catch (err) {
+            //     console.log('Warning: Could not delete temporary file:', (err as Error).message);
+            // }
         } else {
             console.log('✗ File was not created');
         }

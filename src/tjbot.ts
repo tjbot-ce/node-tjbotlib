@@ -270,7 +270,7 @@ class TJBot {
 
                 case Hardware.MICROPHONE: {
                     const config = this.config.listen;
-                    winston.info(`🎤 Setting up microphone [device: ${config?.device}]`);
+                    winston.info(`🎤 Setting up microphone [device: ${config?.device || 'default'}]`);
                     this.rpiDriver.setupMicrophone(config);
                     break;
                 }
@@ -284,7 +284,7 @@ class TJBot {
 
                 case Hardware.SPEAKER: {
                     const config = this.config.speak;
-                    winston.info(`🔊 Setting up speaker [device: ${config?.device}]`);
+                    winston.info(`🔊 Setting up speaker [device: ${config?.device || 'default'}]`);
                     this.rpiDriver.setupSpeaker(config);
                     break;
                 }
