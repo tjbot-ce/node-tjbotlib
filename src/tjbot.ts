@@ -655,14 +655,14 @@ class TJBot {
             const l = 0.0 + (i / (numSteps / 2)) * 0.5;
             colorRamp[i] = hex.toHsl().lightness(l).toRgb().toHexString().replace('#', '0x');
         }
-        winston.verbose(`💡 color ramp for pulse: ${colorRamp.join(', ')}`);
+        winston.silly(`💡 color ramp for pulse: ${colorRamp.join(', ')}`);
 
         // perform the ease
         winston.verbose(`💡 pulsing my LED to RGB color ${rgb}`);
         for (let i = 0; i < easeDelays.length; i += 1) {
             const c =
                 i < colorRamp.length ? colorRamp[i] : colorRamp[colorRamp.length - 1 - (i - colorRamp.length) - 1];
-            winston.verbose(`💡 pulse step ${i}: setting color to ${c}`);
+            winston.silly(`💡 pulse step ${i}: setting color to ${c}`);
             await this.shine(c);
             sleep(easeDelays[i]);
         }
