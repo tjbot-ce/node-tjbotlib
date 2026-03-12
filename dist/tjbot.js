@@ -191,38 +191,42 @@ class TJBot {
         hardwareToInit.forEach((device) => {
             switch (device) {
                 case Hardware.CAMERA: {
-                    winston.info('📷 Setting up camera');
                     const config = this.config.see;
+                    winston.info('📷 Setting up camera');
                     this.rpiDriver.setupCamera(config);
                     break;
                 }
                 case Hardware.LED_NEOPIXEL: {
-                    winston.info('💡 Setting up NeoPixel LED');
                     const shineConfig = this.config.shine;
+                    winston.info('💡 Setting up NeoPixel LED ' +
+                        (shineConfig?.neopixel?.gpioPin ?? `pin: ${shineConfig?.neopixel?.gpioPin})`) +
+                        ' ' +
+                        (shineConfig?.neopixel?.spiInterface ?? `SPI: ${shineConfig.neopixel?.spiInterface}`) +
+                        ']');
                     this.rpiDriver.setupLEDNeopixel(shineConfig.neopixel ?? {});
                     break;
                 }
                 case Hardware.LED_COMMON_ANODE: {
-                    winston.info('💡 Setting up Common Anode LED');
                     const shineConfig = this.config.shine;
+                    winston.info(`💡 Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`);
                     this.rpiDriver.setupLEDCommonAnode(shineConfig.commonanode ?? {});
                     break;
                 }
                 case Hardware.MICROPHONE: {
-                    winston.info('🎤 Setting up microphone');
                     const config = this.config.listen;
+                    winston.info(`🎤 Setting up microphone [device: ${config?.device}]`);
                     this.rpiDriver.setupMicrophone(config);
                     break;
                 }
                 case Hardware.SERVO: {
-                    winston.info('🦾 Setting up servo');
                     const config = this.config.wave;
+                    winston.info(`🦾 Setting up servo [pin: ${config?.servoPin}]`);
                     this.rpiDriver.setupServo(config);
                     break;
                 }
                 case Hardware.SPEAKER: {
-                    winston.info('🔊 Setting up speaker');
                     const config = this.config.speak;
+                    winston.info(`🔊 Setting up speaker [device: ${config?.device}]`);
                     this.rpiDriver.setupSpeaker(config);
                     break;
                 }
