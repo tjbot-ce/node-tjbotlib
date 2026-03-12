@@ -24,7 +24,7 @@ import { MicrophoneController } from '../../src/microphone/index.js';
 import { initWinston } from '../../src/utils/logging.js';
 import { formatSection, formatTitle, isCommandAvailable, sleep } from './utils.js';
 
-const LOG_LEVEL = 'verbose';
+const LOG_LEVEL = 'info';
 
 async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);
