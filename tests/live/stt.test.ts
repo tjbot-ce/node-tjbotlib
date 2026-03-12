@@ -19,11 +19,13 @@
 
 import { select } from '@inquirer/prompts';
 import { execSync } from 'child_process';
-import { TJBot } from '../../src/tjbot.js';
-import { initWinston, formatTitle, formatSection } from './utils.js';
-import { inferSTTMode } from '../../src/stt/stt-utils.js';
 import type { ListenConfig, STTBackendConfig } from '../../src/config/config-types.js';
+import { inferSTTMode } from '../../src/stt/stt-utils.js';
+import { TJBot } from '../../src/tjbot.js';
 import { ModelRegistry } from '../../src/utils/index.js';
+import type { STTModelMetadata } from '../../src/utils/index.js';
+import { initWinston } from '../../src/utils/logging.js';
+import { formatSection, formatTitle } from './utils.js';
 
 // ANSI color codes for output
 const COLORS = {
@@ -223,7 +225,7 @@ async function promptBackendSpecificOptions(selectedBackend: string): Promise<Ba
 async function promptSherpaONNXOptions(): Promise<BackendConfig> {
     // Get available models from metadata
     const registry = ModelRegistry.getInstance();
-    const models = registry.lookupModels('stt', false);
+    const models = registry.lookupModels<STTModelMetadata>('stt', false);
 
     // Get installed models once (outside the loop for efficiency)
     const tjbot = TJBot.getInstance();
@@ -246,6 +248,10 @@ async function promptSherpaONNXOptions(): Promise<BackendConfig> {
     });
 
     const selectedModel = models.find((m) => m.key === modelKey);
+    if (!selectedModel) {
+        throw new Error(`Selected model not found in registry: ${modelKey}`);
+    }
+
     const config: BackendConfig = {
         model: selectedModel.key,
     };

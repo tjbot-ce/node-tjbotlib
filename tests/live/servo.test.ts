@@ -17,9 +17,10 @@
  * limitations under the License.
  */
 
+import { confirm, input } from '@inquirer/prompts';
 import TJBot from '../../src/tjbot.js';
-import { formatTitle, formatSection, initWinston } from './utils.js';
-import { input, confirm } from '@inquirer/prompts';
+import { initWinston } from '../../src/utils/logging.js';
+import { formatSection, formatTitle } from './utils.js';
 
 const LOG_LEVEL = 'info';
 

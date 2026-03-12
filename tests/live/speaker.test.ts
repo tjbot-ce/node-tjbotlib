@@ -17,10 +17,11 @@
  * limitations under the License.
  */
 
-import { writeFileSync, unlinkSync } from 'fs';
-import { AudioPlayer } from '../../src/speaker/audio-player.js';
-import { isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
 import { confirm } from '@inquirer/prompts';
+import { unlinkSync, writeFileSync } from 'fs';
+import { AudioPlayer } from '../../src/speaker/audio-player.js';
+import { initWinston } from '../../src/utils/logging.js';
+import { formatSection, formatTitle, isCommandAvailable } from './utils.js';
 
 const LOG_LEVEL = 'info';
 

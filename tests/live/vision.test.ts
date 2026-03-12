@@ -17,20 +17,21 @@
  */
 
 import { select } from '@inquirer/prompts';
-import { TJBot } from '../../src/tjbot.js';
-import { ModelRegistry } from '../../src/utils/model-registry.js';
-import type { ModelType } from '../../src/utils/model-registry.js';
+import fs from 'fs';
+import path from 'path';
+import sharp from 'sharp';
 import type { SeeConfig } from '../../src/config/config-types.js';
+import { TJBot } from '../../src/tjbot.js';
+import { initWinston } from '../../src/utils/logging.js';
+import type { ModelType } from '../../src/utils/model-registry.js';
+import { ModelRegistry } from '../../src/utils/model-registry.js';
 import type {
     FaceDetectionResult,
     ImageClassificationResult,
     ImageDescriptionResult,
     ObjectDetectionResult,
 } from '../../src/vision/index.js';
-import fs from 'fs';
-import path from 'path';
-import sharp from 'sharp';
-import { initWinston, formatTitle, formatSection } from './utils.js';
+import { formatSection, formatTitle } from './utils.js';
 
 const LOG_LEVEL = 'info';
 

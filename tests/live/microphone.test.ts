@@ -17,13 +17,14 @@
  * limitations under the License.
  */
 
-import { MicrophoneController } from '../../src/microphone/index.js';
-import { sleep, isCommandAvailable, formatTitle, formatSection, initWinston } from './utils.js';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { MicrophoneController } from '../../src/microphone/index.js';
+import { initWinston } from '../../src/utils/logging.js';
+import { formatSection, formatTitle, isCommandAvailable, sleep } from './utils.js';
 
-const LOG_LEVEL = 'info';
+const LOG_LEVEL = 'verbose';
 
 async function runTest(): Promise<void> {
     initWinston(LOG_LEVEL);

@@ -17,10 +17,11 @@
  * limitations under the License.
  */
 
-import TJBot from '../../src/tjbot.js';
+import { confirm, input, select } from '@inquirer/prompts';
 import RPiDetect from '../../src/rpi-drivers/rpi-detect.js';
-import { select, input, confirm } from '@inquirer/prompts';
-import { formatTitle, formatSection, initWinston } from './utils.js';
+import TJBot from '../../src/tjbot.js';
+import { initWinston } from '../../src/utils/logging.js';
+import { formatSection, formatTitle } from './utils.js';
 
 const LOG_LEVEL = 'info';
 

@@ -248,18 +248,22 @@ class TJBot {
 
                 case Hardware.LED_NEOPIXEL: {
                     const shineConfig = this.config.shine;
-                    winston.info('💡 Setting up NeoPixel LED ' +
-                        (shineConfig?.neopixel?.gpioPin ?? `pin: ${shineConfig?.neopixel?.gpioPin})`) +
-                        ' ' +
-                        (shineConfig?.neopixel?.spiInterface ?? `SPI: ${shineConfig.neopixel?.spiInterface}`) +
-                        ']');
+                    winston.info(
+                        '💡 Setting up NeoPixel LED ' +
+                            (shineConfig?.neopixel?.gpioPin ?? `pin: ${shineConfig?.neopixel?.gpioPin})`) +
+                            ' ' +
+                            (shineConfig?.neopixel?.spiInterface ?? `SPI: ${shineConfig.neopixel?.spiInterface}`) +
+                            ']'
+                    );
                     this.rpiDriver.setupLEDNeopixel(shineConfig.neopixel ?? {});
                     break;
                 }
 
                 case Hardware.LED_COMMON_ANODE: {
                     const shineConfig = this.config.shine;
-                    winston.info(`💡 Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`);
+                    winston.info(
+                        `💡 Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`
+                    );
                     this.rpiDriver.setupLEDCommonAnode(shineConfig.commonanode ?? {});
                     break;
                 }

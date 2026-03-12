@@ -63,11 +63,6 @@ export class MicrophoneController {
      */
     initialize(rate, channels, device, exitOnSilenceSeconds) {
         winston.verbose('🎤 initializing microphone');
-        // Auto-detect device if not specified
-        let selectedDevice = device || '';
-        if (!selectedDevice || selectedDevice === '') {
-            selectedDevice = this.detectMicrophoneDevice();
-        }
         const params = {
             rate: String(rate),
             channels: String(channels),
@@ -80,12 +75,14 @@ export class MicrophoneController {
         if (typeof exitOnSilenceSeconds === 'number' && exitOnSilenceSeconds > 0) {
             params['exitOnSilence'] = exitOnSilenceSeconds;
         }
-        if (selectedDevice && selectedDevice !== '') {
-            winston.verbose('🎤 listening through user-defined audio device: ' + selectedDevice);
-            params['device'] = selectedDevice;
+        if (device && device !== '') {
+            params['device'] = device;
+            winston.verbose('🎤 listening through user-defined audio device: ' + device);
         }
         else {
-            winston.verbose('🎤 listening through default audio device');
+            const selectedDevice = this.detectMicrophoneDevice();
+            params['device'] = selectedDevice;
+            winston.verbose('🎤 listening through auto-detected audio device: ' + selectedDevice);
         }
         // create the microphone
         this.mic = Mic(params);

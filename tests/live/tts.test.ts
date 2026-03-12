@@ -17,13 +17,13 @@
  * limitations under the License.
  */
 
-import { execSync } from 'node:child_process';
 import { select } from '@inquirer/prompts';
-import { TJBot } from '../../src/tjbot.js';
-import { initWinston } from './utils.js';
-import { isCommandAvailable, formatTitle, formatSection } from './utils.js';
-import { ModelRegistry } from '../../src/utils/index.js';
+import { execSync } from 'node:child_process';
 import type { SpeakConfig, TTSBackendConfig } from '../../src/config/config-types.js';
+import { TJBot } from '../../src/tjbot.js';
+import { ModelRegistry } from '../../src/utils/index.js';
+import { initWinston } from '../../src/utils/logging.js';
+import { formatSection, formatTitle, isCommandAvailable } from './utils.js';
 
 // ANSI color codes for output
 const COLORS = {
