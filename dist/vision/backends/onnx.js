@@ -554,7 +554,8 @@ export class ONNXVisionEngine extends VisionEngine {
      */
     postprocessClassification(results, labels, confidenceThreshold, outputNames) {
         const outputName = outputNames[0];
-        const scores = results[outputName].data;
+        const logits = results[outputName].data;
+        const scores = this.softmax(logits);
         // Create results for all classes, then filter by threshold and sort
         const allResults = Array.from(scores)
             .map((score, i) => ({

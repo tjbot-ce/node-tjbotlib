@@ -692,7 +692,8 @@ export class ONNXVisionEngine extends VisionEngine {
         outputNames: readonly string[]
     ): ImageClassificationResult[] {
         const outputName = outputNames[0];
-        const scores = results[outputName].data as Float32Array;
+        const logits = results[outputName].data as Float32Array;
+        const scores = this.softmax(logits);
 
         // Create results for all classes, then filter by threshold and sort
         const allResults = Array.from(scores)
