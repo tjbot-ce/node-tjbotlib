@@ -46,7 +46,7 @@ async function runTest(): Promise<void> {
 
     console.log(formatSection('Testing TJBot speaker'));
 
-    // Create audio player directly to test playback without TTS
+    // Create audio player directly to test playback
     const audioPlayer = new AudioPlayer();
     console.log('✓ Audio player initialized\n');
 

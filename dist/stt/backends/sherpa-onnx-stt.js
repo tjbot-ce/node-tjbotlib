@@ -57,7 +57,8 @@ export class SherpaONNXSTTEngine extends STTEngine {
         winston.info(`${EMO} Loading STT model: ${modelName}`);
         this.modelInfo = await this.registry.loadModel(modelName);
         const modelCacheDir = this.registry.getModelCacheDirForType('stt');
-        this.modelPaths = this.pathsForModelKey(this.modelInfo.key, modelCacheDir);
+        const modelDir = path.join(modelCacheDir, this.modelInfo.folder);
+        this.modelPaths = this.pathsForModelKey(this.modelInfo.key, modelDir);
         // Download VAD model if needed for offline recognition
         const vadConfig = this.config.vad;
         if (vadConfig && this.modelInfo) {
