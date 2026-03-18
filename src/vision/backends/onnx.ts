@@ -363,41 +363,34 @@ export class ONNXVisionEngine extends VisionEngine {
     }
 
     /**
-     * Postprocess YOLO object detection output
-     */
-    /**
      * Sigmoid function to normalize logits to 0-1 range
      */
     private sigmoid(x: number): number {
         return 1 / (1 + Math.exp(-x));
     }
 
-    /**
-     * Postprocess YOLO object detection output
-     */
     private postprocessDetection(
         results: Record<string, ort.Tensor>,
         labels: string[],
         outputNames: readonly string[],
         confidenceThreshold: number = 0.8
     ): ObjectDetectionResult[] {
+        const isSSDMobileNetV2 = outputNames.some((name) => name.includes('BoxPredictor_'));
+        if (isSSDMobileNetV2) {
+            return this.postprocessSSDMobileNetV2(results, labels, confidenceThreshold);
+        }
+
+        // Fallback for YOLO-style output [batch, num_detections, (x, y, w, h, conf, class_scores...)]
         const outputName = outputNames[0];
         const outputData = results[outputName].data as Float32Array;
-
-        // YOLO output format: [batch, num_detections, (x, y, w, h, confidence, class_scores...)]
-        // For simplicity, assume each detection is 5 + num_classes values
         let detections: ObjectDetectionResult[] = [];
-        const numClasses = labels.length || 80; // Default to 80 for COCO
+        const numClasses = labels.length || 80;
         const valuesPerDetection = 5 + numClasses;
 
         for (let i = 0; i < outputData.length; i += valuesPerDetection) {
-            // Apply sigmoid to normalize confidence (it's a logit from the model)
             const confidence = this.sigmoid(outputData[i + 4]);
-
-            // Filter by confidence threshold
             if (confidence < confidenceThreshold) continue;
 
-            // Find class with highest probability (apply sigmoid to class scores too)
             let maxClassScore = 0;
             let maxClassIdx = 0;
             for (let j = 0; j < numClasses; j++) {
@@ -416,15 +409,205 @@ export class ONNXVisionEngine extends VisionEngine {
 
             detections.push({
                 label,
-                confidence: maxClassScore, // Use class score as confidence, not combined score
+                confidence: maxClassScore,
                 bbox: [x, y, w, h],
             });
         }
 
-        // Apply Non-Maximum Suppression (NMS) to remove duplicate detections
         detections = this.nonMaxSuppression(detections);
-
         return detections;
+    }
+
+    /**
+     * Decode SSD MobileNet v2 raw predictor outputs into object detections.
+     */
+    private postprocessSSDMobileNetV2(
+        results: Record<string, ort.Tensor>,
+        labels: string[],
+        confidenceThreshold: number
+    ): ObjectDetectionResult[] {
+        const boxScales = {
+            x: 10,
+            y: 10,
+            w: 5,
+            h: 5,
+        };
+
+        const featureMapShapes = [
+            [19, 19],
+            [10, 10],
+            [5, 5],
+            [3, 3],
+            [2, 2],
+            [1, 1],
+        ] as const;
+
+        const anchorsByLayer = this.generateSSDMobileNetV2Anchors(featureMapShapes);
+        const detections: ObjectDetectionResult[] = [];
+
+        for (let layer = 0; layer < featureMapShapes.length; layer++) {
+            const boxTensor = results[`BoxPredictor_${layer}/BoxEncodingPredictor/BiasAdd:0`];
+            const classTensor = results[`BoxPredictor_${layer}/ClassPredictor/BiasAdd:0`];
+
+            if (!boxTensor || !classTensor) {
+                continue;
+            }
+
+            const boxData = boxTensor.data as Float32Array;
+            const classData = classTensor.data as Float32Array;
+            const [, boxChannels, h, w] = boxTensor.dims;
+            const [, classChannels] = classTensor.dims;
+
+            const numAnchorsPerCell = boxChannels / 4;
+            const numClassesWithBackground = classChannels / numAnchorsPerCell;
+
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    for (let a = 0; a < numAnchorsPerCell; a++) {
+                        const anchorIdxInLayer = (y * w + x) * numAnchorsPerCell + a;
+                        const anchor = anchorsByLayer[layer][anchorIdxInLayer];
+                        if (!anchor) continue;
+
+                        const classLogits = new Float32Array(numClassesWithBackground);
+                        for (let c = 0; c < numClassesWithBackground; c++) {
+                            const classChannel = a * numClassesWithBackground + c;
+                            const classOffset = (classChannel * h + y) * w + x;
+                            classLogits[c] = classData[classOffset];
+                        }
+
+                        const probs = this.softmax(classLogits);
+
+                        // Class index 0 is background for SSD models.
+                        let bestClass = 0;
+                        let bestScore = 0;
+                        for (let c = 1; c < probs.length; c++) {
+                            if (probs[c] > bestScore) {
+                                bestScore = probs[c];
+                                bestClass = c;
+                            }
+                        }
+
+                        if (bestScore < confidenceThreshold) {
+                            continue;
+                        }
+
+                        // Box tensor channel layout per anchor: [ty, tx, th, tw]
+                        const ty = boxData[((a * 4 + 0) * h + y) * w + x];
+                        const tx = boxData[((a * 4 + 1) * h + y) * w + x];
+                        const th = boxData[((a * 4 + 2) * h + y) * w + x];
+                        const tw = boxData[((a * 4 + 3) * h + y) * w + x];
+
+                        const yCenter = (ty / boxScales.y) * anchor.h + anchor.cy;
+                        const xCenter = (tx / boxScales.x) * anchor.w + anchor.cx;
+                        const boxH = Math.exp(th / boxScales.h) * anchor.h;
+                        const boxW = Math.exp(tw / boxScales.w) * anchor.w;
+
+                        const xMin = Math.max(0, Math.min(1, xCenter - boxW / 2));
+                        const yMin = Math.max(0, Math.min(1, yCenter - boxH / 2));
+                        const xMax = Math.max(0, Math.min(1, xCenter + boxW / 2));
+                        const yMax = Math.max(0, Math.min(1, yCenter + boxH / 2));
+
+                        const width = xMax - xMin;
+                        const height = yMax - yMin;
+                        if (width <= 0 || height <= 0) {
+                            continue;
+                        }
+
+                        const labelIndex = bestClass - 1;
+                        const label = labels[labelIndex] || `class${labelIndex}`;
+                        detections.push({
+                            label,
+                            confidence: bestScore,
+                            bbox: [xMin, yMin, width, height],
+                        });
+                    }
+                }
+            }
+        }
+
+        return this.nonMaxSuppression(detections);
+    }
+
+    /**
+     * Generate normalized anchors for SSD MobileNet v2 with input size 300x300.
+     */
+    private generateSSDMobileNetV2Anchors(featureMapShapes: ReadonlyArray<readonly [number, number]>): {
+        cx: number;
+        cy: number;
+        w: number;
+        h: number;
+    }[][] {
+        const minScale = 0.2;
+        const maxScale = 0.95;
+        const aspectRatios = [1.0, 2.0, 0.5, 3.0, 1.0 / 3.0];
+        const anchorsByLayer: { cx: number; cy: number; w: number; h: number }[][] = [];
+
+        const scaleForLayer = (layer: number): number => {
+            if (featureMapShapes.length === 1) {
+                return (minScale + maxScale) * 0.5;
+            }
+            return minScale + ((maxScale - minScale) * layer) / (featureMapShapes.length - 1);
+        };
+
+        for (let layer = 0; layer < featureMapShapes.length; layer++) {
+            const [featH, featW] = featureMapShapes[layer];
+            const scale = scaleForLayer(layer);
+            const nextScale = layer === featureMapShapes.length - 1 ? 1.0 : scaleForLayer(layer + 1);
+            const layerAnchors: { cx: number; cy: number; w: number; h: number }[] = [];
+
+            const anchorSizes: { w: number; h: number }[] = [];
+            if (layer === 0) {
+                // Reduced anchor set on first layer per TF SSD config.
+                anchorSizes.push({ w: 0.1, h: 0.1 });
+                anchorSizes.push({ w: scale * Math.sqrt(2.0), h: scale / Math.sqrt(2.0) });
+                anchorSizes.push({ w: scale / Math.sqrt(2.0), h: scale * Math.sqrt(2.0) });
+            } else {
+                for (const ratio of aspectRatios) {
+                    const ratioSqrt = Math.sqrt(ratio);
+                    anchorSizes.push({ w: scale * ratioSqrt, h: scale / ratioSqrt });
+                }
+
+                // Interpolated scale anchor with aspect ratio 1.0.
+                const interpolated = Math.sqrt(scale * nextScale);
+                anchorSizes.push({ w: interpolated, h: interpolated });
+            }
+
+            for (let y = 0; y < featH; y++) {
+                for (let x = 0; x < featW; x++) {
+                    const cy = (y + 0.5) / featH;
+                    const cx = (x + 0.5) / featW;
+                    for (const sz of anchorSizes) {
+                        layerAnchors.push({ cx, cy, w: sz.w, h: sz.h });
+                    }
+                }
+            }
+
+            anchorsByLayer.push(layerAnchors);
+        }
+
+        return anchorsByLayer;
+    }
+
+    private softmax(values: Float32Array): Float32Array {
+        let max = -Infinity;
+        for (let i = 0; i < values.length; i++) {
+            if (values[i] > max) max = values[i];
+        }
+
+        const exps = new Float32Array(values.length);
+        let sum = 0;
+        for (let i = 0; i < values.length; i++) {
+            const e = Math.exp(values[i] - max);
+            exps[i] = e;
+            sum += e;
+        }
+
+        if (sum === 0) return exps;
+
+        for (let i = 0; i < exps.length; i++) {
+            exps[i] /= sum;
+        }
+        return exps;
     }
 
     /**

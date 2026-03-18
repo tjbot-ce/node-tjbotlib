@@ -53,16 +53,19 @@ export declare class ONNXVisionEngine extends VisionEngine {
      */
     describeImage(_image: Buffer | string): Promise<ImageDescriptionResult>;
     /**
-     * Postprocess YOLO object detection output
-     */
-    /**
      * Sigmoid function to normalize logits to 0-1 range
      */
     private sigmoid;
-    /**
-     * Postprocess YOLO object detection output
-     */
     private postprocessDetection;
+    /**
+     * Decode SSD MobileNet v2 raw predictor outputs into object detections.
+     */
+    private postprocessSSDMobileNetV2;
+    /**
+     * Generate normalized anchors for SSD MobileNet v2 with input size 300x300.
+     */
+    private generateSSDMobileNetV2Anchors;
+    private softmax;
     /**
      * Apply Non-Maximum Suppression to remove overlapping detections
      */
