@@ -17,20 +17,25 @@
 
 import { describe, test, expect } from 'vitest';
 import { TJBotConfig } from '../../src/config/tjbot-config.js';
-import { tjbotConfigSchema, sttBackendTypeSchema, ttsBackendTypeSchema } from '../../src/config/config-types.js';
+import {
+    tjbotConfigSchema,
+    sttBackendTypeSchema,
+    ttsBackendTypeSchema,
+    seeBackendTypeSchema,
+} from '../../src/config/config-types.js';
 
 // ============================================================================
 // Zod Schema Tests (only those exported from config-types)
 // ============================================================================
 
 describe('Zod Schema Validation - Backend Types', () => {
-    test('sttBackendTypeSchema accepts local', () => {
-        const result = sttBackendTypeSchema.safeParse('local');
+    test('sttBackendTypeSchema accepts none', () => {
+        const result = sttBackendTypeSchema.safeParse('none');
         expect(result.success).toBe(true);
     });
 
-    test('sttBackendTypeSchema accepts ibm-watson-stt', () => {
-        const result = sttBackendTypeSchema.safeParse('ibm-watson-stt');
+    test('sttBackendTypeSchema accepts local', () => {
+        const result = sttBackendTypeSchema.safeParse('local');
         expect(result.success).toBe(true);
     });
 
@@ -39,18 +44,33 @@ describe('Zod Schema Validation - Backend Types', () => {
         expect(result.success).toBe(false);
     });
 
+    test('ttsBackendTypeSchema accepts none', () => {
+        const result = ttsBackendTypeSchema.safeParse('none');
+        expect(result.success).toBe(true);
+    });
+
     test('ttsBackendTypeSchema accepts local', () => {
         const result = ttsBackendTypeSchema.safeParse('local');
         expect(result.success).toBe(true);
     });
 
-    test('ttsBackendTypeSchema accepts ibm-watson-tts', () => {
-        const result = ttsBackendTypeSchema.safeParse('ibm-watson-tts');
+    test('ttsBackendTypeSchema rejects invalid type', () => {
+        const result = ttsBackendTypeSchema.safeParse('invalid-type');
+        expect(result.success).toBe(false);
+    });
+
+    test('seeBackendTypeSchema accepts none', () => {
+        const result = seeBackendTypeSchema.safeParse('none');
         expect(result.success).toBe(true);
     });
 
-    test('ttsBackendTypeSchema rejects invalid type', () => {
-        const result = ttsBackendTypeSchema.safeParse('invalid-type');
+    test('seeBackendTypeSchema accepts local', () => {
+        const result = seeBackendTypeSchema.safeParse('local');
+        expect(result.success).toBe(true);
+    });
+
+    test('seeBackendTypeSchema rejects invalid type', () => {
+        const result = seeBackendTypeSchema.safeParse('invalid-type');
         expect(result.success).toBe(false);
     });
 });

@@ -246,7 +246,7 @@ class TJBot {
         // Initialize STT engine if microphone is configured
         if (this.rpiDriver.hasCapability(Capability.LISTEN)) {
             const listenConfig = this.config.listen;
-            if (listenConfig?.backend?.local) {
+            if (listenConfig && listenConfig.backend?.type === 'local') {
                 winston.info(`${LogEmoji.STT} Initializing STT engine...`);
                 await this.rpiDriver.initializeSTTEngine();
             }
@@ -254,7 +254,7 @@ class TJBot {
         // Initialize TTS engine if speaker is configured
         if (this.rpiDriver.hasCapability(Capability.SPEAK)) {
             const speakConfig = this.config.speak;
-            if (speakConfig?.backend?.local) {
+            if (speakConfig && speakConfig.backend?.type === 'local') {
                 winston.info(`${LogEmoji.TTS} Initializing TTS engine...`);
                 await this.rpiDriver.initializeTTSEngine();
             }
@@ -262,7 +262,7 @@ class TJBot {
         // Initialize Vision engine if camera is configured
         if (this.rpiDriver.hasCapability(Capability.SEE)) {
             const seeConfig = this.config.see;
-            if (seeConfig?.backend?.local) {
+            if (seeConfig && seeConfig.backend?.type === 'local') {
                 winston.info(`${LogEmoji.VISION} Initializing Vision engine...`);
                 await this.rpiDriver.initializeVisionEngine();
             }

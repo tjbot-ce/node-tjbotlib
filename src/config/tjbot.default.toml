@@ -40,11 +40,11 @@ microphoneChannels = 2
 
 [listen.backend]
 # 'type' chooses the STT provider:
-#   'local'            -> sherpa-onnx on-device (OFFLINE by default, can also do streaming models)
-#   'ibm-watson-stt'   -> IBM Cloud STT (STREAMING)
-#   'google-cloud-stt' -> Google Cloud STT (STREAMING)
-#   'azure-stt'        -> Microsoft Azure STT (single-shot, treated as OFFLINE for API usage)
-# If you add a callback for an offline model or omit it for a streaming model, TJBot will throw a TJBotError.
+#   'none'                -> disable STT
+#   'local'               -> on-device Sherpa-ONNX STT (OFFLINE by default, can also do streaming models)
+#   'ibm-watson-stt'      -> IBM Cloud STT (STREAMING)
+#   'google-cloud-stt'    -> Google Cloud STT (STREAMING)
+#   'azure-stt'           -> Microsoft Azure STT ((single-shot, treated as OFFLINE for API usage))
 type = 'local'
 
 [listen.backend.local]
@@ -147,6 +147,7 @@ zeroShutterLag = false
 
 [see.backend]
 # 'type' chooses the CV provider:
+#   'none'                -> disable computer vision
 #   'local'               -> on-device ONNX (OFFLINE)
 #   'google-cloud-vision' -> Google Cloud Vision (CLOUD)
 #   'azure-vision'        -> Microsoft Azure Vision (CLOUD)
@@ -238,13 +239,12 @@ bluePin = 12  # GPIO12 / Physical pin 32
 device = ''
 
 [speak.backend]
-# 'type' specifies which text-to-speech backend to use.
-# Valid options:
-#   'local', which uses the sherpa-onnx TTS engine (no internet connection required)
-#   'ibm-watson-tts', which uses the IBM Watson Text-to-Speech cloud service (requires an `ibm-credentials.env` file for API credentials)
-#   'google-cloud-tts', which uses the Google Cloud Text-to-Speech service (requires a `google-credentials.json` file for API credentials)
-#   'azure-tts', which uses the Microsoft Azure Text-to-Speech service (requires an `azure-credentials.env` file for API credentials)
-# By default, TJBot uses the local sherpa-onnx TTS engine.
+# 'type' chooses the TTS provider:
+#   'none'                -> disable TTS
+#   'local'               -> on-device Sherpa-ONNX TTS
+#   'ibm-watson-tts'      -> IBM Cloud TTS
+#   'google-cloud-tts'    -> Google Cloud TTS
+#   'azure-tts'           -> Microsoft Azure TTS
 type = 'local'
 
 [speak.backend.local]

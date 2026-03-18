@@ -102,7 +102,7 @@ export const listenConfigSchema = z
 /**
  * SEE (CV) Backend configuration with discriminated union based on type field
  */
-export const seeBackendTypeSchema = z.enum(['local', 'google-cloud-vision', 'azure-vision']);
+export const seeBackendTypeSchema = z.enum(['none', 'local', 'google-cloud-vision', 'azure-vision']);
 export const seeBackendLocalConfigSchema = z
     .object({
     objectDetectionModel: z.string().optional(),
@@ -328,6 +328,8 @@ export function getSeeBackendConfig(backendConfig, backendType) {
         return {};
     }
     switch (backendType) {
+        case 'none':
+            return {};
         case 'local':
             return (backendConfig.local ?? {});
         case 'google-cloud-vision':

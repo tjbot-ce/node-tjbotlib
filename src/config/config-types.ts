@@ -141,7 +141,7 @@ export type ListenConfig = z.infer<typeof listenConfigSchema>;
 /**
  * SEE (CV) Backend configuration with discriminated union based on type field
  */
-export const seeBackendTypeSchema = z.enum(['local', 'google-cloud-vision', 'azure-vision']);
+export const seeBackendTypeSchema = z.enum(['none', 'local', 'google-cloud-vision', 'azure-vision']);
 export type SeeBackendType = z.infer<typeof seeBackendTypeSchema>;
 
 export const seeBackendLocalConfigSchema = z
@@ -174,6 +174,9 @@ export type SeeBackendAzureConfig = z.infer<typeof seeBackendAzureConfigSchema>;
 
 /** Discriminated union for Vision backend configs */
 export type SeeBackendConfig =
+    | ({
+          type: 'none';
+      } & NoneBackendConfig)
     | ({
           type: 'local';
       } & SeeBackendLocalConfig)
@@ -395,7 +398,11 @@ export type TTSEngineConfig =
     | TTSBackendGoogleCloudConfig
     | TTSBackendAzureConfig;
 
-export type VisionEngineConfig = SeeBackendLocalConfig | SeeBackendGoogleCloudConfig | SeeBackendAzureConfig;
+export type VisionEngineConfig =
+    | NoneBackendConfig
+    | SeeBackendLocalConfig
+    | SeeBackendGoogleCloudConfig
+    | SeeBackendAzureConfig;
 
 /**
  * Type guard functions for safe backend config narrowing
@@ -470,6 +477,8 @@ export function getSeeBackendConfig(
     }
 
     switch (backendType) {
+        case 'none':
+            return {} as VisionEngineConfig;
         case 'local':
             return ((backendConfig as Record<string, unknown>).local ?? {}) as VisionEngineConfig;
         case 'google-cloud-vision':

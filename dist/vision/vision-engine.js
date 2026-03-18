@@ -39,6 +39,26 @@ export class VisionEngine {
 export async function createVisionEngine(seeConfig) {
     const backend = (seeConfig.backend?.type ?? 'local');
     try {
+        if (backend === 'none') {
+            class NoneVisionEngine extends VisionEngine {
+                async initialize() {
+                    // No-op for 'none' backend
+                }
+                async detectObjects() {
+                    throw new TJBotError('Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.');
+                }
+                async classifyImage() {
+                    throw new TJBotError('Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.');
+                }
+                async detectFaces() {
+                    throw new TJBotError('Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.');
+                }
+                async describeImage() {
+                    throw new TJBotError('Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.');
+                }
+            }
+            return new NoneVisionEngine();
+        }
         if (backend === 'local') {
             const module = await import('./backends/onnx.js');
             if (!module?.ONNXVisionEngine) {

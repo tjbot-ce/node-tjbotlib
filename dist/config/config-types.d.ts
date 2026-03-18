@@ -173,6 +173,7 @@ export type ListenConfig = z.infer<typeof listenConfigSchema>;
  * SEE (CV) Backend configuration with discriminated union based on type field
  */
 export declare const seeBackendTypeSchema: z.ZodEnum<{
+    none: "none";
     local: "local";
     "google-cloud-vision": "google-cloud-vision";
     "azure-vision": "azure-vision";
@@ -199,6 +200,8 @@ export declare const seeBackendAzureConfigSchema: z.ZodObject<{
 export type SeeBackendAzureConfig = z.infer<typeof seeBackendAzureConfigSchema>;
 /** Discriminated union for Vision backend configs */
 export type SeeBackendConfig = ({
+    type: 'none';
+} & NoneBackendConfig) | ({
     type: 'local';
 } & SeeBackendLocalConfig) | ({
     type: 'google-cloud-vision';
@@ -207,6 +210,7 @@ export type SeeBackendConfig = ({
 } & SeeBackendAzureConfig);
 export declare const seeBackendConfigSchema: z.ZodObject<{
     type: z.ZodEnum<{
+        none: "none";
         local: "local";
         "google-cloud-vision": "google-cloud-vision";
         "azure-vision": "azure-vision";
@@ -239,6 +243,7 @@ export declare const seeConfigSchema: z.ZodObject<{
     zeroShutterLag: z.ZodOptional<z.ZodBoolean>;
     backend: z.ZodOptional<z.ZodObject<{
         type: z.ZodEnum<{
+            none: "none";
             local: "local";
             "google-cloud-vision": "google-cloud-vision";
             "azure-vision": "azure-vision";
@@ -457,7 +462,7 @@ export type ModelsConfig = z.infer<typeof modelsConfigSchema>;
  */
 export type STTEngineConfig = NoneBackendConfig | STTBackendLocalConfig | STTBackendIBMWatsonConfig | STTBackendGoogleCloudConfig | STTBackendAzureConfig;
 export type TTSEngineConfig = NoneBackendConfig | TTSBackendLocalConfig | TTSBackendIBMWatsonConfig | TTSBackendGoogleCloudConfig | TTSBackendAzureConfig;
-export type VisionEngineConfig = SeeBackendLocalConfig | SeeBackendGoogleCloudConfig | SeeBackendAzureConfig;
+export type VisionEngineConfig = NoneBackendConfig | SeeBackendLocalConfig | SeeBackendGoogleCloudConfig | SeeBackendAzureConfig;
 /**
  * Type guard functions for safe backend config narrowing
  */
@@ -542,6 +547,7 @@ export declare const tjbotConfigSchema: z.ZodObject<{
         zeroShutterLag: z.ZodOptional<z.ZodBoolean>;
         backend: z.ZodOptional<z.ZodObject<{
             type: z.ZodEnum<{
+                none: "none";
                 local: "local";
                 "google-cloud-vision": "google-cloud-vision";
                 "azure-vision": "azure-vision";
