@@ -151,13 +151,12 @@ tj.shine(favorite_color);
 
 ## Configuration Reference
 
-TJBot uses [TOML](https://toml.io/en/) for its configuration. Please refer to the annotated [`tjbot.default.toml`](src/config/tjbot.default.toml) file for a complete reference of all configuration settings.
+TJBot uses [TOML](https://toml.io/en/) for its configuration. Please refer to the annotated [tjbot.default.toml](src/config/tjbot.default.toml) file for a complete reference of all configuration settings.
 
 ### Custom Models & Model Registry
 
 TJBot ships with a built-in model registry in
-[config/model-registry.yaml](config/model-registry.yaml) for speech (STT/TTS/VAD)
-and vision tasks. You can register additional ML models in your `~/.tjbot/tjbot.toml` file. Search for the section titled "On-Device ML Models".
+[src/config/model-registry.yaml](src/config/model-registry.yaml) for speech (STT/TTS/VAD) and vision tasks. You can register additional ML models in your `~/.tjbot/tjbot.toml` file. Search for the section titled "On-Device ML Models".
 
 Example: register a custom vision classification model and use it locally:
 
