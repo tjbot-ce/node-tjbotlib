@@ -46,12 +46,7 @@ async function runTest(): Promise<void> {
     const tjbot = await TJBot.getInstance().initialize({
         log: { level: LOG_LEVEL },
         hardware: {
-            camera: true,
-            speaker: false,
-            microphone: false,
-            ledNeopixel: false,
-            ledCommonAnode: false,
-            servo: false,
+            camera: true
         },
         see: {
             cameraResolution: [640, 480],

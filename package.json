@@ -88,7 +88,6 @@
     "test-camera": "tsx tests/live/camera.test.ts",
     "test-led": "tsx tests/live/led.test.ts",
     "test-microphone": "tsx tests/live/microphone.test.ts",
-    "test-models": "tsx tests/models/model-manager.test.ts",
     "test-servo": "tsx tests/live/servo.test.ts",
     "test-speaker": "tsx tests/live/speaker.test.ts",
     "test-stt": "tsx tests/live/stt.test.ts",

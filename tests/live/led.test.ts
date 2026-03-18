@@ -44,11 +44,7 @@ async function runTest(): Promise<void> {
     const config: Partial<TJBotConfigSchema> = {
         log: { level: LOG_LEVEL },
         hardware: {
-            led: true,
-            speaker: false,
-            microphone: false,
-            camera: false,
-            servo: false,
+            led: true
         },
         shine: {},
     };
