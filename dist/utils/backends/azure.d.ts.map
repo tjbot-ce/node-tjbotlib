@@ -1,0 +1,1 @@
+{"version":3,"file":"azure.d.ts","sourceRoot":"","sources":["../../../src/utils/backends/azure.ts"],"names":[],"mappings":"AAAA;;;;;;;;;;;;;;GAcG;AASH,wBAAgB,sBAAsB,CAAC,YAAY,CAAC,EAAE,MAAM,GAAG,MAAM,GAAG,SAAS,CAqBhF;AAED,wBAAgB,uBAAuB,CAAC,eAAe,EAAE,MAAM,GAAG;IAAE,eAAe,EAAE,MAAM,CAAC;IAAC,MAAM,EAAE,MAAM,CAAA;CAAE,CA6B5G"}

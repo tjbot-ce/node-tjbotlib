@@ -14,6 +14,22 @@
  * limitations under the License.
  */
 export type TJBotLogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug';
+export declare enum LogEmoji {
+    CAMERA = "\uD83D\uDCF7",
+    COLOR = "\uD83C\uDFA8",
+    CONFIG = "\u2699\uFE0F",
+    GENERAL = "\uD83E\uDD16",
+    HARDWARE = "\uD83D\uDD27",
+    LED = "\uD83D\uDCA1",
+    MIC = "\uD83C\uDFA4",
+    MODEL = "\uD83D\uDCE6",
+    RPI = "\uD83C\uDF53",
+    SERVO = "\uD83E\uDDBE",
+    SPEAKER = "\uD83D\uDD08",
+    STT = "\uD83E\uDDBB",
+    TTS = "\uD83D\uDCAC",
+    VISION = "\uD83D\uDC41\uFE0F"
+}
 /**
  * Initialize Winston with TJBot's default formatter.
  * Safe to call repeatedly; only the first call configures transports/format.

@@ -98,7 +98,7 @@ declare class TJBot {
      */
     private initializeHardware;
     /**
-     * Eagerly initialize AI models (STT, TTS, Vision) if configured
+     * Eagerly initialize local AI models (STT, TTS, Vision) if configured
      * @private
      * @async
      */
@@ -122,6 +122,11 @@ declare class TJBot {
      * @param {string} capability The capability assert (see TJBot.prototype.capabilities).
      */
     private assertCapability;
+    /**
+     * Sleep for the specified number of seconds.
+     * @param sec Number of seconds to sleep
+     */
+    sleep(sec: number): Promise<void>;
     /** ------------------------------------------------------------------------ */
     /** LOCAL AI/ML MODELS                                                       */
     /** ------------------------------------------------------------------------ */

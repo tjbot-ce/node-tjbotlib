@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { SeeBackendConfig, SeeBackendType, VisionEngineConfig, getSeeBackendConfig } from '../config/config-types.js';
+import {
+    SeeBackendConfig,
+    SeeBackendType,
+    SeeConfig,
+    VisionEngineConfig,
+    getSeeBackendConfig,
+} from '../config/config-types.js';
 import { TJBotError } from '../utils/index.js';
 
 export interface ObjectDetectionResult {
@@ -142,8 +148,16 @@ export abstract class VisionEngine {
     abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
 }
 
-export async function createVisionEngine(config: SeeBackendConfig): Promise<VisionEngine> {
-    const backend = (config.type ?? 'local') as SeeBackendType;
+/**
+ * Create a Vision engine instance based on the configuration.
+ * Uses dynamic imports to lazily load backend implementations only when needed.
+ * @param seeConfig - Configuration for the Vision engine with backend settings
+ * @returns {Promise<VisionEngine>} Initialized Vision engine instance
+ * @throws {TJBotError} if backend type is unknown or dependencies are not installed
+ * @public
+ */
+export async function createVisionEngine(seeConfig: SeeConfig): Promise<VisionEngine> {
+    const backend = (seeConfig.backend?.type ?? 'local') as SeeBackendType;
 
     try {
         if (backend === 'local') {
@@ -151,7 +165,7 @@ export async function createVisionEngine(config: SeeBackendConfig): Promise<Visi
             if (!module?.ONNXVisionEngine) {
                 throw new TJBotError('Vision backend "local" is unavailable (missing ONNXVisionEngine export).');
             }
-            const engineConfig = getSeeBackendConfig(config, backend);
+            const engineConfig = getSeeBackendConfig(seeConfig.backend as SeeBackendConfig | undefined, backend);
             return new module.ONNXVisionEngine(engineConfig);
         }
 
@@ -162,7 +176,7 @@ export async function createVisionEngine(config: SeeBackendConfig): Promise<Visi
                     'Vision backend "google-cloud-vision" is unavailable (missing GoogleCloudVisionEngine export).'
                 );
             }
-            const engineConfig = getSeeBackendConfig(config, backend);
+            const engineConfig = getSeeBackendConfig(seeConfig.backend as SeeBackendConfig | undefined, backend);
             return new module.GoogleCloudVisionEngine(engineConfig);
         }
 
@@ -173,7 +187,7 @@ export async function createVisionEngine(config: SeeBackendConfig): Promise<Visi
                     'Vision backend "azure-vision" is unavailable (missing AzureVisionEngine export).'
                 );
             }
-            const engineConfig = getSeeBackendConfig(config, backend);
+            const engineConfig = getSeeBackendConfig(seeConfig.backend as SeeBackendConfig | undefined, backend);
             return new module.AzureVisionEngine(engineConfig);
         }
 

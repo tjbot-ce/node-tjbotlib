@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { STTBackendLocalConfig } from '../../config/config-types.js';
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
 /**
  * Sherpa-ONNX Speech-to-Text Engine
@@ -31,16 +30,9 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
     private modelInfo?;
     private modelPaths?;
     private vadPath?;
-    private recognizer?;
     private vad?;
-    constructor(config?: STTBackendLocalConfig);
+    private recognizer?;
     initialize(): Promise<void>;
-    /**
-     * Ensure the STT model is downloaded and return its local path.
-     * @returns Path to the STT model files.
-     * @throws {TJBotError} if model download fails
-     */
-    private ensureModelIsDownloaded;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
     /**
      * Determine if VAD should be used
@@ -50,6 +42,13 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
      * Setup recognizer and VAD based on model configuration
      */
     private setupRecognizer;
+    /**
+     * Get the paths for all of the model files for a given model key.
+     * @param key The model key (e.g. "moonshine-tiny", "whisper-tiny", "zipformer-en", "paraformer-en")
+     * @param baseDir The folder in which the model exists.
+     * @returns An STTModelPaths object containing the paths to the model files.
+     */
+    private pathsForModelKey;
     /**
      * Extract and validate required paths for Paraformer online recognizer.
      * @throws {TJBotError} if required paths are missing
@@ -107,10 +106,6 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
      */
     private transcribeOfflineEnergy;
     /**
-     * Build model file paths based on model key
-     */
-    private buildModelPaths;
-    /**
      * Convert Int16 PCM buffer to Float32 samples
      */
     private bufferToFloat32LE;
@@ -119,4 +114,4 @@ export declare class SherpaONNXSTTEngine extends STTEngine {
      */
     private getRMS;
 }
-//# sourceMappingURL=sherpa-onnx.d.ts.map
+//# sourceMappingURL=sherpa-onnx-stt.d.ts.map

@@ -14,18 +14,23 @@
  * limitations under the License.
  */
 
-import fetch from 'node-fetch';
 import fs from 'fs';
-
+import fetch from 'node-fetch';
+import winston from 'winston';
+import type { SeeBackendGoogleCloudConfig } from '../../config/config-types.js';
+import { resolveCredentialsPath } from '../../utils/backends/azure.js';
+import { LogEmoji } from '../../utils/logging.js';
 import {
     VisionEngine,
-    type ObjectDetectionResult,
-    type ImageClassificationResult,
     type FaceDetectionMetadata,
+    type ImageClassificationResult,
     type ImageDescriptionResult,
     type Landmark,
+    type ObjectDetectionResult,
 } from '../vision-engine.js';
-import type { SeeBackendGoogleCloudConfig } from '../../config/config-types.js';
+import { TJBotError } from '../../utils/errors.js';
+
+const EMO = LogEmoji.VISION;
 
 // Google Cloud Vision API response type
 type GoogleCloudVisionAPIResponse = {
@@ -43,31 +48,39 @@ type GoogleCloudVisionAPIResponse = {
 };
 
 export class GoogleCloudVisionEngine extends VisionEngine {
-    private credentialsPath?: string;
     private model?: string;
-    private endpoint: string;
-    private apiKey?: string; // Only for legacy fallback, not used if credentialsPath is set
+    private endpoint?: string;
 
-    constructor(config?: SeeBackendGoogleCloudConfig) {
-        super(config ?? {});
-        const configObj = config ?? {};
-        this.credentialsPath = configObj.credentialsPath as string | undefined;
-        this.model = configObj.model as string | undefined;
-        this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
-    }
+    async initialize(config?: SeeBackendGoogleCloudConfig): Promise<void> {
+        const credentialsPath = resolveCredentialsPath(config?.credentialsPath);
 
-    async initialize(): Promise<void> {
-        // Set GOOGLE_APPLICATION_CREDENTIALS if credentialsPath is provided
-        if (this.credentialsPath) {
-            if (!fs.existsSync(this.credentialsPath)) {
-                throw new Error(`Google Cloud Vision credentials file not found at: ${this.credentialsPath}`);
-            }
-            process.env.GOOGLE_APPLICATION_CREDENTIALS = this.credentialsPath;
+        // Set credentials path in environment variable
+        if (credentialsPath) {
+            process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
         }
-        // Optionally, could validate credentials by making a test request
+
+        this.model = config?.model as string | undefined;
+        this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
+
+        winston.info(`${EMO} Google Cloud Vision engine initialized`);
+        winston.debug(`${EMO} Initialized GoogleCloudVisionEngine with config:
+            credentialsPath: ${credentialsPath},
+            model: ${this.model},
+            endpoint: ${this.endpoint}`);
     }
 
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
+        if (this.model === undefined) {
+            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
+        }
+        if (this.endpoint === undefined) {
+            throw new Error(
+                'Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.'
+            );
+        }
+
+        winston.verbose(`${EMO} Detecting objects in image with Google Cloud Vision API`);
+
         // Prepare image as base64
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -76,6 +89,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             imgBuf = image;
         }
         const base64 = imgBuf.toString('base64');
+
         // Use Application Default Credentials (ADC) if GOOGLE_APPLICATION_CREDENTIALS is set
         const body = {
             requests: [
@@ -85,14 +99,19 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                 },
             ],
         };
+
         const res = await fetch(this.endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
-        const data = (await res.json()) as GoogleCloudVisionAPIResponse;
+
+        if (!res.ok) {
+            throw new TJBotError(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+        }
+
         // Parse objects from response
+        const data = (await res.json()) as GoogleCloudVisionAPIResponse;
         const results: ObjectDetectionResult[] = [];
         if (data.responses && data.responses[0] && data.responses[0].localizedObjectAnnotations) {
             for (const obj of data.responses[0].localizedObjectAnnotations) {
@@ -118,6 +137,17 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         image: Buffer | string,
         confidenceThreshold: number = 0.5
     ): Promise<ImageClassificationResult[]> {
+        if (this.model === undefined) {
+            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
+        }
+        if (this.endpoint === undefined) {
+            throw new Error(
+                'Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.'
+            );
+        }
+
+        winston.verbose(`${EMO} Classifying image with Google Cloud Vision API`);
+
         // Prepare image as base64
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -126,6 +156,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             imgBuf = image;
         }
         const base64 = imgBuf.toString('base64');
+
         // Use Application Default Credentials (ADC) if GOOGLE_APPLICATION_CREDENTIALS is set
         const body = {
             requests: [
@@ -140,9 +171,13 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        if (!res.ok) throw new Error(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
-        const data = (await res.json()) as GoogleCloudVisionAPIResponse;
+
+        if (!res.ok) {
+            throw new TJBotError(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+        }
+
         // Parse labels from response
+        const data = (await res.json()) as GoogleCloudVisionAPIResponse;
         const results: ImageClassificationResult[] = [];
         if (data.responses && data.responses[0] && data.responses[0].labelAnnotations) {
             for (const label of data.responses[0].labelAnnotations) {
@@ -154,12 +189,24 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                 }
             }
         }
+
         // Sort by confidence descending
         results.sort((a, b) => b.confidence - a.confidence);
         return results;
     }
 
     async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
+        if (this.model === undefined) {
+            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
+        }
+        if (this.endpoint === undefined) {
+            throw new Error(
+                'Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.'
+            );
+        }
+
+        winston.verbose(`${EMO} Detecting faces in image with Google Cloud Vision API`);
+
         // Prepare image as base64
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -184,7 +231,9 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             body: JSON.stringify(body),
         });
 
-        if (!res.ok) throw new Error(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+        if (!res.ok) {
+            throw new TJBotError(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json()) as any;
@@ -246,7 +295,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
     }
 
     async describeImage(_image: Buffer | string): Promise<ImageDescriptionResult> {
-        throw new Error(
+        throw new TJBotError(
             'Image description is only available with Azure Vision backend. Configure see.backend.type to "azure-vision".'
         );
     }

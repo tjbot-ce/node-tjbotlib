@@ -108,7 +108,7 @@ export async function createSTTEngine(listenConfig: ListenConfig): Promise<STTEn
         }
 
         if (backend === 'local') {
-            const module = await import('./backends/sherpa-onnx.js');
+            const module = await import('./backends/sherpa-onnx-stt.js');
             if (!module?.SherpaONNXSTTEngine) {
                 throw new TJBotError('STT backend "local" is unavailable (missing SherpaONNXSTTEngine export).');
             }

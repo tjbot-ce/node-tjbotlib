@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { getSeeBackendConfig } from '../config/config-types.js';
+import { getSeeBackendConfig, } from '../config/config-types.js';
 import { TJBotError } from '../utils/index.js';
 /**
  * Abstract Vision Engine Base Class
@@ -28,15 +28,23 @@ export class VisionEngine {
         this.config = config ?? {};
     }
 }
-export async function createVisionEngine(config) {
-    const backend = (config.type ?? 'local');
+/**
+ * Create a Vision engine instance based on the configuration.
+ * Uses dynamic imports to lazily load backend implementations only when needed.
+ * @param seeConfig - Configuration for the Vision engine with backend settings
+ * @returns {Promise<VisionEngine>} Initialized Vision engine instance
+ * @throws {TJBotError} if backend type is unknown or dependencies are not installed
+ * @public
+ */
+export async function createVisionEngine(seeConfig) {
+    const backend = (seeConfig.backend?.type ?? 'local');
     try {
         if (backend === 'local') {
             const module = await import('./backends/onnx.js');
             if (!module?.ONNXVisionEngine) {
                 throw new TJBotError('Vision backend "local" is unavailable (missing ONNXVisionEngine export).');
             }
-            const engineConfig = getSeeBackendConfig(config, backend);
+            const engineConfig = getSeeBackendConfig(seeConfig.backend, backend);
             return new module.ONNXVisionEngine(engineConfig);
         }
         if (backend === 'google-cloud-vision') {
@@ -44,7 +52,7 @@ export async function createVisionEngine(config) {
             if (!module?.GoogleCloudVisionEngine) {
                 throw new TJBotError('Vision backend "google-cloud-vision" is unavailable (missing GoogleCloudVisionEngine export).');
             }
-            const engineConfig = getSeeBackendConfig(config, backend);
+            const engineConfig = getSeeBackendConfig(seeConfig.backend, backend);
             return new module.GoogleCloudVisionEngine(engineConfig);
         }
         if (backend === 'azure-vision') {
@@ -52,7 +60,7 @@ export async function createVisionEngine(config) {
             if (!module?.AzureVisionEngine) {
                 throw new TJBotError('Vision backend "azure-vision" is unavailable (missing AzureVisionEngine export).');
             }
-            const engineConfig = getSeeBackendConfig(config, backend);
+            const engineConfig = getSeeBackendConfig(seeConfig.backend, backend);
             return new module.AzureVisionEngine(engineConfig);
         }
         throw new TJBotError(`Unknown Vision backend type: ${backend}`);

@@ -18,6 +18,8 @@ import { execFile } from 'child_process';
 import temp from 'temp';
 import winston from 'winston';
 import { TJBotError } from '../utils/index.js';
+import { LogEmoji } from '../utils/logging.js';
+const EMO = LogEmoji.CAMERA;
 /**
  * Camera controller for TJBot
  * Handles camera initialization and photo capture using rpi-cam-lib
@@ -49,7 +51,12 @@ export class CameraController {
         this.horizontalFlip = horizontalFlip;
         this.captureTimeout = captureTimeout;
         this.zeroShutterLag = zeroShutterLag;
-        winston.debug('📷 camera instance configured for rpicam-still');
+        winston.debug(`${EMO} initialized camera with config:
+            resolution: ${resolution[0]}x${resolution[1]}
+            verticalFlip: ${verticalFlip}
+            horizontalFlip: ${horizontalFlip}
+            captureTimeout: ${captureTimeout}ms
+            zeroShutterLag: ${zeroShutterLag}`);
     }
     /**
      * Build rpicam-still command arguments
@@ -87,6 +94,8 @@ export class CameraController {
         if (this.zeroShutterLag) {
             args.push('--zsl');
         }
+        winston.debug(`${EMO} built camera args:
+            ${args.join(' ')}`);
         return args;
     }
     /**
@@ -101,17 +110,16 @@ export class CameraController {
                 prefix: 'tjbot',
                 suffix: '.jpg',
             });
+        winston.verbose(`${EMO} Capturing image at path: ${photoPath}`);
         const args = this.buildCameraArgs(photoPath);
-        winston.verbose(`📷 capturing image at path: ${photoPath}`);
-        winston.debug(`📷 rpicam-still args: ${args.join(' ')}`);
         return new Promise((resolve, reject) => {
             execFile('rpicam-still', args, (error, stdout, stderr) => {
                 if (error) {
-                    winston.error(`📷 rpicam-still error: ${stderr || error.message}`);
+                    winston.error(`${EMO} rpicam-still error: ${stderr || error.message}`);
                     reject(new TJBotError(stderr || error.message));
                 }
                 else {
-                    winston.debug(`📷 rpicam-still stdout: ${stdout}`);
+                    winston.debug(`${EMO} rpicam-still stdout: ${stdout}`);
                     resolve(photoPath);
                 }
             });
@@ -123,17 +131,16 @@ export class CameraController {
      * @throws TJBotError if the camera capture fails
      */
     async capturePhotoBuffer() {
+        winston.verbose(`${EMO} Capturing image to buffer`);
         const args = this.buildCameraArgs('-', 'jpg');
-        winston.verbose('📷 capturing image to buffer');
-        winston.debug(`📷 rpicam-still args: ${args.join(' ')}`);
         return new Promise((resolve, reject) => {
             execFile('rpicam-still', args, { encoding: 'buffer', maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
                 if (error) {
-                    winston.error(`📷 rpicam-still error: ${stderr?.toString() || error.message}`);
+                    winston.error(`${EMO} rpicam-still error: ${stderr?.toString() || error.message}`);
                     reject(new TJBotError(stderr?.toString() || error.message));
                 }
                 else {
-                    winston.debug(`📷 captured image buffer (${stdout.length} bytes)`);
+                    winston.debug(`${EMO} captured image buffer (${stdout.length} bytes)`);
                     resolve(stdout);
                 }
             });
@@ -143,7 +150,7 @@ export class CameraController {
      * Clean up resources (no-op for direct process invocation)
      */
     cleanup() {
-        winston.debug('📷 camera cleanup (no-op for rpicam-still)');
+        winston.debug(`${EMO} CameraController cleanup (no-op for rpicam-still)`);
     }
 }
 //# sourceMappingURL=camera.js.map

@@ -14,20 +14,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import winston from 'winston';
+import { TJBotError } from '../utils/errors.js';
+import { LogEmoji } from '../utils/logging.js';
 import { createSTTEngine } from './stt-engine.js';
+const EMO = LogEmoji.STT;
 /**
- * STT Controller for TJBot
- * Manages speech-to-text synthesis and engine lifecycle.
- * Lazy-initializes the STT engine on first transcribe call and caches it for reuse.
+ * STT controller manages speech-to-text synthesis and engine lifecycle.
+ * STT engine is eagerly initialized during setupMicrophone() and cached for reuse.
  */
 export class STTController {
     sttEngine;
     microphoneController;
     listenConfig;
-    constructor(microphoneController, listenConfig) {
+    constructor(microphoneController) {
         this.sttEngine = undefined;
         this.microphoneController = microphoneController;
-        this.listenConfig = listenConfig;
+    }
+    /**
+     * Initialize the STT backend
+     * Called during setupMicrophone to eagerly load STT engine
+     * @param config Configuration object with backend, IBM settings, and Sherpa settings
+     */
+    async initialize(config) {
+        this.listenConfig = config;
+        this.sttEngine = await createSTTEngine(this.listenConfig);
+        await this.sttEngine.initialize();
     }
     /**
      * Transcribe audio from a microphone stream.
@@ -37,10 +49,11 @@ export class STTController {
      * @returns The transcribed text
      */
     async transcribe(options) {
-        // Initialize STT engine lazily on first call
+        if (this.listenConfig === undefined) {
+            throw new TJBotError('STT engine not initialized. Call initialize() before transcribing.');
+        }
         if (this.sttEngine === undefined) {
-            this.sttEngine = await createSTTEngine(this.listenConfig);
-            await this.sttEngine.initialize();
+            throw new TJBotError('STT engine not initialized. Call initialize() before transcribing.');
         }
         // Start microphone
         this.microphoneController.start();
@@ -52,6 +65,7 @@ export class STTController {
                 onFinalResult: options?.onFinalResult,
                 abortSignal: options?.abortSignal,
             });
+            winston.debug(`${EMO} Transcript: ${transcript}`);
             return transcript;
         }
         finally {
@@ -60,19 +74,11 @@ export class STTController {
         }
     }
     /**
-     * Eagerly initialize the STT engine.
-     */
-    async ensureEngineInitialized() {
-        if (this.sttEngine === undefined) {
-            this.sttEngine = await createSTTEngine(this.listenConfig);
-            await this.sttEngine.initialize();
-        }
-    }
-    /**
      * Clean up STT resources.
      */
     async cleanup() {
         if (this.sttEngine) {
+            winston.debug(`${EMO} STTController cleanup`);
             await this.sttEngine.cleanup?.();
             this.sttEngine = undefined;
         }

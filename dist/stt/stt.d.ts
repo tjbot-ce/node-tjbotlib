@@ -17,15 +17,20 @@
 import { ListenConfig } from '../config/index.js';
 import { MicrophoneController } from '../microphone/index.js';
 /**
- * STT Controller for TJBot
- * Manages speech-to-text synthesis and engine lifecycle.
- * Lazy-initializes the STT engine on first transcribe call and caches it for reuse.
+ * STT controller manages speech-to-text synthesis and engine lifecycle.
+ * STT engine is eagerly initialized during setupMicrophone() and cached for reuse.
  */
 export declare class STTController {
-    private sttEngine;
+    private sttEngine?;
     private microphoneController;
-    private listenConfig;
-    constructor(microphoneController: MicrophoneController, listenConfig: ListenConfig);
+    private listenConfig?;
+    constructor(microphoneController: MicrophoneController);
+    /**
+     * Initialize the STT backend
+     * Called during setupMicrophone to eagerly load STT engine
+     * @param config Configuration object with backend, IBM settings, and Sherpa settings
+     */
+    initialize(config: ListenConfig): Promise<void>;
     /**
      * Transcribe audio from a microphone stream.
      * Lazily initializes the STT engine on first call.
@@ -38,10 +43,6 @@ export declare class STTController {
         onFinalResult?: (text: string) => void;
         abortSignal?: AbortSignal;
     }): Promise<string>;
-    /**
-     * Eagerly initialize the STT engine.
-     */
-    ensureEngineInitialized(): Promise<void>;
     /**
      * Clean up STT resources.
      */

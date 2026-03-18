@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 import type { VisionEngineConfig } from '../../config/config-types.js';
-import { ImageClassificationResult, ObjectDetectionResult, VisionEngine, FaceDetectionMetadata, ImageDescriptionResult } from '../vision-engine.js';
+import { FaceDetectionMetadata, ImageClassificationResult, ImageDescriptionResult, ObjectDetectionResult, VisionEngine } from '../vision-engine.js';
 export declare class ONNXVisionEngine extends VisionEngine {
     private manager;
     private models;
-    constructor(config?: VisionEngineConfig);
-    private getLocalConfig;
+    private objectDetectionModel?;
+    private imageClassificationModel?;
+    private faceDetectionModel?;
+    private objectDetectionConfidence?;
+    private imageClassificationConfidence?;
+    private faceDetectionConfidence?;
     /**
      * Initialize the ONNX vision engine.
      */
-    initialize(): Promise<void>;
+    initialize(config?: VisionEngineConfig): Promise<void>;
     /**
      * Load a model
      */
@@ -36,7 +40,6 @@ export declare class ONNXVisionEngine extends VisionEngine {
      * Get a model, loading it if necessary
      */
     private getOrLoadModel;
-    private requireModelName;
     /**
      * Detect objects in an image.
      */
@@ -44,7 +47,7 @@ export declare class ONNXVisionEngine extends VisionEngine {
     /**
      * Classify an image.
      */
-    classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
+    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
     /**
      * Detect faces in an image.
      */

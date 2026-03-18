@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 import { createRequire } from 'module';
+import { LogEmoji } from '../utils/logging.js';
+import winston from 'winston';
+const EMO = LogEmoji.SERVO;
 const require = createRequire(import.meta.url);
 let pigpioGpioClass;
 function getPigpioGpioClass() {
@@ -32,6 +35,7 @@ export class PiGPIOServoController {
     constructor(pin) {
         const Gpio = getPigpioGpioClass();
         this.servo = new Gpio(pin, { mode: Gpio.OUTPUT });
+        winston.debug(`${EMO} Initialized PiGPIOServoController on pin ${pin}`);
     }
     /**
      * Set the servo to a specific position

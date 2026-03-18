@@ -15,44 +15,56 @@
  */
 import fs from 'fs';
 import * as ort from 'onnxruntime-node';
+import path from 'path';
 import sharp from 'sharp';
 import winston from 'winston';
-import { TJBotError, ModelRegistry } from '../../utils/index.js';
+import { ModelRegistry, TJBotError } from '../../utils/index.js';
+import { LogEmoji } from '../../utils/logging.js';
 import { VisionEngine, } from '../vision-engine.js';
-import path from 'path';
+const EMO = LogEmoji.VISION;
 export class ONNXVisionEngine extends VisionEngine {
     manager = ModelRegistry.getInstance();
     models = new Map();
-    constructor(config) {
-        super(config);
-    }
-    getLocalConfig() {
-        // Config is already the extracted local config from the helper function
-        return this.config;
-    }
+    objectDetectionModel;
+    imageClassificationModel;
+    faceDetectionModel;
+    objectDetectionConfidence;
+    imageClassificationConfidence;
+    faceDetectionConfidence;
     /**
      * Initialize the ONNX vision engine.
      */
-    async initialize() {
-        try {
-            // Validate that configuration is present
-            const localConfig = this.getLocalConfig();
-            const detectionModelName = localConfig.objectDetectionModel;
-            const classificationModelName = localConfig.imageClassificationModel;
-            const faceDetectionModelName = localConfig.faceDetectionModel;
-            if (!detectionModelName || !classificationModelName || !faceDetectionModelName) {
-                throw new TJBotError('ONNX vision engine config is missing required model names (objectDetectionModel, imageClassificationModel, faceDetectionModel)');
-            }
-            // Eagerly load all models
-            await this.loadModel(detectionModelName);
-            await this.loadModel(classificationModelName);
-            await this.loadModel(faceDetectionModelName);
-            winston.info('👁️ ONNX vision engine initialized');
+    async initialize(config) {
+        if (config === undefined) {
+            throw new TJBotError('ONNX vision engine config is missing');
         }
-        catch (error) {
-            winston.error('Failed to initialize ONNX vision engine:', error);
-            throw new TJBotError('Failed to initialize ONNX vision engine', { cause: error });
+        if (config.objectDetectionModel === undefined) {
+            throw new TJBotError('ONNX vision engine config is missing required parameter: objectDetectionModel');
         }
+        if (config.imageClassificationModel === undefined) {
+            throw new TJBotError('ONNX vision engine config is missing required parameter: imageClassificationModel');
+        }
+        if (config.faceDetectionModel === undefined) {
+            throw new TJBotError('ONNX vision engine config is missing required parameter: faceDetectionModel');
+        }
+        this.objectDetectionModel = config.objectDetectionModel;
+        this.imageClassificationModel = config.imageClassificationModel;
+        this.faceDetectionModel = config.faceDetectionModel;
+        this.objectDetectionConfidence = config.objectDetectionConfidence ?? 0.8;
+        this.imageClassificationConfidence = config.imageClassificationConfidence ?? 0.8;
+        this.faceDetectionConfidence = config.faceDetectionConfidence ?? 0.35;
+        // Eagerly load all models
+        await this.loadModel(this.objectDetectionModel);
+        await this.loadModel(this.imageClassificationModel);
+        await this.loadModel(this.faceDetectionModel);
+        winston.info(`${EMO} ONNX vision engine initialized`);
+        winston.debug(`${EMO} Initialized ONNXVisionEngine with config:
+            objectDetectionModel: ${this.objectDetectionModel},
+            objectDetectionConfidence: ${this.objectDetectionConfidence},
+            imageClassificationModel: ${this.imageClassificationModel},
+            imageClassificationConfidence: ${this.imageClassificationConfidence},
+            faceDetectionModel: ${this.faceDetectionModel},
+            faceDetectionConfidence: ${this.faceDetectionConfidence}`);
     }
     /**
      * Load a model
@@ -61,44 +73,40 @@ export class ONNXVisionEngine extends VisionEngine {
         if (this.models.has(modelName)) {
             return; // Already loaded
         }
-        try {
-            winston.debug(`Loading ONNX model: ${modelName}`);
-            // Get model metadata and download
-            const metadata = await this.manager.loadModel(modelName);
-            // Build model path
-            const modelCacheDir = this.manager.getModelCacheDirForType('vision');
-            const modelDir = path.join(modelCacheDir, metadata.folder);
-            // Find the ONNX model file in the required files
-            const onnxFile = metadata.required.find((file) => file.endsWith('.onnx'));
-            if (!onnxFile) {
-                throw new TJBotError(`No ONNX file found in model requirements for: ${modelName}`);
-            }
-            const modelPath = path.join(modelDir, onnxFile);
-            // Create ONNX session
-            const session = await ort.InferenceSession.create(modelPath);
-            // Load labels if available
-            let labels = [];
-            if (metadata.labelUrl && metadata.kind !== 'face-detection') {
-                labels = await this.loadLabels(modelName, metadata, modelDir);
-            }
-            // Get input shape from metadata
-            const inputShape = metadata.inputShape ?? [1, 3, 640, 640];
-            this.models.set(modelName, {
-                session,
-                labels,
-                inputShape,
-                kind: metadata.kind,
-            });
-            winston.info(`✅ Loaded ONNX model: ${modelName} (${metadata.kind})`);
+        winston.verbose(`${EMO} Loading ONNX model: ${modelName}`);
+        // Get model metadata and download
+        const metadata = await this.manager.loadModel(modelName);
+        // Build model path
+        const modelCacheDir = this.manager.getModelCacheDirForType('vision');
+        const modelDir = path.join(modelCacheDir, metadata.folder);
+        // Find the ONNX model file in the required files
+        const onnxFile = metadata.required.find((file) => file.endsWith('.onnx'));
+        if (!onnxFile) {
+            throw new TJBotError(`No ONNX file found in model requirements for: ${modelName}`);
         }
-        catch (error) {
-            throw new TJBotError(`Failed to load ONNX model ${modelName}`, { cause: error });
+        const modelPath = path.join(modelDir, onnxFile);
+        // Create ONNX session
+        const session = await ort.InferenceSession.create(modelPath);
+        // Load labels if available
+        let labels = [];
+        if (metadata.labelUrl && metadata.kind !== 'face-detection') {
+            labels = await this.loadLabels(modelName, metadata, modelDir);
         }
+        // Get input shape from metadata
+        const inputShape = metadata.inputShape ?? [1, 3, 640, 640];
+        this.models.set(modelName, {
+            session,
+            labels,
+            inputShape,
+            kind: metadata.kind,
+        });
+        winston.info(`${EMO} Loaded ONNX model: ${modelName} (${metadata.kind})`);
     }
     /**
      * Load label file for a model
      */
     async loadLabels(modelName, metadata, modelDir) {
+        winston.info(`${EMO} Loading labels for model: ${modelName}`);
         try {
             // Try common label file names based on model kind
             let labelFile;
@@ -123,9 +131,10 @@ export class ONNXVisionEngine extends VisionEngine {
                 }
             }
             if (!labelFile) {
-                winston.warn(`No label file found for model: ${modelName}`);
+                winston.warn(`${EMO} No label file found for model: ${modelName}`);
                 return [];
             }
+            winston.debug(`${EMO} Found label file for ${modelName}: ${labelFile}`);
             const content = fs.readFileSync(labelFile, 'utf8');
             // Parse YAML files for detection models
             if (labelFile.endsWith('.yaml') && metadata.kind === 'detection') {
@@ -181,6 +190,7 @@ export class ONNXVisionEngine extends VisionEngine {
     async getOrLoadModel(modelName) {
         let model = this.models.get(modelName);
         if (!model) {
+            winston.debug(`${EMO} model ${modelName} not yet loaded, loading now...`);
             await this.loadModel(modelName);
             model = this.models.get(modelName);
         }
@@ -189,21 +199,18 @@ export class ONNXVisionEngine extends VisionEngine {
         }
         return model;
     }
-    requireModelName(modelName, configKey) {
-        if (!modelName) {
-            throw new TJBotError(`ONNX vision engine missing required config field: ${configKey}`);
-        }
-        return modelName;
-    }
     /**
      * Detect objects in an image.
      */
     async detectObjects(image) {
-        const localConfig = this.getLocalConfig();
-        const detectionModelName = this.requireModelName(localConfig.objectDetectionModel, 'objectDetectionModel');
-        const confidenceThreshold = localConfig.objectDetectionConfidence ?? 0.8;
-        // Lazy load model if needed
-        const model = await this.getOrLoadModel(detectionModelName);
+        if (this.objectDetectionModel === undefined) {
+            throw new TJBotError('Object detection model is not configured for ONNX vision engine');
+        }
+        if (this.objectDetectionConfidence === undefined) {
+            throw new TJBotError('Object detection confidence threshold is not configured for ONNX vision engine');
+        }
+        winston.info(`${EMO} Running object detection with confidence threshold: ${this.objectDetectionConfidence}`);
+        const model = await this.getOrLoadModel(this.objectDetectionModel);
         try {
             // Preprocess image using model's expected input size
             const [, , height, width] = model.inputShape;
@@ -213,7 +220,7 @@ export class ONNXVisionEngine extends VisionEngine {
             feeds[model.session.inputNames[0]] = input;
             const results = await model.session.run(feeds);
             // Postprocess YOLO output
-            return this.postprocessDetection(results, model.labels, model.session.outputNames, confidenceThreshold);
+            return this.postprocessDetection(results, model.labels, model.session.outputNames, this.objectDetectionConfidence);
         }
         catch (error) {
             throw new TJBotError('Object detection failed', { cause: error });
@@ -222,13 +229,15 @@ export class ONNXVisionEngine extends VisionEngine {
     /**
      * Classify an image.
      */
-    async classifyImage(image, confidenceThreshold) {
-        const localConfig = this.getLocalConfig();
-        const classificationModelName = this.requireModelName(localConfig.imageClassificationModel, 'imageClassificationModel');
-        // Use provided threshold, fall back to config, then default to 0.8
-        const threshold = confidenceThreshold ?? localConfig.imageClassificationConfidence ?? 0.8;
-        // Lazy load model if needed
-        const model = await this.getOrLoadModel(classificationModelName);
+    async classifyImage(image) {
+        if (this.imageClassificationModel === undefined) {
+            throw new TJBotError('Image classification model is not configured for ONNX vision engine');
+        }
+        if (this.imageClassificationConfidence === undefined) {
+            throw new TJBotError('Image classification confidence threshold is not configured for ONNX vision engine');
+        }
+        winston.info(`${EMO} Running image classification with confidence threshold: ${this.imageClassificationConfidence}`);
+        const model = await this.getOrLoadModel(this.imageClassificationModel);
         try {
             // Preprocess image using model's expected input size
             const [, , height, width] = model.inputShape;
@@ -238,7 +247,7 @@ export class ONNXVisionEngine extends VisionEngine {
             feeds[model.session.inputNames[0]] = input;
             const results = await model.session.run(feeds);
             // Postprocess classification output
-            return this.postprocessClassification(results, model.labels, threshold, model.session.outputNames);
+            return this.postprocessClassification(results, model.labels, this.imageClassificationConfidence, model.session.outputNames);
         }
         catch (error) {
             throw new TJBotError('Image classification failed', { cause: error });
@@ -248,16 +257,18 @@ export class ONNXVisionEngine extends VisionEngine {
      * Detect faces in an image.
      */
     async detectFaces(image) {
-        const localConfig = this.getLocalConfig();
-        const faceDetectionModelName = this.requireModelName(localConfig.faceDetectionModel, 'faceDetectionModel');
-        const confidenceThreshold = localConfig.faceDetectionConfidence ?? 0.35;
-        winston.info(`👁️  Running face detection with confidence threshold: ${confidenceThreshold}`);
-        // Lazy load model if needed
-        const model = await this.getOrLoadModel(faceDetectionModelName);
+        if (this.faceDetectionModel === undefined) {
+            throw new TJBotError('Face detection model is not configured for ONNX vision engine');
+        }
+        if (this.faceDetectionConfidence === undefined) {
+            throw new TJBotError('Face detection confidence threshold is not configured for ONNX vision engine');
+        }
+        winston.info(`${EMO} Running face detection with confidence threshold: ${this.faceDetectionConfidence}`);
+        const model = await this.getOrLoadModel(this.faceDetectionModel);
         try {
             // Preprocess image using model's expected input size
             const [, , height, width] = model.inputShape;
-            const input = await this.preprocessFaceImage(image, [width, height], faceDetectionModelName);
+            const input = await this.preprocessFaceImage(image, [width, height], this.faceDetectionModel);
             // Run inference
             const feeds = {};
             feeds[model.session.inputNames[0]] = input;
@@ -266,7 +277,7 @@ export class ONNXVisionEngine extends VisionEngine {
             const outputTensor = results[model.session.outputNames[0]];
             winston.debug(`Output shape: [${outputTensor.dims.join(', ')}], size: ${outputTensor.size}`);
             // Postprocess face detection output
-            const metadata = this.postprocessFaceDetection(results, confidenceThreshold, [width, height]);
+            const metadata = this.postprocessFaceDetection(results, this.faceDetectionConfidence, [width, height]);
             return {
                 isFaceDetected: metadata.length > 0,
                 metadata,
@@ -424,13 +435,13 @@ export class ONNXVisionEngine extends VisionEngine {
             { stride: 16, scoreKey: '466', bboxKey: '469', kpsKey: '472' },
             { stride: 32, scoreKey: '486', bboxKey: '489', kpsKey: '492' },
         ];
-        winston.debug('Processing SCRFD-2.5G multi-scale output...');
+        winston.debug(`${EMO} Processing SCRFD-2.5G multi-scale output...`);
         for (const scale of scales) {
             const scoreTensor = results[scale.scoreKey];
             const bboxTensor = results[scale.bboxKey];
             const kpsTensor = results[scale.kpsKey];
             if (!scoreTensor || !bboxTensor) {
-                winston.warn(`Missing SCRFD tensors for stride ${scale.stride}`);
+                winston.warn(`${EMO} Missing SCRFD tensors for stride ${scale.stride}`);
                 continue;
             }
             const scores = scoreTensor.data;

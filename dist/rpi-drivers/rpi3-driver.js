@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 import winston from 'winston';
-import { Hardware } from '../utils/index.js';
-import { RPiBaseHardwareDriver } from './rpi-driver.js';
 import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
 import { PiGPIOServoController } from '../servo/index.js';
+import { Hardware } from '../utils/index.js';
+import { LogEmoji } from '../utils/logging.js';
+import { RPiBaseHardwareDriver } from './rpi-driver.js';
 class RPi3Driver extends RPiBaseHardwareDriver {
     commonAnodeLed;
     neopixelLed;
@@ -26,27 +27,23 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     servo;
     constructor() {
         super();
-        winston.debug('🥧 initializing RPi3 hardware driver');
         this.useGRBFormat = false;
     }
     setupLEDCommonAnode(config) {
         const redPin = config?.redPin ?? 19;
         const greenPin = config?.greenPin ?? 13;
         const bluePin = config?.bluePin ?? 12;
-        winston.verbose(`💡 initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`);
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
         this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
     }
     setupLEDNeopixel(config) {
         const pin = config?.gpioPin ?? 21;
-        winston.verbose(`💡 initializing ${Hardware.LED_NEOPIXEL} on pin ${pin}`);
         this.neopixelLed = new LEDNeopixel(pin);
         this.useGRBFormat = config?.useGRBFormat ?? false;
         this.initializedHardware.add(Hardware.LED_NEOPIXEL);
     }
     setupServo(config) {
         const pin = config.servoPin ?? 18;
-        winston.verbose(`🦾 initializing ${Hardware.SERVO} on PIN ${pin}`);
         this.servo = new PiGPIOServoController(pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
@@ -55,7 +52,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
             this.commonAnodeLed.render(rgbColor);
         }
         else {
-            winston.warn('attempted to render on an uninitialized Common Anode LED');
+            winston.warn(`${LogEmoji.LED} Attempted to render on an uninitialized Common Anode LED`);
         }
     }
     async renderLEDNeopixel(hexColor) {
@@ -73,7 +70,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
             }
         }
         else {
-            winston.warn('attempted to render on an uninitialized Neopixel LED');
+            winston.warn(`${LogEmoji.LED} Attempted to render on an uninitialized Neopixel LED`);
         }
     }
     renderServoPosition(position) {
@@ -81,14 +78,14 @@ class RPi3Driver extends RPiBaseHardwareDriver {
             this.servo.setPosition(position);
         }
         else {
-            winston.warn('attempted to render on an uninitialized servo');
+            winston.warn(`${LogEmoji.SERVO} Attempted to render on an uninitialized servo`);
         }
     }
     async listenForTranscript() {
         // Warn about performance on RPi3 when using local STT
         const backend = this.listenConfig.backend?.type ?? 'local';
         if (backend === 'local') {
-            winston.warn('⚠️  Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
+            winston.warn(`${LogEmoji.STT} Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
         }
         return super.listenForTranscript();
     }
@@ -96,7 +93,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
         // Warn about performance on RPi3 when using local TTS
         const backend = this.speakConfig.backend?.type ?? 'local';
         if (backend === 'local') {
-            winston.warn('⚠️  Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
+            winston.warn(`${LogEmoji.TTS} Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
         }
         return super.speak(message);
     }

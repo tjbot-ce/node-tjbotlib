@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { TTSEngine } from '../tts-engine.js';
 import type { TTSBackendIBMWatsonConfig } from '../../config/config-types.js';
+import { TTSEngine } from '../tts-engine.js';
 /**
  * IBM Watson Text-to-Speech Engine
  *
@@ -25,13 +25,11 @@ import type { TTSBackendIBMWatsonConfig } from '../../config/config-types.js';
  */
 export declare class IBMTTSEngine extends TTSEngine {
     private ttsService;
-    constructor(config?: TTSBackendIBMWatsonConfig);
     /**
      * Initialize the IBM Watson TTS service.
      * Creates a new TextToSpeechV1 instance.
      */
-    initialize(): Promise<void>;
-    private loadCredentials;
+    initialize(config?: TTSBackendIBMWatsonConfig): Promise<void>;
     /**
      * Synthesize text to WAV audio using IBM Watson TTS.
      * Voice is configured at engine initialization time via config.

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
-import type { STTBackendGoogleCloudConfig } from '../../config/config-types.js';
 /**
  * Google Cloud Speech-to-Text Engine
  *
@@ -24,9 +23,7 @@ import type { STTBackendGoogleCloudConfig } from '../../config/config-types.js';
  */
 export declare class GoogleCloudSTTEngine extends STTEngine {
     private client;
-    constructor(config?: STTBackendGoogleCloudConfig);
     initialize(): Promise<void>;
-    private resolveCredentialsPath;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
 }
 //# sourceMappingURL=google-cloud-stt.d.ts.map

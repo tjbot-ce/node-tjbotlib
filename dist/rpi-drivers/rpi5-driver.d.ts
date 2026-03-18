@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { ShineConfig, WaveConfig } from '../config/index.js';
 import { ServoPosition } from '../servo/index.js';
 import { RPiBaseHardwareDriver } from './rpi-driver.js';
-import { ShineConfig, WaveConfig } from '../config/index.js';
 declare class RPi5Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed;
     private neopixelLed;

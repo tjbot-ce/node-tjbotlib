@@ -17,6 +17,8 @@
 import SPI from 'pi-spi';
 import winston from 'winston';
 import { TJBotError } from '../utils/errors.js';
+import { LogEmoji } from '../utils/logging.js';
+const EMO = LogEmoji.LED;
 /**
  * LED controller for SPI-based NeoPixel LEDs (Raspberry Pi 5)
  * This is based on pi5neo.py:
@@ -33,6 +35,7 @@ export class LEDNeopixelSPI {
         this.spi = SPI.initialize(i);
         this.spi.clockSpeed(LEDNeopixelSPI.FREQ);
         this.useGRBFormat = useGRB;
+        winston.verbose(`${EMO} Initialized NeoPixel SPI LED on interface ${i} with GRB format: ${useGRB}`);
     }
     static bitMask(byte, index) {
         return (byte & (1 << (7 - index))) !== 0;
@@ -64,10 +67,8 @@ export class LEDNeopixelSPI {
      * @returns A promise that resolves when the SPI transfer completes.
      */
     async render(color) {
-        // Debug output for color value
-        winston.debug(`LEDNeopixelSPI.render called with color: ${color}`);
+        winston.verbose(`${EMO} Rendering LED with color: ${color}`);
         try {
-            winston.debug(`LEDNeopixelSPI.render typeof color: ${typeof color} value: ${color}`);
             const c = parseInt(color, 16);
             const r = (c & 0xff0000) >> 16;
             const g = (c & 0x00ff00) >> 8;
@@ -75,23 +76,23 @@ export class LEDNeopixelSPI {
             const bitstream = LEDNeopixelSPI.rgbToSpiBitstream(r, g, b, this.useGRBFormat);
             // Transfer data via SPI to update the LED
             // Wait for the transfer to complete before returning
-            winston.debug('LEDNeopixelSPI.render about to call spi.transfer');
+            winston.debug(`${EMO} LEDNeopixelSPI.render about to call spi.transfer`);
             await new Promise((resolve, reject) => {
                 this.spi.transfer(bitstream, (err) => {
                     if (err) {
-                        winston.error('SPI transfer error:', err);
+                        winston.error(`${EMO} SPI transfer error:`, err);
                         reject(new TJBotError('SPI transfer failed', { cause: err }));
                     }
                     else {
-                        winston.debug('LEDNeopixelSPI.render spi.transfer success');
+                        winston.debug(`${EMO} LEDNeopixelSPI.render spi.transfer success`);
                         resolve();
                     }
                 });
             });
-            winston.debug('LEDNeopixelSPI.render completed normally');
+            winston.debug(`${EMO} LEDNeopixelSPI.render completed normally`);
         }
         catch (e) {
-            winston.error('Exception in LEDNeopixelSPI.render:', e);
+            winston.error(`${EMO} Exception in LEDNeopixelSPI.render:`, e);
             // Print stack trace if available
             if (e instanceof Error && e.stack) {
                 winston.error(e.stack);
@@ -103,7 +104,7 @@ export class LEDNeopixelSPI {
      * Clean up resources
      */
     cleanup() {
-        // SPI cleanup is handled by the library
+        winston.debug(`${EMO} LEDNeopixelSPI cleanup (no-op)`);
     }
 }
 //# sourceMappingURL=led-neopixel-spi.js.map

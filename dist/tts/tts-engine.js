@@ -25,7 +25,6 @@ import { TJBotError } from '../utils/index.js';
 export class TTSEngine {
     config;
     constructor(config) {
-        // Uses global winston instance
         this.config = config ?? {};
     }
     /**
@@ -65,7 +64,7 @@ export async function createTTSEngine(speakConfig) {
             return new NoneTTSEngine();
         }
         if (backend === 'local') {
-            const module = await import('./backends/sherpa-onnx.js');
+            const module = await import('./backends/sherpa-onnx-tts.js');
             if (!module?.SherpaONNXTTSEngine) {
                 throw new TJBotError('TTS backend "local" is unavailable (missing SherpaONNXTTSEngine export).');
             }

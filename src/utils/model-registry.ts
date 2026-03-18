@@ -25,7 +25,9 @@ import { fileURLToPath } from 'url';
 import { promisify } from 'util';
 import winston from 'winston';
 import { TJBotError } from './errors.js';
+import { LogEmoji } from './logging.js';
 
+const EMO = LogEmoji.MODEL;
 const execFileAsync = promisify(execFile);
 
 /**
@@ -118,7 +120,7 @@ export class ModelRegistry {
      */
     private loadMetadata(yamlPath?: string): void {
         if (this.metadataLoaded) {
-            winston.debug('Model metadata already loaded');
+            winston.debug(`${EMO} loadMetadata() called but model metadata already loaded`);
             return;
         }
 
@@ -130,7 +132,7 @@ export class ModelRegistry {
                 yamlPath = path.join(__dirname, '..', 'config', 'model-registry.yaml');
             }
 
-            winston.debug(`Loading model metadata from: ${yamlPath}`);
+            winston.verbose(`${EMO} Loading model metadata from: ${yamlPath}`);
 
             const fileContents = fs.readFileSync(yamlPath, 'utf8');
             const data = yaml.load(fileContents) as ModelsYAML;
@@ -154,10 +156,10 @@ export class ModelRegistry {
             }
 
             this.metadataLoaded = true;
-            winston.debug(`Loaded metadata for ${this.registeredModels.size} models from YAML`);
+            winston.info(`${EMO} Loaded metadata for ${this.registeredModels.size} ML models`);
         } catch (error) {
-            winston.error('Failed to load model metadata:', error);
-            throw new TJBotError('Failed to load model metadata', { cause: error as Error });
+            winston.error(`${EMO} Failed to load ML model metadata:`, error);
+            throw new TJBotError('Failed to load ML model metadata', { cause: error as Error });
         }
     }
 
@@ -193,7 +195,7 @@ export class ModelRegistry {
      */
     registerModel(model: BaseModelMetadata): void {
         this.registeredModels.set(model.key, model);
-        winston.debug(`Registered model: ${model.key} (type: ${model.type})`);
+        winston.debug(`${EMO} registered model: ${model.key} (type: ${model.type})`);
     }
 
     /**
@@ -281,7 +283,7 @@ export class ModelRegistry {
             // Convert file:// URL to path
             const sourcePath = sourceUrl.startsWith('file://') ? new URL(sourceUrl).pathname : sourceUrl;
 
-            winston.info(`📦 Copying file from ${sourcePath}`);
+            winston.debug(`${EMO} copying file from ${sourcePath} to ${destination}`);
 
             // Get file size for progress bar
             const stats = await fs.promises.stat(sourcePath);
@@ -320,7 +322,7 @@ export class ModelRegistry {
                     if (totalSize > 0) {
                         progressBar.stop();
                     }
-                    winston.info('✅ File copy complete');
+                    winston.debug(`${EMO} file copy complete`);
                     resolve();
                 });
                 writer.on('error', (err) => {
@@ -337,7 +339,7 @@ export class ModelRegistry {
                 });
             });
         } catch (err) {
-            winston.error('❌ File copy failed:', err);
+            winston.error(`${EMO} File copy failed:`, err);
             throw new TJBotError(`Failed to copy file from ${sourceUrl}`, {
                 cause: err as Error,
             });
@@ -362,11 +364,13 @@ export class ModelRegistry {
             try {
                 if (attempt > 0) {
                     const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
-                    winston.info(`⏱️  Retrying download in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+                    winston.info(
+                        `${EMO} Retrying download in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`
+                    );
                     await new Promise((resolve) => setTimeout(resolve, delay));
                 }
 
-                winston.info(`📦 Downloading from ${url} (attempt ${attempt + 1}/${maxRetries})`);
+                winston.info(`${EMO} Downloading from ${url} (attempt ${attempt + 1}/${maxRetries})`);
 
                 const response = await fetch(url);
                 if (!response.ok) {
@@ -405,7 +409,7 @@ export class ModelRegistry {
                         if (totalSize > 0) {
                             progressBar.stop();
                         }
-                        winston.info('✅ Download complete');
+                        winston.info(`${EMO} Download complete`);
                         resolve();
                     });
                     writer.on('error', (err) => {
@@ -426,13 +430,13 @@ export class ModelRegistry {
                 return;
             } catch (err) {
                 lastError = err as Error;
-                winston.warn(`❌ Download failed (attempt ${attempt + 1}/${maxRetries}):`, err);
+                winston.warn(`${EMO} Download failed (attempt ${attempt + 1}/${maxRetries}):`, err);
                 attempt++;
             }
         }
 
         // All retries exhausted
-        winston.error(`❌ Download failed after ${maxRetries} attempts`);
+        winston.error(`${EMO} Download failed after ${maxRetries} attempts`);
         throw new TJBotError(`Failed to download file after ${maxRetries} attempts`, {
             cause: lastError || new Error('Unknown error'),
         });
@@ -442,9 +446,9 @@ export class ModelRegistry {
      * Extract tar.bz2 archive using system tar command
      */
     private async extractTarBz2(archivePath: string, destinationDir: string): Promise<void> {
-        winston.info('📦 Extracting archive...');
+        winston.info(`${EMO} Extracting archive...`);
         await execFileAsync('tar', ['-xjf', archivePath, '-C', destinationDir]);
-        winston.info('✅ Extraction complete');
+        winston.info(`${EMO} Extraction complete`);
     }
 
     /**
@@ -501,7 +505,7 @@ export class ModelRegistry {
             throw new TJBotError(`Model "${modelKey}" download incomplete: required files missing`);
         }
 
-        winston.info(`✅ Model "${modelKey}" downloaded and extracted to ${modelPath}`);
+        winston.info(`${EMO} Model "${modelKey}" downloaded and extracted to ${modelPath}`);
         return;
     }
 }

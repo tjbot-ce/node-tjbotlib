@@ -13,30 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import winston from 'winston';
+import { LogEmoji } from '../utils/logging.js';
 import { createVisionEngine } from './vision-engine.js';
+const EMO = LogEmoji.VISION;
 export class VisionController {
     visionEngine;
     visionConfig;
-    constructor(visionConfig) {
-        this.visionConfig = visionConfig;
-    }
-    /**
-     * Ensure the Vision engine is initialized (lazy init).
-     */
-    async _initializeVisionEngineIfNeeded() {
-        if (!this.visionEngine) {
-            this.visionEngine = await createVisionEngine(this.visionConfig);
-            await this.visionEngine.initialize();
-        }
+    async initialize(config) {
+        this.visionConfig = config;
+        this.visionEngine = await createVisionEngine(config);
+        await this.visionEngine.initialize();
     }
     /**
      * Detect objects in an image using the configured Vision engine.
      * @param image Image buffer or file path
      */
     async detectObjects(image) {
-        await this._initializeVisionEngineIfNeeded();
-        if (!this.visionEngine)
-            throw new Error('Vision engine is not initialized.');
+        if (this.visionEngine === undefined) {
+            throw new Error('Vision engine not initialized. Call initialize() before detecting objects.');
+        }
+        winston.verbose(`${EMO} Detecting objects in image`);
         return this.visionEngine.detectObjects(image);
     }
     /**
@@ -45,9 +42,10 @@ export class VisionController {
      * @param confidenceThreshold Optional confidence threshold (default 0.5). Only return labels above this threshold.
      */
     async classifyImage(image, confidenceThreshold) {
-        await this._initializeVisionEngineIfNeeded();
-        if (!this.visionEngine)
-            throw new Error('Vision engine is not initialized.');
+        if (this.visionEngine === undefined) {
+            throw new Error('Vision engine not initialized. Call initialize() before classifying images.');
+        }
+        winston.verbose(`${EMO} Classifying image`);
         return this.visionEngine.classifyImage(image, confidenceThreshold);
     }
     /**
@@ -55,9 +53,10 @@ export class VisionController {
      * @param image Image buffer or file path
      */
     async detectFaces(image) {
-        await this._initializeVisionEngineIfNeeded();
-        if (!this.visionEngine)
-            throw new Error('Vision engine is not initialized.');
+        if (this.visionEngine === undefined) {
+            throw new Error('Vision engine not initialized. Call initialize() before detecting faces.');
+        }
+        winston.verbose(`${EMO} Detecting faces inimage`);
         return this.visionEngine.detectFaces(image);
     }
     /**
@@ -66,22 +65,18 @@ export class VisionController {
      * @param image Image buffer or file path
      */
     async describeImage(image) {
-        await this._initializeVisionEngineIfNeeded();
-        if (!this.visionEngine)
-            throw new Error('Vision engine is not initialized.');
+        if (this.visionEngine === undefined) {
+            throw new Error('Vision engine not initialized. Call initialize() before describing images.');
+        }
+        winston.verbose(`${EMO} Describing image`);
         return this.visionEngine.describeImage(image);
-    }
-    /**
-     * Eagerly initialize the Vision engine.
-     */
-    async ensureEngineInitialized() {
-        await this._initializeVisionEngineIfNeeded();
     }
     /**
      * Clean up Vision resources.
      */
     async cleanup() {
         if (this.visionEngine) {
+            winston.debug(`${EMO} VisionController cleanup`);
             await this.visionEngine.cleanup?.();
             this.visionEngine = undefined;
         }

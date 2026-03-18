@@ -33,6 +33,9 @@ import {
     type WaveConfig,
 } from './config-types.js';
 import { TJBotError, ModelRegistry } from '../utils/index.js';
+import { LogEmoji } from '../utils/logging.js';
+
+const EMO = LogEmoji.CONFIG;
 
 /**
  * TJBotConfig manages loading and parsing TJBot configuration from TOML files.
@@ -92,7 +95,7 @@ export class TJBotConfig {
             const registry = ModelRegistry.getInstance();
             for (const model of this.config.models) {
                 registry.registerModel(model as never);
-                winston.debug(`Registered custom model: ${model.key}`);
+                winston.verbose(`${EMO} Registered custom ML model: ${model.key}`);
             }
         }
 
@@ -109,6 +112,10 @@ export class TJBotConfig {
         this.speak = this.config.speak ?? {};
         this.wave = this.config.wave ?? {};
         this.recipe = this.config.recipe ?? {};
+
+        winston.verbose(`${EMO} TJBot configuration loaded successfully`);
+        winston.silly(`${EMO} TJBot configuration:
+            ${JSON.stringify(this.config, null, 2)}`);
     }
 
     /**
@@ -117,7 +124,7 @@ export class TJBotConfig {
      */
     private loadInternalConfig(configFile: string): TJBotConfigSchema {
         const configPath = resolve(configFile, import.meta.url);
-        winston.debug(`loading default TJBot configuration TOML from ${configPath}`);
+        winston.debug(`${EMO} loading default TJBot configuration TOML from ${configPath}`);
 
         let config: TOML.JsonMap;
         try {
@@ -140,14 +147,14 @@ export class TJBotConfig {
 
         try {
             if (fs.existsSync(homeConfigPath) && fs.lstatSync(homeConfigPath).isFile()) {
-                winston.debug(`loading user TJBot configuration from ${homeConfigPath}`);
+                winston.debug(`${EMO} loading user TJBot configuration from ${homeConfigPath}`);
                 const configData = fs.readFileSync(homeConfigPath, 'utf8');
                 let config = TOML.parse(configData);
                 // Clean up the config to remove any Symbol keys
                 config = this.cleanConfig(config) as TOML.JsonMap;
                 return config as TJBotConfigSchema;
             } else {
-                winston.debug(`user configuration file ${homeConfigPath} not found, skipping`);
+                winston.debug(`${EMO} user configuration file ${homeConfigPath} not found, skipping`);
                 return null;
             }
         } catch (err) {
@@ -167,14 +174,14 @@ export class TJBotConfig {
 
         try {
             if (fs.existsSync(absoluteRecipeConfigPath) && fs.lstatSync(absoluteRecipeConfigPath).isFile()) {
-                winston.debug(`loading recipe configuration from ${absoluteRecipeConfigPath}`);
+                winston.debug(`${EMO} loading recipe configuration from ${absoluteRecipeConfigPath}`);
                 const configData = fs.readFileSync(absoluteRecipeConfigPath, 'utf8');
                 let config = TOML.parse(configData);
                 // Clean up the config to remove any Symbol keys
                 config = this.cleanConfig(config) as TOML.JsonMap;
                 return config as Record<string, unknown>;
             } else {
-                winston.debug(`recipe configuration file ${absoluteRecipeConfigPath} not found, skipping`);
+                winston.debug(`${EMO} recipe configuration file ${absoluteRecipeConfigPath} not found, skipping`);
                 return null;
             }
         } catch (err) {
@@ -258,7 +265,7 @@ export class TJBotConfig {
                 } else {
                     // Warn about non-string keys being removed
                     winston.warn(
-                        `Removing non-string configuration key from TOML: ${typeof key === 'symbol' ? 'Symbol' : typeof key}`
+                        `${EMO} Removing non-string configuration key from TOML: ${typeof key === 'symbol' ? 'Symbol' : typeof key}`
                     );
                 }
             }

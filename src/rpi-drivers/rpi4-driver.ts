@@ -16,13 +16,13 @@
  */
 
 import winston from 'winston';
+import { LogEmoji } from '../utils/logging.js';
 
-import { Hardware } from '../utils/index.js';
-import { ServoPosition } from '../servo/index.js';
-import { RPiBaseHardwareDriver } from './rpi-driver.js';
-import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
-import { PiGPIOServoController } from '../servo/index.js';
 import { ShineConfig, WaveConfig } from '../config/index.js';
+import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
+import { PiGPIOServoController, ServoPosition } from '../servo/index.js';
+import { Hardware } from '../utils/index.js';
+import { RPiBaseHardwareDriver } from './rpi-driver.js';
 
 class RPi4Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed: LEDCommonAnode | undefined;
@@ -32,7 +32,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
 
     constructor() {
         super();
-        winston.debug('🥧 initializing RPi4 hardware driver');
+        winston.debug(`${LogEmoji.RPI} initializing RPi4 hardware driver`);
         this.useGRBFormat = false;
     }
 
@@ -41,7 +41,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
         const greenPin: number = config?.greenPin ?? 13;
         const bluePin: number = config?.bluePin ?? 12;
         winston.verbose(
-            `💡 initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
+            `${LogEmoji.LED} initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
         );
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
         this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
@@ -49,7 +49,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
 
     setupLEDNeopixel(config: ShineConfig['neopixel']): void {
         const pin: number = config?.gpioPin ?? 21;
-        winston.verbose(`💡 initializing ${Hardware.LED_NEOPIXEL} on pin ${pin}`);
+        winston.verbose(`${LogEmoji.LED} initializing ${Hardware.LED_NEOPIXEL} on pin ${pin}`);
         this.neopixelLed = new LEDNeopixel(pin);
         this.useGRBFormat = config?.useGRBFormat ?? false;
         this.initializedHardware.add(Hardware.LED_NEOPIXEL);
@@ -57,7 +57,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
 
     setupServo(config: WaveConfig): void {
         const pin: number = config.servoPin ?? 18;
-        winston.verbose(`🦾 initializing ${Hardware.SERVO} on PIN ${pin}`);
+        winston.verbose(`${LogEmoji.SERVO} initializing ${Hardware.SERVO} on PIN ${pin}`);
         this.servo = new PiGPIOServoController(pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
@@ -66,7 +66,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
         if (this.commonAnodeLed) {
             this.commonAnodeLed.render(rgbColor);
         } else {
-            winston.warn('attempted to render on an uninitialized Common Anode LED');
+            winston.warn(`${LogEmoji.LED} attempted to render on an uninitialized Common Anode LED`);
         }
     }
 
@@ -84,7 +84,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
                 this.neopixelLed.render(rgb);
             }
         } else {
-            winston.warn('attempted to render on an uninitialized Neopixel LED');
+            winston.warn(`${LogEmoji.LED} attempted to render on an uninitialized Neopixel LED`);
         }
     }
 
@@ -92,7 +92,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
         if (this.servo) {
             this.servo.setPosition(position);
         } else {
-            winston.warn('attempted to render on an uninitialized servo');
+            winston.warn(`${LogEmoji.SERVO} attempted to render on an uninitialized servo`);
         }
     }
 }

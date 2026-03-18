@@ -15,30 +15,31 @@
  * limitations under the License.
  */
 import winston from 'winston';
-import { Hardware } from '../utils/index.js';
-import { RPiBaseHardwareDriver } from './rpi-driver.js';
+import { LogEmoji } from '../utils/logging.js';
 import { LEDCommonAnode, LEDNeopixelSPI } from '../led/index.js';
 import { LGPIOServoController } from '../servo/index.js';
+import { Hardware } from '../utils/index.js';
+import { RPiBaseHardwareDriver } from './rpi-driver.js';
 class RPi5Driver extends RPiBaseHardwareDriver {
     commonAnodeLed;
     neopixelLed;
     servo;
     constructor() {
         super();
-        winston.debug('🥧 initializing RPi5 hardware driver');
+        winston.debug(`${LogEmoji.RPI} initializing RPi5 hardware driver`);
     }
     setupLEDCommonAnode(config) {
         const redPin = config?.redPin ?? 19;
         const greenPin = config?.greenPin ?? 13;
         const bluePin = config?.bluePin ?? 12;
-        winston.verbose(`💡 initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`);
+        winston.verbose(`${LogEmoji.LED} initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`);
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
         this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
     }
     setupLEDNeopixel(config) {
         const spiInterface = config?.spiInterface ?? '/dev/spidev0.0';
         const useGRBFormat = config?.useGRBFormat ?? false;
-        winston.verbose(`💡 initializing ${Hardware.LED_NEOPIXEL} on SPI ${spiInterface}`);
+        winston.verbose(`${LogEmoji.LED} initializing ${Hardware.LED_NEOPIXEL} on SPI ${spiInterface}`);
         this.neopixelLed = new LEDNeopixelSPI(spiInterface, useGRBFormat);
         this.initializedHardware.add(Hardware.LED_NEOPIXEL);
     }
@@ -53,7 +54,7 @@ class RPi5Driver extends RPiBaseHardwareDriver {
             this.commonAnodeLed.render(rgbColor);
         }
         else {
-            winston.warn('attempted to render on an uninitialized Common Anode LED');
+            winston.warn(`${LogEmoji.LED} attempted to render on an uninitialized Common Anode LED`);
         }
     }
     async renderLEDNeopixel(hexColor) {
@@ -61,7 +62,7 @@ class RPi5Driver extends RPiBaseHardwareDriver {
             await this.neopixelLed.render(hexColor);
         }
         else {
-            winston.warn('attempted to render on an uninitialized Neopixel LED');
+            winston.warn(`${LogEmoji.LED} attempted to render on an uninitialized Neopixel LED`);
         }
     }
     renderServoPosition(position) {
@@ -70,11 +71,11 @@ class RPi5Driver extends RPiBaseHardwareDriver {
             // ServoPosition uses pigpio servo pulse format: 500-2500 microseconds
             // LGPIOServoController expects pulse width: 0.5-2.5 milliseconds
             const pulseMs = position / 1000;
-            winston.verbose(`setting servo position to ${position} μs (${pulseMs} ms)`);
+            winston.verbose(`${LogEmoji.SERVO} setting servo position to ${position} μs (${pulseMs} ms)`);
             this.servo.setPulseWidth(pulseMs);
         }
         else {
-            winston.warn('attempted to render on an uninitialized servo');
+            winston.warn(`${LogEmoji.SERVO} attempted to render on an uninitialized servo`);
         }
     }
 }

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 import { Transform } from 'stream';
 import { CameraController } from '../camera/index.js';
 import { ListenConfig, SeeConfig, ShineConfig, SpeakConfig, WaveConfig } from '../config/index.js';
@@ -24,7 +23,7 @@ import { SpeakerController } from '../speaker/index.js';
 import { STTController } from '../stt/stt.js';
 import { TTSController } from '../tts/tts.js';
 import { Capability, Hardware } from '../utils/index.js';
-import { ImageClassificationResult, ObjectDetectionResult, FaceDetectionMetadata, ImageDescriptionResult } from '../vision/index.js';
+import { FaceDetectionMetadata, ImageClassificationResult, ImageDescriptionResult, ObjectDetectionResult } from '../vision/index.js';
 import { VisionController } from '../vision/vision.js';
 export declare abstract class RPiHardwareDriver {
     abstract getHardware(): Set<Hardware>;
@@ -45,7 +44,6 @@ export declare abstract class RPiHardwareDriver {
     abstract resumeMic(): void;
     abstract stopMic(): void;
     abstract getMicInputStream(): Transform;
-    abstract connectMicStreamToSTTStream(sttStream: RecognizeStream): RecognizeStream;
     abstract listenForTranscript(options?: {
         onPartialResult?: (text: string) => void;
         onFinalResult?: (text: string) => void;
@@ -85,12 +83,15 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     setupCamera(config: SeeConfig): void;
     setupMicrophone(config: ListenConfig): void;
     setupSpeaker(config: SpeakConfig): void;
+    cleanup(): Promise<void>;
+    initializeSTTEngine(): Promise<void>;
+    initializeTTSEngine(): Promise<void>;
+    initializeVisionEngine(): Promise<void>;
     startMic(): void;
     pauseMic(): void;
     resumeMic(): void;
     stopMic(): void;
     getMicInputStream(): Transform;
-    connectMicStreamToSTTStream(sttStream: RecognizeStream): RecognizeStream;
     listenForTranscript(options?: {
         onPartialResult?: (text: string) => void;
         onFinalResult?: (text: string) => void;
@@ -108,9 +109,5 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     renderLED(hexColor: string): Promise<void>;
     playAudio(audioPath: string): Promise<void>;
     speak(message: string): Promise<void>;
-    cleanup(): Promise<void>;
-    initializeSTTEngine(): Promise<void>;
-    initializeTTSEngine(): Promise<void>;
-    initializeVisionEngine(): Promise<void>;
 }
 //# sourceMappingURL=rpi-driver.d.ts.map

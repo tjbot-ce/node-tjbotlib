@@ -16,7 +16,10 @@
  */
 
 import { createRequire } from 'module';
+import winston from 'winston';
+import { LogEmoji } from '../utils/logging.js';
 
+const EMO = LogEmoji.LED;
 const require = createRequire(import.meta.url);
 
 interface PigpioPin {
@@ -51,6 +54,8 @@ export class LEDCommonAnode {
         this.redPin = new Gpio(red, { mode: Gpio.OUTPUT });
         this.greenPin = new Gpio(green, { mode: Gpio.OUTPUT });
         this.bluePin = new Gpio(blue, { mode: Gpio.OUTPUT });
+
+        winston.verbose(`${EMO} Initialized LEDCommonAnode on pins R:${red} G:${green} B:${blue}`);
     }
 
     /**
@@ -59,6 +64,9 @@ export class LEDCommonAnode {
      * @param rgbColor RGB color as [red, green, blue] where each is 0-255
      */
     render(rgbColor: [number, number, number]): void {
+        winston.debug(
+            `${EMO} rendering Common Anode LED with color RGB(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`
+        );
         this.redPin.pwmWrite(rgbColor[0] === null ? 255 : 255 - rgbColor[0]);
         this.greenPin.pwmWrite(rgbColor[1] === null ? 255 : 255 - rgbColor[1]);
         this.bluePin.pwmWrite(rgbColor[2] === null ? 255 : 255 - rgbColor[2]);
@@ -68,6 +76,7 @@ export class LEDCommonAnode {
      * Clean up resources
      */
     cleanup(): void {
+        winston.debug(`${EMO} LEDCommonAnode cleanup`);
         this.redPin.digitalWrite(0);
         this.greenPin.digitalWrite(0);
         this.bluePin.digitalWrite(0);

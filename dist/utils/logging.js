@@ -14,6 +14,23 @@
  * limitations under the License.
  */
 import winston from 'winston';
+export var LogEmoji;
+(function (LogEmoji) {
+    LogEmoji["CAMERA"] = "\uD83D\uDCF7";
+    LogEmoji["COLOR"] = "\uD83C\uDFA8";
+    LogEmoji["CONFIG"] = "\u2699\uFE0F";
+    LogEmoji["GENERAL"] = "\uD83E\uDD16";
+    LogEmoji["HARDWARE"] = "\uD83D\uDD27";
+    LogEmoji["LED"] = "\uD83D\uDCA1";
+    LogEmoji["MIC"] = "\uD83C\uDFA4";
+    LogEmoji["MODEL"] = "\uD83D\uDCE6";
+    LogEmoji["RPI"] = "\uD83C\uDF53";
+    LogEmoji["SERVO"] = "\uD83E\uDDBE";
+    LogEmoji["SPEAKER"] = "\uD83D\uDD08";
+    LogEmoji["STT"] = "\uD83E\uDDBB";
+    LogEmoji["TTS"] = "\uD83D\uDCAC";
+    LogEmoji["VISION"] = "\uD83D\uDC41\uFE0F";
+})(LogEmoji || (LogEmoji = {}));
 let winstonInitialized = false;
 const prettyErrorFormat = winston.format.printf(((info) => {
     let message = `${info.level}: ${info.message}`;

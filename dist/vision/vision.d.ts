@@ -13,16 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import type { SeeConfig } from '../config/config-types.js';
 import { type VisionEngine } from './vision-engine.js';
-import type { SeeBackendConfig } from '../config/config-types.js';
 export declare class VisionController {
     visionEngine?: VisionEngine;
-    visionConfig: SeeBackendConfig;
-    constructor(visionConfig: SeeBackendConfig);
-    /**
-     * Ensure the Vision engine is initialized (lazy init).
-     */
-    private _initializeVisionEngineIfNeeded;
+    visionConfig?: SeeConfig;
+    initialize(config: SeeConfig): Promise<void>;
     /**
      * Detect objects in an image using the configured Vision engine.
      * @param image Image buffer or file path
@@ -45,10 +41,6 @@ export declare class VisionController {
      * @param image Image buffer or file path
      */
     describeImage(image: Buffer | string): Promise<import("./vision-engine.js").ImageDescriptionResult>;
-    /**
-     * Eagerly initialize the Vision engine.
-     */
-    ensureEngineInitialized(): Promise<void>;
     /**
      * Clean up Vision resources.
      */

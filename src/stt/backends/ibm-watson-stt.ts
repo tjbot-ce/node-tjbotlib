@@ -15,16 +15,17 @@
  * limitations under the License.
  */
 
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 import SpeechToTextV1 from 'ibm-watson/speech-to-text/v1.js';
 import winston from 'winston';
-import { STTEngine, STTRequestOptions } from '../stt-engine.js';
-import { ListenConfig } from '../../config/index.js';
-import { TJBotError } from '../../utils/index.js';
 import type { STTBackendIBMWatsonConfig } from '../../config/config-types.js';
+import { ListenConfig } from '../../config/index.js';
+import { loadCredentials } from '../../utils/backends/ibm-watson.js';
+import { TJBotError } from '../../utils/index.js';
+import { LogEmoji } from '../../utils/logging.js';
+import { STTEngine, STTRequestOptions } from '../stt-engine.js';
+
+const EMO = LogEmoji.STT;
 
 /**
  * IBM Watson Speech-to-Text Engine
@@ -36,68 +37,15 @@ import type { STTBackendIBMWatsonConfig } from '../../config/config-types.js';
 export class IBMWatsonSTTEngine extends STTEngine {
     private sttService: SpeechToTextV1 | undefined;
 
-    constructor(config?: STTBackendIBMWatsonConfig) {
-        super(config);
-    }
-
     async initialize(): Promise<void> {
-        try {
-            const config = this.config as STTBackendIBMWatsonConfig | undefined;
-            const credentialsPath = config?.credentialsPath;
-            // Load IBM credentials from file
-            this.loadCredentials(credentialsPath);
-            this.sttService = new SpeechToTextV1({});
-            winston.debug('🗣️ IBM Watson STT engine initialized');
-        } catch (err) {
-            winston.error('Failed to initialize IBM Watson STT:', err);
-            throw err;
-        }
-    }
+        const config = this.config as STTBackendIBMWatsonConfig;
+        const credentialsPath = config?.credentialsPath;
+        loadCredentials(credentialsPath);
 
-    private loadCredentials(credentialsPath?: string): void {
-        let resolvedPath: string | undefined = credentialsPath;
-
-        // If no path provided, check default locations in order
-        if (!resolvedPath) {
-            // 1. Check CWD
-            const cwdPath = path.join(process.cwd(), 'ibm-credentials.env');
-            if (fs.existsSync(cwdPath)) {
-                resolvedPath = cwdPath;
-            } else {
-                // 2. Check ~/.tjbot/ibm-credentials.env
-                const homePath = path.join(os.homedir(), '.tjbot', 'ibm-credentials.env');
-                if (fs.existsSync(homePath)) {
-                    resolvedPath = homePath;
-                }
-            }
-        }
-
-        // If path is specified (either provided or found), load credentials
-        if (resolvedPath) {
-            try {
-                if (!fs.existsSync(resolvedPath)) {
-                    throw new TJBotError(`IBM credentials file not found at: ${resolvedPath}`);
-                }
-                const credentialsContent = fs.readFileSync(resolvedPath, 'utf-8');
-                credentialsContent.split('\n').forEach((line) => {
-                    line = line.trim();
-                    if (line && !line.startsWith('#')) {
-                        const [key, ...valueParts] = line.split('=');
-                        if (key) {
-                            process.env[key.trim()] = valueParts.join('=').trim();
-                        }
-                    }
-                });
-                winston.debug(`🗣️ Loaded IBM credentials from: ${resolvedPath}`);
-            } catch (err) {
-                winston.error(`Failed to load IBM credentials from ${resolvedPath}:`, err);
-                throw err;
-            }
-        } else {
-            throw new TJBotError(
-                'IBM Watson STT credentials not found. Place credentials at: ./ibm-credentials.env or ~/.tjbot/ibm-credentials.env'
-            );
-        }
+        this.sttService = new SpeechToTextV1({});
+        winston.info(`${EMO} IBM Watson STT engine initialized`);
+        winston.debug(`${EMO} Initialized IBMWatsonSTTEngine with config:
+            credentialsPath: ${credentialsPath}`);
     }
 
     async transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string> {
@@ -129,7 +77,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
             backgroundAudioSuppression,
         };
 
-        winston.debug(`🎤 recognizeUsingWebSocket params: ${JSON.stringify(params)}`);
+        winston.silly(`${EMO} IBM Watson STT params:`, JSON.stringify(params, null, 2));
 
         const recognizeStream: RecognizeStream = this.sttService.recognizeUsingWebSocket(params) as RecognizeStream;
         recognizeStream.setEncoding('utf8');
@@ -139,11 +87,13 @@ export class IBMWatsonSTTEngine extends STTEngine {
 
         return new Promise<string>((resolve, reject) => {
             const handleData = (data: string) => {
+                winston.debug(`${EMO} IBM Watson STT recognized: ${data.trim()}`);
                 cleanup();
                 resolve(data.trim());
             };
 
             const handleError = (err: Error) => {
+                winston.error(`${EMO} IBM Watson STT stream error:`, err);
                 cleanup();
                 reject(err);
             };
@@ -154,7 +104,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
                 try {
                     this.ensureStream(micStream).unpipe(recognizeStream);
                 } catch (err) {
-                    winston.debug('🎤 mic unpipe failed (likely already closed)', err as Error);
+                    winston.debug(`${EMO} mic unpipe failed (likely already closed)`, err as Error);
                 }
                 if (typeof recognizeStream.destroy === 'function') {
                     recognizeStream.destroy();

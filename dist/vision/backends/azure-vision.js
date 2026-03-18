@@ -16,24 +16,29 @@
 import fs from 'fs';
 import fetch from 'node-fetch';
 import { VisionEngine, } from '../vision-engine.js';
+import { TJBotError } from '../../utils/index.js';
+import winston from 'winston';
+import { LogEmoji } from '../../utils/logging.js';
+const EMO = LogEmoji.VISION;
 export class AzureVisionEngine extends VisionEngine {
     apiKey;
     url;
-    constructor(config) {
-        super(config ?? {});
-        const configObj = config ?? {};
-        this.apiKey = typeof configObj.apiKey === 'string' ? configObj.apiKey : undefined;
-        this.url =
-            typeof configObj.url === 'string'
-                ? configObj.url
-                : 'https://<region>.api.cognitive.microsoft.com/vision/v3.2/analyze';
-    }
-    async initialize() {
-        // No-op for now; could validate API key or endpoint
+    async initialize(config) {
+        this.apiKey = config?.apiKey;
+        this.url = config?.url;
+        winston.info(`${EMO} Azure Vision engine initialized`);
+        winston.debug(`${EMO} Initialized AzureVisionEngine with config:
+            apiKey: ${this.apiKey ? '***' : 'not set'},
+            url: ${this.url ? this.url : 'not set'}`);
     }
     async detectObjects(image) {
-        if (!this.apiKey)
-            throw new Error('Azure Computer Vision API key not configured');
+        if (!this.apiKey) {
+            throw new TJBotError('Azure Vision API key not configured');
+        }
+        if (!this.url) {
+            throw new TJBotError('Azure Vision API URL not configured');
+        }
+        winston.verbose(`${EMO} Detecting objects in image with Azure Vision API`);
         // Prepare image buffer
         let imgBuf;
         if (typeof image === 'string') {
@@ -52,10 +57,11 @@ export class AzureVisionEngine extends VisionEngine {
             },
             body: imgBuf,
         });
-        if (!res.ok)
-            throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
-        const data = (await res.json());
+        if (!res.ok) {
+            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
+        }
         // Parse objects from response
+        const data = (await res.json());
         const results = [];
         if (data.objects) {
             for (const obj of data.objects) {
@@ -69,8 +75,13 @@ export class AzureVisionEngine extends VisionEngine {
         return results;
     }
     async classifyImage(image, confidenceThreshold = 0.5) {
-        if (!this.apiKey)
-            throw new Error('Azure Computer Vision API key not configured');
+        if (!this.apiKey) {
+            throw new TJBotError('Azure Vision API key not configured');
+        }
+        if (!this.url) {
+            throw new TJBotError('Azure Vision API URL not configured');
+        }
+        winston.verbose(`${EMO} Classifying image with Azure Vision API`);
         // Prepare image buffer
         let imgBuf;
         if (typeof image === 'string') {
@@ -89,10 +100,11 @@ export class AzureVisionEngine extends VisionEngine {
             },
             body: imgBuf,
         });
-        if (!res.ok)
-            throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
-        const data = (await res.json());
+        if (!res.ok) {
+            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
+        }
         // Parse tags from response
+        const data = (await res.json());
         const results = [];
         if (data.tags) {
             for (const tag of data.tags) {
@@ -109,8 +121,13 @@ export class AzureVisionEngine extends VisionEngine {
         return results;
     }
     async detectFaces(image) {
-        if (!this.apiKey)
-            throw new Error('Azure Computer Vision API key not configured');
+        if (!this.apiKey) {
+            throw new TJBotError('Azure Vision API key not configured');
+        }
+        if (!this.url) {
+            throw new TJBotError('Azure Vision API URL not configured');
+        }
+        winston.verbose(`${EMO} Detecting faces in image with Azure Vision API`);
         let imgBuf;
         if (typeof image === 'string') {
             imgBuf = fs.readFileSync(image);
@@ -128,8 +145,12 @@ export class AzureVisionEngine extends VisionEngine {
             },
             body: imgBuf,
         });
-        if (!res.ok)
-            throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
+        if (!res.ok) {
+            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
+        }
+        // Parse faces from response
+        // FIXME: Figure out what data type is returned by the Azure Face API and replace 'any' with the correct type
+        // const data = (await res.json()) as AzureVisionAPIResponse;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json());
         const metadata = [];
@@ -209,8 +230,13 @@ export class AzureVisionEngine extends VisionEngine {
         };
     }
     async describeImage(image) {
-        if (!this.apiKey)
-            throw new Error('Azure Computer Vision API key not configured');
+        if (!this.apiKey) {
+            throw new TJBotError('Azure Vision API key not configured');
+        }
+        if (!this.url) {
+            throw new TJBotError('Azure Vision API URL not configured');
+        }
+        winston.verbose(`${EMO} Describing image with Azure Vision API`);
         let imgBuf;
         if (typeof image === 'string') {
             imgBuf = fs.readFileSync(image);
@@ -228,8 +254,9 @@ export class AzureVisionEngine extends VisionEngine {
             },
             body: imgBuf,
         });
-        if (!res.ok)
+        if (!res.ok) {
             throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
+        }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json());
         if (data.description && data.description.captions && data.description.captions.length > 0) {

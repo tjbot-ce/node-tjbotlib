@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import { SpeechClient, protos as speechProtos } from '@google-cloud/speech';
 import winston from 'winston';
-import { STTEngine } from '../stt-engine.js';
+import { resolveCredentialsPath } from '../../utils/backends/google-cloud.js';
 import { TJBotError } from '../../utils/index.js';
+import { LogEmoji } from '../../utils/logging.js';
+import { STTEngine } from '../stt-engine.js';
+const EMO = LogEmoji.STT;
 /**
  * Google Cloud Speech-to-Text Engine
  *
@@ -29,52 +29,17 @@ import { TJBotError } from '../../utils/index.js';
  */
 export class GoogleCloudSTTEngine extends STTEngine {
     client;
-    constructor(config) {
-        super(config);
-    }
     async initialize() {
-        try {
-            const config = this.config;
-            const credentialsPath = this.resolveCredentialsPath(config?.credentialsPath);
-            // Set credentials path in environment variable
-            if (credentialsPath) {
-                process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-                winston.debug(`🗣️ Using Google Cloud credentials from: ${credentialsPath}`);
-            }
-            this.client = new SpeechClient();
-            winston.debug('🗣️ Google Cloud STT engine initialized');
+        const config = this.config;
+        const credentialsPath = resolveCredentialsPath(config?.credentialsPath);
+        // Set credentials path in environment variable
+        if (credentialsPath) {
+            process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
         }
-        catch (err) {
-            winston.error('Failed to initialize Google Cloud STT:', err);
-            throw new TJBotError('Failed to initialize Google Cloud STT engine', { cause: err });
-        }
-    }
-    resolveCredentialsPath(providedPath) {
-        // If path is explicitly provided, use it
-        if (providedPath) {
-            if (!fs.existsSync(providedPath)) {
-                throw new TJBotError(`Google Cloud credentials file not found at: ${providedPath}`);
-            }
-            return providedPath;
-        }
-        // If GOOGLE_APPLICATION_CREDENTIALS is already set, use it
-        if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            const envPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-            if (fs.existsSync(envPath)) {
-                return envPath;
-            }
-        }
-        // Check default locations
-        const defaultPaths = [
-            path.join(process.cwd(), 'google-credentials.json'),
-            path.join(os.homedir(), '.tjbot', 'google-credentials.json'),
-        ];
-        for (const defaultPath of defaultPaths) {
-            if (fs.existsSync(defaultPath)) {
-                return defaultPath;
-            }
-        }
-        throw new TJBotError('Google Cloud credentials not found. Set GOOGLE_APPLICATION_CREDENTIALS environment variable or place credentials at: ./google-credentials.json or ~/.tjbot/google-credentials.json');
+        this.client = new SpeechClient();
+        winston.info(`${EMO} Google Cloud STT engine initialized`);
+        winston.debug(`${EMO} Initialized GoogleCloudSTTEngine with config:
+            credentialsPath: ${credentialsPath}`);
     }
     async transcribe(micStream, options) {
         if (!this.client) {
@@ -105,12 +70,12 @@ export class GoogleCloudSTTEngine extends STTEngine {
             },
             interimResults,
         };
-        winston.debug(`🎤 Google Cloud STT params: ${JSON.stringify(request)}`);
+        winston.silly(`${EMO} Google Cloud STT params:`, JSON.stringify(request, null, 2));
         // Create a recognize stream
         const recognizeStream = this.client
             .streamingRecognize(request)
             .on('error', (err) => {
-            winston.error('Google Cloud STT stream error:', err);
+            winston.error(`${EMO} Google Cloud STT stream error:`, err);
         })
             .on('data', (data) => {
             if (data.results && data.results.length > 0) {
@@ -118,7 +83,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 if (result.alternatives && result.alternatives.length > 0) {
                     const transcript = result.alternatives[0].transcript;
                     if (result.isFinal && transcript) {
-                        winston.debug(`🎤 Final transcript: ${transcript}`);
+                        winston.debug(`${EMO} Google Cloud STT recognized: ${transcript}`);
                     }
                 }
             }
@@ -149,7 +114,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
                     this.ensureStream(micStream).unpipe(recognizeStream);
                 }
                 catch (err) {
-                    winston.debug('🎤 mic unpipe failed (likely already closed)', err);
+                    winston.debug(`${EMO} mic unpipe failed (likely already closed)`, err);
                 }
                 recognizeStream.destroy();
             };

@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import { TextToSpeechClient, protos as ttsProtos } from '@google-cloud/text-to-speech';
 import winston from 'winston';
-import { TTSEngine } from '../tts-engine.js';
-import { TJBotError } from '../../utils/index.js';
 import type { TTSBackendGoogleCloudConfig } from '../../config/config-types.js';
+import { resolveCredentialsPath } from '../../utils/backends/azure.js';
+import { TJBotError } from '../../utils/index.js';
+import { LogEmoji } from '../../utils/logging.js';
+import { TTSEngine } from '../tts-engine.js';
+
+const EMO = LogEmoji.TTS;
 
 /**
  * Google Cloud Text-to-Speech Engine
@@ -33,70 +34,27 @@ import type { TTSBackendGoogleCloudConfig } from '../../config/config-types.js';
 export class GoogleCloudTTSEngine extends TTSEngine {
     private client: TextToSpeechClient | undefined;
 
-    constructor(config?: TTSBackendGoogleCloudConfig) {
-        super(config);
-    }
+    async initialize(config?: TTSBackendGoogleCloudConfig): Promise<void> {
+        const credentialsPath = resolveCredentialsPath(config?.credentialsPath);
 
-    async initialize(): Promise<void> {
-        try {
-            const credentialsPath = this.resolveCredentialsPath(
-                (this.config as TTSBackendGoogleCloudConfig)?.credentialsPath
-            );
-
-            // Set credentials path in environment variable
-            if (credentialsPath) {
-                process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-                winston.debug(`🔈 Using Google Cloud credentials from: ${credentialsPath}`);
-            }
-
-            this.client = new TextToSpeechClient();
-            winston.info('🔈 Google Cloud TTS engine initialized');
-        } catch (error) {
-            winston.error('Failed to initialize Google Cloud TTS:', error);
-            throw new TJBotError('Failed to initialize Google Cloud TTS engine', { cause: error as Error });
-        }
-    }
-
-    private resolveCredentialsPath(providedPath?: string): string {
-        // If path is explicitly provided, use it
-        if (providedPath) {
-            if (!fs.existsSync(providedPath)) {
-                throw new TJBotError(`Google Cloud credentials file not found at: ${providedPath}`);
-            }
-            return providedPath;
+        // Set credentials path in environment variable
+        if (credentialsPath) {
+            process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
         }
 
-        // If GOOGLE_APPLICATION_CREDENTIALS is already set, use it
-        if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            const envPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-            if (fs.existsSync(envPath)) {
-                return envPath;
-            }
-        }
+        this.client = new TextToSpeechClient();
 
-        // Check default locations
-        const defaultPaths = [
-            path.join(process.cwd(), 'google-credentials.json'),
-            path.join(os.homedir(), '.tjbot', 'google-credentials.json'),
-        ];
-
-        for (const defaultPath of defaultPaths) {
-            if (fs.existsSync(defaultPath)) {
-                return defaultPath;
-            }
-        }
-
-        throw new TJBotError(
-            'Google Cloud credentials not found. Set GOOGLE_APPLICATION_CREDENTIALS environment variable or place credentials at: ./google-credentials.json or ~/.tjbot/google-credentials.json'
-        );
+        winston.info(`${EMO} Google Cloud TTS engine initialized`);
+        winston.debug(`${EMO} Initialized GoogleCloudTTSEngine with config:
+            credentialsPath: ${credentialsPath}`);
     }
 
     async synthesize(text: string): Promise<Buffer> {
-        this.validateText(text);
-
         if (!this.client) {
             throw new TJBotError('Google Cloud TTS client not initialized. Call initialize() first.');
         }
+
+        this.validateText(text);
 
         try {
             const voiceName = this.config?.voice as string;
@@ -110,7 +68,9 @@ export class GoogleCloudTTSEngine extends TTSEngine {
                 );
             }
 
-            winston.debug(`🔈 Synthesizing with Google Cloud TTS: voice=${voiceName}, language=${languageCode}`);
+            winston.verbose(
+                `${EMO} Synthesizing speech with Google Cloud TTS (voice=${voiceName}, language=${languageCode})`
+            );
 
             const request: ttsProtos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest = {
                 input: { text },
@@ -136,10 +96,9 @@ export class GoogleCloudTTSEngine extends TTSEngine {
             // Google returns raw LINEAR16 PCM, we need to add WAV header
             const wavBuffer = this.addWavHeader(audioBuffer, 24000, 1, 16);
 
-            winston.debug(`🔈 Google Cloud TTS synthesis complete: ${wavBuffer.length} bytes`);
+            winston.debug(`${EMO} Google Cloud TTS synthesis complete: ${wavBuffer.length} bytes`);
             return wavBuffer;
         } catch (error) {
-            winston.error('Google Cloud TTS synthesis failed:', error);
             throw new TJBotError('Google Cloud TTS synthesis failed', { cause: error as Error });
         }
     }

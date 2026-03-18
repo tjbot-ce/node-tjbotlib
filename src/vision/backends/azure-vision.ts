@@ -19,12 +19,17 @@ import fetch from 'node-fetch';
 import type { SeeBackendAzureConfig } from '../../config/config-types.js';
 import {
     VisionEngine,
-    type ImageClassificationResult,
-    type ObjectDetectionResult,
     type FaceDetectionMetadata,
+    type ImageClassificationResult,
     type ImageDescriptionResult,
     type Landmark,
+    type ObjectDetectionResult,
 } from '../vision-engine.js';
+import { TJBotError } from '../../utils/index.js';
+import winston from 'winston';
+import { LogEmoji } from '../../utils/logging.js';
+
+const EMO = LogEmoji.VISION;
 
 interface AzureVisionObject {
     object: string;
@@ -46,22 +51,26 @@ export class AzureVisionEngine extends VisionEngine {
     private apiKey?: string;
     private url?: string;
 
-    constructor(config?: SeeBackendAzureConfig) {
-        super(config ?? {});
-        const configObj = config ?? {};
-        this.apiKey = typeof configObj.apiKey === 'string' ? configObj.apiKey : undefined;
-        this.url =
-            typeof configObj.url === 'string'
-                ? configObj.url
-                : 'https://<region>.api.cognitive.microsoft.com/vision/v3.2/analyze';
-    }
+    async initialize(config?: SeeBackendAzureConfig): Promise<void> {
+        this.apiKey = config?.apiKey as string | undefined;
+        this.url = config?.url as string | undefined;
 
-    async initialize(): Promise<void> {
-        // No-op for now; could validate API key or endpoint
+        winston.info(`${EMO} Azure Vision engine initialized`);
+        winston.debug(`${EMO} Initialized AzureVisionEngine with config:
+            apiKey: ${this.apiKey ? '***' : 'not set'},
+            url: ${this.url ? this.url : 'not set'}`);
     }
 
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
-        if (!this.apiKey) throw new Error('Azure Computer Vision API key not configured');
+        if (!this.apiKey) {
+            throw new TJBotError('Azure Vision API key not configured');
+        }
+        if (!this.url) {
+            throw new TJBotError('Azure Vision API URL not configured');
+        }
+
+        winston.verbose(`${EMO} Detecting objects in image with Azure Vision API`);
+
         // Prepare image buffer
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -79,9 +88,13 @@ export class AzureVisionEngine extends VisionEngine {
             },
             body: imgBuf,
         });
-        if (!res.ok) throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
-        const data = (await res.json()) as AzureVisionAPIResponse;
+
+        if (!res.ok) {
+            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
+        }
+
         // Parse objects from response
+        const data = (await res.json()) as AzureVisionAPIResponse;
         const results: ObjectDetectionResult[] = [];
         if (data.objects) {
             for (const obj of data.objects) {
@@ -99,7 +112,15 @@ export class AzureVisionEngine extends VisionEngine {
         image: Buffer | string,
         confidenceThreshold: number = 0.5
     ): Promise<ImageClassificationResult[]> {
-        if (!this.apiKey) throw new Error('Azure Computer Vision API key not configured');
+        if (!this.apiKey) {
+            throw new TJBotError('Azure Vision API key not configured');
+        }
+        if (!this.url) {
+            throw new TJBotError('Azure Vision API URL not configured');
+        }
+
+        winston.verbose(`${EMO} Classifying image with Azure Vision API`);
+
         // Prepare image buffer
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -107,6 +128,7 @@ export class AzureVisionEngine extends VisionEngine {
         } else {
             imgBuf = image;
         }
+
         // Call Azure Computer Vision API (analyze for tags)
         const endpoint = `${this.url}?visualFeatures=Tags`;
         const res = await fetch(endpoint, {
@@ -117,9 +139,13 @@ export class AzureVisionEngine extends VisionEngine {
             },
             body: imgBuf,
         });
-        if (!res.ok) throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
-        const data = (await res.json()) as AzureVisionAPIResponse;
+
+        if (!res.ok) {
+            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
+        }
+
         // Parse tags from response
+        const data = (await res.json()) as AzureVisionAPIResponse;
         const results: ImageClassificationResult[] = [];
         if (data.tags) {
             for (const tag of data.tags) {
@@ -131,13 +157,21 @@ export class AzureVisionEngine extends VisionEngine {
                 }
             }
         }
+
         // Sort by confidence descending
         results.sort((a, b) => b.confidence - a.confidence);
         return results;
     }
 
     async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
-        if (!this.apiKey) throw new Error('Azure Computer Vision API key not configured');
+        if (!this.apiKey) {
+            throw new TJBotError('Azure Vision API key not configured');
+        }
+        if (!this.url) {
+            throw new TJBotError('Azure Vision API URL not configured');
+        }
+
+        winston.verbose(`${EMO} Detecting faces in image with Azure Vision API`);
 
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -157,11 +191,15 @@ export class AzureVisionEngine extends VisionEngine {
             body: imgBuf,
         });
 
-        if (!res.ok) throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
+        if (!res.ok) {
+            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
+        }
 
+        // Parse faces from response
+        // FIXME: Figure out what data type is returned by the Azure Face API and replace 'any' with the correct type
+        // const data = (await res.json()) as AzureVisionAPIResponse;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json()) as any;
-
         const metadata: FaceDetectionMetadata[] = [];
 
         if (data.faces && Array.isArray(data.faces)) {
@@ -250,7 +288,14 @@ export class AzureVisionEngine extends VisionEngine {
     }
 
     async describeImage(image: Buffer | string): Promise<ImageDescriptionResult> {
-        if (!this.apiKey) throw new Error('Azure Computer Vision API key not configured');
+        if (!this.apiKey) {
+            throw new TJBotError('Azure Vision API key not configured');
+        }
+        if (!this.url) {
+            throw new TJBotError('Azure Vision API URL not configured');
+        }
+
+        winston.verbose(`${EMO} Describing image with Azure Vision API`);
 
         let imgBuf: Buffer;
         if (typeof image === 'string') {
@@ -270,7 +315,9 @@ export class AzureVisionEngine extends VisionEngine {
             body: imgBuf,
         });
 
-        if (!res.ok) throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
+        if (!res.ok) {
+            throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json()) as any;

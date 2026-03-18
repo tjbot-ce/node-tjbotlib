@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { SeeBackendConfig, VisionEngineConfig } from '../config/config-types.js';
+import { SeeConfig, VisionEngineConfig } from '../config/config-types.js';
 export interface ObjectDetectionResult {
     label: string;
     confidence: number;
@@ -120,5 +120,13 @@ export declare abstract class VisionEngine {
      */
     abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
 }
-export declare function createVisionEngine(config: SeeBackendConfig): Promise<VisionEngine>;
+/**
+ * Create a Vision engine instance based on the configuration.
+ * Uses dynamic imports to lazily load backend implementations only when needed.
+ * @param seeConfig - Configuration for the Vision engine with backend settings
+ * @returns {Promise<VisionEngine>} Initialized Vision engine instance
+ * @throws {TJBotError} if backend type is unknown or dependencies are not installed
+ * @public
+ */
+export declare function createVisionEngine(seeConfig: SeeConfig): Promise<VisionEngine>;
 //# sourceMappingURL=vision-engine.d.ts.map

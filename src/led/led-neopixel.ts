@@ -16,6 +16,10 @@
  */
 
 import { spawn } from 'child_process';
+import { LogEmoji } from '../utils/logging.js';
+import winston from 'winston';
+
+const EMO = LogEmoji.LED;
 
 interface NeopixelDriver {
     init(numLeds: number, options: { pin: number }): void;
@@ -63,6 +67,8 @@ export class LEDNeopixel {
                 process.exit(0);
             });
         });
+
+        winston.verbose(`${EMO} Initialized LEDNeopixel on pin ${pin}`);
     }
 
     /**
@@ -70,6 +76,7 @@ export class LEDNeopixel {
      * @param color Color as a 32-bit integer in RGB format (0xRRGGBB)
      */
     render(color: number): void {
+        winston.verbose(`${EMO} Rendering LED with color: ${color}`);
         const colors = new Uint32Array(1);
         colors[0] = color;
         this.neopixel.render(colors);
@@ -79,6 +86,7 @@ export class LEDNeopixel {
      * Clean up resources
      */
     cleanup(): void {
+        winston.debug(`${EMO} LEDNeopixel cleanup`);
         this.neopixel.reset();
     }
 }

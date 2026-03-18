@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 import { TTSEngine } from '../tts-engine.js';
-import type { TTSBackendLocalConfig } from '../../config/config-types.js';
 /**
  * Sherpa-ONNX Local Text-to-Speech Engine
  *
@@ -23,22 +22,20 @@ import type { TTSBackendLocalConfig } from '../../config/config-types.js';
  * @public
  */
 export declare class SherpaONNXTTSEngine extends TTSEngine {
-    private manager;
-    private modelPath;
+    private registry;
+    private modelInfo?;
+    private modelPath?;
     private ttsEngine?;
-    constructor(config?: TTSBackendLocalConfig);
     /**
      * Initialize the sherpa-onnx TTS engine.
      * Pre-downloads the configured model.
      */
     initialize(): Promise<void>;
+    private pathForModel;
     /**
-     * Ensure the TTS model is downloaded and return its local path.
-     * @returns Path to the TTS model file.
-     * @throws {TJBotError} if model download fails
+     * Setup synthesizer based on model configuration
      */
-    private ensureModelIsDownloaded;
-    private setupTTSEngine;
+    private setupSynthesizer;
     /**
      * Synthesize text to WAV audio using sherpa-onnx.
      * Voice is configured at engine initialization time via config.
@@ -48,6 +45,21 @@ export declare class SherpaONNXTTSEngine extends TTSEngine {
      * @throws Error if not initialized or synthesis fails
      */
     synthesize(text: string): Promise<Buffer>;
+    /**
+     * Resolve the data directory for VITS models. Some models include
+     * a separate "espeak-ng-data" folder with necessary data files.
+     * If that folder exists, return its path. Otherwise, return
+     * the base model directory.
+     * @returns Path to the data directory to be used for VITS synthesis
+     */
+    private resolveVitsDataDir;
+    /**
+     * Setup synthesizer based on model configuration. Creates the OfflineTts instance with the appropriate config.
+     * @param modelFile The full path to the model file
+     * @param vitsDataDir The directory containing VITS data files (may be the same as modelDir or a subdirectory)
+     * @returns An instance of OfflineTts configured with the specified model
+     */
+    private createOfflineTTS;
     /**
      * Convert PCM samples to WAV format.
      * Creates a proper WAV file with header and audio data.
@@ -65,4 +77,4 @@ export declare class SherpaONNXTTSEngine extends TTSEngine {
      */
     private float32ToPcm16;
 }
-//# sourceMappingURL=sherpa-onnx.d.ts.map
+//# sourceMappingURL=sherpa-onnx-tts.d.ts.map

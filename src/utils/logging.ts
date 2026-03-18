@@ -18,6 +18,23 @@ import winston from 'winston';
 
 export type TJBotLogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug';
 
+export enum LogEmoji {
+    CAMERA = '📷',
+    COLOR = '🎨',
+    CONFIG = '⚙️',
+    GENERAL = '🤖',
+    HARDWARE = '🔧',
+    LED = '💡',
+    MIC = '🎤',
+    MODEL = '📦',
+    RPI = '🍓',
+    SERVO = '🦾',
+    SPEAKER = '🔈',
+    STT = '🦻',
+    TTS = '💬',
+    VISION = '👁️',
+}
+
 interface LoggerInfo extends Record<PropertyKey, unknown> {
     level: string;
     message: string;

@@ -17,6 +17,10 @@
 
 import { createRequire } from 'module';
 import { ServoPosition } from './servo-constants.js';
+import { LogEmoji } from '../utils/logging.js';
+import winston from 'winston';
+
+const EMO = LogEmoji.SERVO;
 
 const require = createRequire(import.meta.url);
 
@@ -49,6 +53,7 @@ export class PiGPIOServoController {
     constructor(pin: number) {
         const Gpio = getPigpioGpioClass();
         this.servo = new Gpio(pin, { mode: Gpio.OUTPUT });
+        winston.debug(`${EMO} Initialized PiGPIOServoController on pin ${pin}`);
     }
 
     /**

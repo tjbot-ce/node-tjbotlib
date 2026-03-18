@@ -14,10 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { Capability, Hardware } from './constants.js';
 export { convertHexToRgbColor, getShineColors, normalizeColor } from './colors.js';
+export { Capability, Hardware } from './constants.js';
 export { TJBotError } from './errors.js';
-export { ModelRegistry } from './model-registry.js';
 export { initWinston } from './logging.js';
+export { ModelRegistry } from './model-registry.js';
 export { isCommandAvailable, sleep } from './utils.js';
 //# sourceMappingURL=index.js.map

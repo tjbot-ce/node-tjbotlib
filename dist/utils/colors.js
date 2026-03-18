@@ -19,7 +19,9 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import winston from 'winston';
 import { TJBotError } from './errors.js';
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { LogEmoji } from './logging.js';
+const DIRNAME = dirname(fileURLToPath(import.meta.url));
+const EMO = LogEmoji.COLOR;
 /**
  * Color map: normalized color name (lowercase, no spaces) -> hex value
  * @private
@@ -37,7 +39,7 @@ let colorsLoaded = false;
  */
 function loadColors() {
     try {
-        const colorsPath = join(__dirname, 'colors.yaml');
+        const colorsPath = join(DIRNAME, 'colors.yaml');
         const colorsYaml = readFileSync(colorsPath, 'utf8');
         const colors = yaml.load(colorsYaml);
         for (const [name, hex] of Object.entries(colors)) {
@@ -47,10 +49,10 @@ function loadColors() {
             const normalizedName = name.replace(/\s+/g, '').toLowerCase();
             colorMap.set(normalizedName, hex);
         }
-        winston.debug(`Loaded ${colorNames.length} colors for LED control`);
+        winston.debug(`${EMO} loaded ${colorNames.length} colors for LED control`);
     }
     catch (error) {
-        winston.error('Failed to load colors.yaml:', error);
+        winston.error(`${EMO} Failed to load colors.yaml:`, error);
         throw new TJBotError('Failed to load LED color definitions');
     }
 }
@@ -85,7 +87,7 @@ export function convertHexToRgbColor(hexColor) {
         return [rgb[0], rgb[1], rgb[2]];
     }
     else {
-        winston.warn(`an error occurred converting hex color ${hexColor} to RGB, returning [0, 0, 0]`);
+        winston.warn(`${EMO} An error occurred converting hex color ${hexColor} to RGB, returning [0, 0, 0]`);
         return [0, 0, 0];
     }
 }

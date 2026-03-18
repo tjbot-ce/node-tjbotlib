@@ -13,32 +13,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import fetch from 'node-fetch';
 import fs from 'fs';
+import fetch from 'node-fetch';
+import winston from 'winston';
+import { resolveCredentialsPath } from '../../utils/backends/azure.js';
+import { LogEmoji } from '../../utils/logging.js';
 import { VisionEngine, } from '../vision-engine.js';
+import { TJBotError } from '../../utils/errors.js';
+const EMO = LogEmoji.VISION;
 export class GoogleCloudVisionEngine extends VisionEngine {
-    credentialsPath;
     model;
     endpoint;
-    apiKey; // Only for legacy fallback, not used if credentialsPath is set
-    constructor(config) {
-        super(config ?? {});
-        const configObj = config ?? {};
-        this.credentialsPath = configObj.credentialsPath;
-        this.model = configObj.model;
-        this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
-    }
-    async initialize() {
-        // Set GOOGLE_APPLICATION_CREDENTIALS if credentialsPath is provided
-        if (this.credentialsPath) {
-            if (!fs.existsSync(this.credentialsPath)) {
-                throw new Error(`Google Cloud Vision credentials file not found at: ${this.credentialsPath}`);
-            }
-            process.env.GOOGLE_APPLICATION_CREDENTIALS = this.credentialsPath;
+    async initialize(config) {
+        const credentialsPath = resolveCredentialsPath(config?.credentialsPath);
+        // Set credentials path in environment variable
+        if (credentialsPath) {
+            process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
         }
-        // Optionally, could validate credentials by making a test request
+        this.model = config?.model;
+        this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
+        winston.info(`${EMO} Google Cloud Vision engine initialized`);
+        winston.debug(`${EMO} Initialized GoogleCloudVisionEngine with config:
+            credentialsPath: ${credentialsPath},
+            model: ${this.model},
+            endpoint: ${this.endpoint}`);
     }
     async detectObjects(image) {
+        if (this.model === undefined) {
+            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
+        }
+        if (this.endpoint === undefined) {
+            throw new Error('Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.');
+        }
+        winston.verbose(`${EMO} Detecting objects in image with Google Cloud Vision API`);
         // Prepare image as base64
         let imgBuf;
         if (typeof image === 'string') {
@@ -62,10 +69,11 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        if (!res.ok)
-            throw new Error(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
-        const data = (await res.json());
+        if (!res.ok) {
+            throw new TJBotError(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+        }
         // Parse objects from response
+        const data = (await res.json());
         const results = [];
         if (data.responses && data.responses[0] && data.responses[0].localizedObjectAnnotations) {
             for (const obj of data.responses[0].localizedObjectAnnotations) {
@@ -87,6 +95,13 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         return results;
     }
     async classifyImage(image, confidenceThreshold = 0.5) {
+        if (this.model === undefined) {
+            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
+        }
+        if (this.endpoint === undefined) {
+            throw new Error('Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.');
+        }
+        winston.verbose(`${EMO} Classifying image with Google Cloud Vision API`);
         // Prepare image as base64
         let imgBuf;
         if (typeof image === 'string') {
@@ -110,10 +125,11 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        if (!res.ok)
-            throw new Error(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
-        const data = (await res.json());
+        if (!res.ok) {
+            throw new TJBotError(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+        }
         // Parse labels from response
+        const data = (await res.json());
         const results = [];
         if (data.responses && data.responses[0] && data.responses[0].labelAnnotations) {
             for (const label of data.responses[0].labelAnnotations) {
@@ -130,6 +146,13 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         return results;
     }
     async detectFaces(image) {
+        if (this.model === undefined) {
+            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
+        }
+        if (this.endpoint === undefined) {
+            throw new Error('Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.');
+        }
+        winston.verbose(`${EMO} Detecting faces in image with Google Cloud Vision API`);
         // Prepare image as base64
         let imgBuf;
         if (typeof image === 'string') {
@@ -152,8 +175,9 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         });
-        if (!res.ok)
-            throw new Error(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+        if (!res.ok) {
+            throw new TJBotError(`Google Cloud Vision API error: ${res.status} ${res.statusText}`);
+        }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = (await res.json());
         const metadata = [];
@@ -204,7 +228,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         };
     }
     async describeImage(_image) {
-        throw new Error('Image description is only available with Azure Vision backend. Configure see.backend.type to "azure-vision".');
+        throw new TJBotError('Image description is only available with Azure Vision backend. Configure see.backend.type to "azure-vision".');
     }
 }
 //# sourceMappingURL=google-cloud-vision.js.map

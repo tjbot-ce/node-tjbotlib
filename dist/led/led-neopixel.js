@@ -15,6 +15,9 @@
  * limitations under the License.
  */
 import { spawn } from 'child_process';
+import { LogEmoji } from '../utils/logging.js';
+import winston from 'winston';
+const EMO = LogEmoji.LED;
 /**
  * LED controller for NeoPixel (WS281x) LEDs
  * This uses the native pigpio library for ws281x support
@@ -49,12 +52,14 @@ export class LEDNeopixel {
                 process.exit(0);
             });
         });
+        winston.verbose(`${EMO} Initialized LEDNeopixel on pin ${pin}`);
     }
     /**
      * Render the NeoPixel to a specific color
      * @param color Color as a 32-bit integer in RGB format (0xRRGGBB)
      */
     render(color) {
+        winston.verbose(`${EMO} Rendering LED with color: ${color}`);
         const colors = new Uint32Array(1);
         colors[0] = color;
         this.neopixel.render(colors);
@@ -63,6 +68,7 @@ export class LEDNeopixel {
      * Clean up resources
      */
     cleanup() {
+        winston.debug(`${EMO} LEDNeopixel cleanup`);
         this.neopixel.reset();
     }
 }

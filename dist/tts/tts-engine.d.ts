@@ -25,10 +25,7 @@ export declare abstract class TTSEngine {
     protected config: TTSEngineConfig;
     constructor(config?: TTSEngineConfig);
     /**
-     * Initialize the TTS engine.
-     * This method may perform setup tasks such as loading models or authenticating with services.
-     * Should be called before the first call to synthesize().
-     *
+     * Initialize the TTS engine. Must be called before synthesize().
      * @throws {TJBotError} if initialization fails
      * @public
      */
@@ -43,7 +40,6 @@ export declare abstract class TTSEngine {
      * Synthesize text to WAV audio.
      * Both backends should validate input text and return audio as a Buffer in WAV format.
      * Voice is configured at engine initialization time and cannot be changed per synthesis call.
-     *
      * @param text - Text to synthesize
      * @returns WAV audio buffer
      * @throws {TJBotError} if synthesis fails

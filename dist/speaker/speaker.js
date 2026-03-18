@@ -18,6 +18,8 @@ import { AudioPlayer } from './audio-player.js';
 import winston from 'winston';
 import { once } from 'events';
 import { execSync } from 'child_process';
+import { LogEmoji } from '../utils/logging.js';
+const EMO = LogEmoji.SPEAKER;
 /**
  * Speaker controller for TJBot
  * Handles audio playback and text-to-speech synthesis
@@ -52,11 +54,11 @@ export class SpeakerController {
                     return deviceString;
                 }
             }
-            winston.warn('🔈 no audio playback devices found');
+            winston.warn(`${EMO} No audio playback devices found`);
             return '';
         }
         catch (error) {
-            winston.error('🔈 error detecting speaker device:', error);
+            winston.error(`${EMO} Error detecting speaker device:`, error);
             return '';
         }
     }
@@ -71,7 +73,7 @@ export class SpeakerController {
             selectedDevice = this.detectSpeakerDevice();
         }
         this.device = selectedDevice;
-        winston.verbose(`🔈 initializing speaker on device ${this.device}`);
+        winston.verbose(`${EMO} Initialized speaker on device ${this.device}`);
     }
     /**
      * Set callbacks for pause/resume (typically to pause/resume microphone)
@@ -93,22 +95,21 @@ export class SpeakerController {
         }
         const player = new AudioPlayer();
         if (this.device !== undefined && this.device !== '') {
-            winston.verbose('🔈 playing through user-defined audio device: ' + this.device);
+            winston.verbose(`${EMO} Playing audio file ${audioPath} through user-defined audio device (${this.device})`);
         }
         else {
-            winston.verbose('🔈 playing through default audio device');
+            winston.verbose(`${EMO} Playing audio file ${audioPath} through default audio device`);
         }
-        winston.debug('🔈 playing audio file: ' + audioPath);
         // Set up event handlers
         player.on('complete', () => {
-            winston.debug('🔈 audio playback finished');
+            winston.debug(`${EMO} Audio playback finished`);
             // resume listening
             if (this.onResumeCallback) {
                 this.onResumeCallback();
             }
         });
         player.on('error', (err) => {
-            winston.error('🔈 error occurred while playing audio', err);
+            winston.error(`${EMO} Error occurred while playing audio`, err);
         });
         // play the audio
         player.play(audioPath, this.device);
@@ -119,7 +120,7 @@ export class SpeakerController {
      * Clean up resources
      */
     cleanup() {
-        // AudioPlayer cleanup is handled automatically
+        winston.debug(`${EMO} SpeakerController cleanup (no-op)`);
     }
 }
 //# sourceMappingURL=speaker.js.map

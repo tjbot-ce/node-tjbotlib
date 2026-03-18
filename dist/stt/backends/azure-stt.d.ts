@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
-import type { STTBackendAzureConfig } from '../../config/config-types.js';
 /**
  * Azure Cognitive Services Speech-to-Text Engine
  *
@@ -25,11 +24,8 @@ import type { STTBackendAzureConfig } from '../../config/config-types.js';
 export declare class AzureSTTEngine extends STTEngine {
     private subscriptionKey;
     private region;
-    constructor(config?: STTBackendAzureConfig);
     initialize(): Promise<void>;
     private loadCredentials;
-    private resolveCredentialsPath;
-    private loadCredentialsFromFile;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
 }
 //# sourceMappingURL=azure-stt.d.ts.map
