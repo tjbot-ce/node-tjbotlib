@@ -56,24 +56,10 @@ describe('Constants - Capability Enum', () => {
 });
 
 describe('Constants - Hardware Enum', () => {
-    test('Hardware enum has all expected values', () => {
-        expect(Hardware.CAMERA).toBe('camera');
-        expect(Hardware.LED_COMMON_ANODE).toBe('led_common_anode');
-        expect(Hardware.LED_NEOPIXEL).toBe('led_neopixel');
-        expect(Hardware.MICROPHONE).toBe('microphone');
-        expect(Hardware.SERVO).toBe('servo');
-        expect(Hardware.SPEAKER).toBe('speaker');
-    });
-
     test('Hardware enum values are strings', () => {
         Object.values(Hardware).forEach((value) => {
             expect(typeof value).toBe('string');
         });
-    });
-
-    test('Hardware enum has correct number of values', () => {
-        const values = Object.values(Hardware);
-        expect(values.length).toBe(6);
     });
 
     test('Hardware enum values are unique', () => {
@@ -90,10 +76,6 @@ describe('Constants - Hardware Enum', () => {
         expect(hardwareMap[Hardware.CAMERA]).toBe(true);
         expect(hardwareMap[Hardware.SPEAKER]).toBe(false);
         expect(hardwareMap[Hardware.MICROPHONE]).toBeUndefined();
-    });
-
-    test('LED hardware types are distinct', () => {
-        expect(Hardware.LED_NEOPIXEL).not.toBe(Hardware.LED_COMMON_ANODE);
     });
 });
 

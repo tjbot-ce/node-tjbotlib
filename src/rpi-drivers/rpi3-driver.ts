@@ -40,14 +40,14 @@ class RPi3Driver extends RPiBaseHardwareDriver {
         const greenPin: number = config?.greenPin ?? 13;
         const bluePin: number = config?.bluePin ?? 12;
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
-        this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
+        this.initializedHardware.add(Hardware.LED);
     }
 
     setupLEDNeopixel(config: ShineConfig['neopixel']): void {
         const pin: number = config?.gpioPin ?? 21;
         this.neopixelLed = new LEDNeopixel(pin);
         this.useGRBFormat = config?.useGRBFormat ?? false;
-        this.initializedHardware.add(Hardware.LED_NEOPIXEL);
+        this.initializedHardware.add(Hardware.LED);
     }
 
     setupServo(config: WaveConfig): void {

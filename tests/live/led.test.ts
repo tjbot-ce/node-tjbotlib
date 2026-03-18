@@ -18,6 +18,7 @@
  */
 
 import { confirm, input, select } from '@inquirer/prompts';
+import type { TJBotConfigSchema } from '../../src/config/config-types.js';
 import RPiDetect from '../../src/rpi-drivers/rpi-detect.js';
 import TJBot from '../../src/tjbot.js';
 import { initWinston } from '../../src/utils/logging.js';
@@ -40,17 +41,21 @@ async function runTest(): Promise<void> {
     });
     const isNeoPixel = ledType === 'neopixel';
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const config: any = {
+    const config: Partial<TJBotConfigSchema> = {
         log: { level: LOG_LEVEL },
-        hardware: {},
+        hardware: {
+            led: true,
+            speaker: false,
+            microphone: false,
+            camera: false,
+            servo: false,
+        },
         shine: {},
     };
 
     if (isNeoPixel) {
         // NeoPixel setup - configuration varies by Pi model
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        let neopixelConfig: any;
+        let neopixelConfig: Record<string, string | number>;
 
         if (RPiDetect.isPi5()) {
             // RPi5 uses SPI interface
@@ -74,8 +79,7 @@ async function runTest(): Promise<void> {
             console.log(`✓ NeoPixel GPIO pin: ${gpioPin}\n`);
         }
 
-        config.hardware = { [TJBot.Hardware.LED_NEOPIXEL]: true };
-        config.shine = { neopixel: neopixelConfig };
+        config.shine = { hasNeopixelLED: true, neopixel: neopixelConfig };
         console.log('✓ NeoPixel LED config ready\n');
     } else {
         // Common Anode RGB LED setup
@@ -104,8 +108,8 @@ async function runTest(): Promise<void> {
             },
         });
 
-        config.hardware = { [TJBot.Hardware.LED_COMMON_ANODE]: true };
         config.shine = {
+            hasCommonAnodeLED: true,
             commonanode: {
                 redPin: parseInt(redPin),
                 greenPin: parseInt(greenPin),
@@ -116,13 +120,13 @@ async function runTest(): Promise<void> {
     }
 
     const tjbot = await TJBot.getInstance().initialize(config);
-    if (config.hardware.led_neopixel) {
+    if (config.shine?.hasNeopixelLED) {
         console.log('✓ TJBot initialized with NeoPixel LED\n');
-    } else {
+    } else if (config.shine?.hasCommonAnodeLED) {
         console.log('✓ TJBot initialized with Common Anode LED\n');
-        console.log(
-            `✓ TJBot initialized with Common Anode LED on Red:GPIO${tjbot.config.shine.commonanode?.redPin} Green:GPIO${tjbot.config.shine.commonanode?.greenPin} Blue:GPIO${tjbot.config.shine.commonanode?.bluePin}\n`
-        );
+    } else {
+        console.log('✗ TJBot LED hardware not initialized');
+        process.exit(1);
     }
 
     console.log(formatSection('Testing TJBot Shine API'));

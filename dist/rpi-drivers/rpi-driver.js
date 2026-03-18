@@ -34,12 +34,14 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
     sttController;
     ttsController;
     visionController;
-    // cached configuration for speak
-    speakConfig = {};
     // cached configuration for listen
     listenConfig = {};
+    // cached configuration for shine
+    shineConfig = {};
     // cached configuration for see
     seeConfig = {};
+    // cached configuration for speak
+    speakConfig = {};
     constructor() {
         super();
         this.initializedHardware = new Set();
@@ -57,7 +59,7 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
             case Capability.SEE:
                 return this.hasHardware(Hardware.CAMERA);
             case Capability.SHINE:
-                return this.hasHardware(Hardware.LED_COMMON_ANODE) || this.hasHardware(Hardware.LED_NEOPIXEL);
+                return this.hasHardware(Hardware.LED);
             case Capability.SPEAK:
                 return this.hasHardware(Hardware.SPEAKER);
             case Capability.WAVE:
@@ -77,6 +79,15 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const zeroShutterLag = config.zeroShutterLag ?? false;
         this.cameraController.initialize([width, height], verticalFlip, horizontalFlip, captureTimeout, zeroShutterLag);
         this.initializedHardware.add(Hardware.CAMERA);
+    }
+    setupLED(config) {
+        this.shineConfig = config;
+        if (config.hasCommonAnodeLED) {
+            this.setupLEDCommonAnode(config.commonanode ?? {});
+        }
+        if (config.hasNeopixelLED) {
+            this.setupLEDNeopixel(config.neopixel ?? {});
+        }
     }
     setupMicrophone(config) {
         this.microphoneController = new MicrophoneController();
@@ -132,14 +143,14 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
     }
     async initializeSTTEngine() {
         if (this.microphoneController === undefined) {
-            throw new TJBotError('Microphone not initialized. Make sure to call setupMicrophone() before initializing the STT engine.');
+            throw new TJBotError('Microphone controllernot initialized. Make sure to call setupMicrophone() before initializing the STT engine.');
         }
         this.sttController = new STTController(this.microphoneController);
         await this.sttController.initialize(this.listenConfig);
     }
     async initializeTTSEngine() {
         if (this.speakerController === undefined) {
-            throw new TJBotError('Speaker not initialized. Make sure to call setupSpeaker() before initializing the TTS engine.');
+            throw new TJBotError('Speaker controllernot initialized. Make sure to call setupSpeaker() before initializing the TTS engine.');
         }
         this.ttsController = new TTSController(this.speakerController);
         await this.ttsController.initialize(this.speakConfig);
@@ -150,7 +161,7 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
     }
     startMic() {
         if (this.microphoneController === undefined) {
-            throw new TJBotError('Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.');
+            throw new TJBotError('Microphone controllernot initialized. Make sure to call setupMicrophone() before using the microphone.');
         }
         this.microphoneController.start();
     }
@@ -168,13 +179,13 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
     }
     stopMic() {
         if (this.microphoneController === undefined) {
-            throw new TJBotError('Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.');
+            throw new TJBotError('Microphone controllernot initialized. Make sure to call setupMicrophone() before using the microphone.');
         }
         this.microphoneController.stop();
     }
     getMicInputStream() {
         if (this.microphoneController === undefined) {
-            throw new TJBotError('Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.');
+            throw new TJBotError('Microphone controller not initialized. Make sure to call setupMicrophone() before using the microphone.');
         }
         return this.microphoneController.getInputStream();
     }
@@ -191,13 +202,13 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
     }
     async capturePhoto(atPath) {
         if (this.cameraController === undefined) {
-            throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
+            throw new TJBotError('Camera controller not initialized. Make sure to call setupCamera() before using the camera.');
         }
         return this.cameraController.capturePhoto(atPath);
     }
     async capturePhotoBuffer() {
         if (this.cameraController === undefined) {
-            throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
+            throw new TJBotError('Camera controller not initialized. Make sure to call setupCamera() before using the camera.');
         }
         return this.cameraController.capturePhotoBuffer();
     }
@@ -226,17 +237,17 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         return this.visionController.detectFaces(image);
     }
     async renderLED(hexColor) {
-        if (this.hasHardware(Hardware.LED_COMMON_ANODE)) {
+        if (this.shineConfig.hasCommonAnodeLED) {
             const rgb = convertHexToRgbColor(hexColor);
             this.renderLEDCommonAnode(rgb);
         }
-        if (this.hasHardware(Hardware.LED_NEOPIXEL)) {
+        if (this.shineConfig.hasNeopixelLED) {
             await this.renderLEDNeopixel(hexColor);
         }
     }
     async playAudio(audioPath) {
         if (this.speakerController === undefined) {
-            throw new TJBotError('Speaker not initialized. Make sure to call setupSpeaker() before playing audio.');
+            throw new TJBotError('Speaker controller not initialized. Make sure to call setupSpeaker() before playing audio.');
         }
         return this.speakerController.playAudio(audioPath);
     }

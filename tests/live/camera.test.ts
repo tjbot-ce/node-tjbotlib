@@ -45,8 +45,21 @@ async function runTest(): Promise<void> {
     console.log(formatSection('Testing TJBot.look() API'));
     const tjbot = await TJBot.getInstance().initialize({
         log: { level: LOG_LEVEL },
-        hardware: { [TJBot.Hardware.CAMERA]: true },
-        see: { cameraResolution: [640, 480] },
+        hardware: {
+            camera: true,
+            speaker: false,
+            microphone: false,
+            ledNeopixel: false,
+            ledCommonAnode: false,
+            servo: false,
+        },
+        see: {
+            cameraResolution: [640, 480],
+            backend: { type: 'none' },
+        },
+        listen: { backend: { type: 'none' } },
+        speak: { backend: { type: 'none' } },
+        shine: { backend: { type: 'none' } },
     });
 
     try {

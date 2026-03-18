@@ -283,6 +283,8 @@ export declare const ledCommonAnodeConfigSchema: z.ZodObject<{
 }, z.core.$loose>;
 export type LEDCommonAnodeConfig = z.infer<typeof ledCommonAnodeConfigSchema>;
 export declare const shineConfigSchema: z.ZodObject<{
+    hasNeopixelLED: z.ZodOptional<z.ZodBoolean>;
+    hasCommonAnodeLED: z.ZodOptional<z.ZodBoolean>;
     neopixel: z.ZodOptional<z.ZodObject<{
         gpioPin: z.ZodOptional<z.ZodNumber>;
         spiInterface: z.ZodOptional<z.ZodString>;
@@ -406,8 +408,7 @@ export type WaveConfig = z.infer<typeof waveConfigSchema>;
 export declare const hardwareConfigSchema: z.ZodObject<{
     speaker: z.ZodOptional<z.ZodBoolean>;
     microphone: z.ZodOptional<z.ZodBoolean>;
-    led_common_anode: z.ZodOptional<z.ZodBoolean>;
-    led_neopixel: z.ZodOptional<z.ZodBoolean>;
+    led: z.ZodOptional<z.ZodBoolean>;
     servo: z.ZodOptional<z.ZodBoolean>;
     camera: z.ZodOptional<z.ZodBoolean>;
 }, z.core.$loose>;
@@ -491,8 +492,7 @@ export declare const tjbotConfigSchema: z.ZodObject<{
     hardware: z.ZodOptional<z.ZodObject<{
         speaker: z.ZodOptional<z.ZodBoolean>;
         microphone: z.ZodOptional<z.ZodBoolean>;
-        led_common_anode: z.ZodOptional<z.ZodBoolean>;
-        led_neopixel: z.ZodOptional<z.ZodBoolean>;
+        led: z.ZodOptional<z.ZodBoolean>;
         servo: z.ZodOptional<z.ZodBoolean>;
         camera: z.ZodOptional<z.ZodBoolean>;
     }, z.core.$loose>>;
@@ -571,6 +571,8 @@ export declare const tjbotConfigSchema: z.ZodObject<{
         }, z.core.$strict>>;
     }, z.core.$loose>>;
     shine: z.ZodOptional<z.ZodObject<{
+        hasNeopixelLED: z.ZodOptional<z.ZodBoolean>;
+        hasCommonAnodeLED: z.ZodOptional<z.ZodBoolean>;
         neopixel: z.ZodOptional<z.ZodObject<{
             gpioPin: z.ZodOptional<z.ZodNumber>;
             spiInterface: z.ZodOptional<z.ZodString>;

@@ -35,8 +35,7 @@ export enum Capability {
  */
 export enum Hardware {
     CAMERA = 'camera',
-    LED_COMMON_ANODE = 'led_common_anode',
-    LED_NEOPIXEL = 'led_neopixel',
+    LED = 'led',
     MICROPHONE = 'microphone',
     SERVO = 'servo',
     SPEAKER = 'speaker',

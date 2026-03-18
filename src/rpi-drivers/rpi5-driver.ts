@@ -39,18 +39,18 @@ class RPi5Driver extends RPiBaseHardwareDriver {
         const greenPin: number = config?.greenPin ?? 13;
         const bluePin: number = config?.bluePin ?? 12;
         winston.verbose(
-            `${LogEmoji.LED} initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
+            `${LogEmoji.LED} initializing Common Anode LED on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
         );
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
-        this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
+        this.initializedHardware.add(Hardware.LED);
     }
 
     setupLEDNeopixel(config: ShineConfig['neopixel']): void {
         const spiInterface: string = config?.spiInterface ?? '/dev/spidev0.0';
         const useGRBFormat: boolean = config?.useGRBFormat ?? false;
-        winston.verbose(`${LogEmoji.LED} initializing ${Hardware.LED_NEOPIXEL} on SPI ${spiInterface}`);
+        winston.verbose(`${LogEmoji.LED} initializing NeoPixel LED on SPI ${spiInterface}`);
         this.neopixelLed = new LEDNeopixelSPI(spiInterface, useGRBFormat);
-        this.initializedHardware.add(Hardware.LED_NEOPIXEL);
+        this.initializedHardware.add(Hardware.LED);
     }
 
     setupServo(config: WaveConfig): void {

@@ -40,6 +40,7 @@ export abstract class RPiHardwareDriver {
 
     // hardware setup & cleanup
     abstract setupCamera(config: SeeConfig): void;
+    abstract setupLED(config: ShineConfig): void;
     abstract setupLEDCommonAnode(config: ShineConfig['commonanode']): void;
     abstract setupLEDNeopixel(config: ShineConfig['neopixel']): void;
     abstract setupMicrophone(config: ListenConfig): void;
@@ -101,12 +102,14 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     protected ttsController?: TTSController;
     protected visionController?: VisionController;
 
-    // cached configuration for speak
-    protected speakConfig: SpeakConfig = {};
     // cached configuration for listen
     protected listenConfig: ListenConfig = {};
+    // cached configuration for shine
+    protected shineConfig: ShineConfig = {};
     // cached configuration for see
     protected seeConfig: SeeConfig = {};
+    // cached configuration for speak
+    protected speakConfig: SpeakConfig = {};
 
     constructor() {
         super();
@@ -128,7 +131,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
             case Capability.SEE:
                 return this.hasHardware(Hardware.CAMERA);
             case Capability.SHINE:
-                return this.hasHardware(Hardware.LED_COMMON_ANODE) || this.hasHardware(Hardware.LED_NEOPIXEL);
+                return this.hasHardware(Hardware.LED);
             case Capability.SPEAK:
                 return this.hasHardware(Hardware.SPEAKER);
             case Capability.WAVE:
@@ -149,6 +152,17 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const zeroShutterLag = config.zeroShutterLag ?? false;
         this.cameraController.initialize([width, height], verticalFlip, horizontalFlip, captureTimeout, zeroShutterLag);
         this.initializedHardware.add(Hardware.CAMERA);
+    }
+
+    setupLED(config: ShineConfig): void {
+        this.shineConfig = config;
+
+        if (config.hasCommonAnodeLED) {
+            this.setupLEDCommonAnode(config.commonanode ?? {});
+        }
+        if (config.hasNeopixelLED) {
+            this.setupLEDNeopixel(config.neopixel ?? {});
+        }
     }
 
     setupMicrophone(config: ListenConfig) {
@@ -221,7 +235,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     async initializeSTTEngine(): Promise<void> {
         if (this.microphoneController === undefined) {
             throw new TJBotError(
-                'Microphone not initialized. Make sure to call setupMicrophone() before initializing the STT engine.'
+                'Microphone controllernot initialized. Make sure to call setupMicrophone() before initializing the STT engine.'
             );
         }
 
@@ -232,7 +246,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     async initializeTTSEngine(): Promise<void> {
         if (this.speakerController === undefined) {
             throw new TJBotError(
-                'Speaker not initialized. Make sure to call setupSpeaker() before initializing the TTS engine.'
+                'Speaker controllernot initialized. Make sure to call setupSpeaker() before initializing the TTS engine.'
             );
         }
         this.ttsController = new TTSController(this.speakerController);
@@ -247,7 +261,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     startMic(): void {
         if (this.microphoneController === undefined) {
             throw new TJBotError(
-                'Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.'
+                'Microphone controllernot initialized. Make sure to call setupMicrophone() before using the microphone.'
             );
         }
         this.microphoneController.start();
@@ -270,7 +284,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     stopMic(): void {
         if (this.microphoneController === undefined) {
             throw new TJBotError(
-                'Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.'
+                'Microphone controllernot initialized. Make sure to call setupMicrophone() before using the microphone.'
             );
         }
         this.microphoneController.stop();
@@ -279,7 +293,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     getMicInputStream(): Transform {
         if (this.microphoneController === undefined) {
             throw new TJBotError(
-                'Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.'
+                'Microphone controller not initialized. Make sure to call setupMicrophone() before using the microphone.'
             );
         }
         return this.microphoneController.getInputStream();
@@ -305,14 +319,14 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
 
     async capturePhoto(atPath?: string): Promise<string> {
         if (this.cameraController === undefined) {
-            throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
+            throw new TJBotError('Camera controller not initialized. Make sure to call setupCamera() before using the camera.');
         }
         return this.cameraController.capturePhoto(atPath);
     }
 
     async capturePhotoBuffer(): Promise<Buffer> {
         if (this.cameraController === undefined) {
-            throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
+            throw new TJBotError('Camera controller not initialized. Make sure to call setupCamera() before using the camera.');
         }
         return this.cameraController.capturePhotoBuffer();
     }
@@ -354,18 +368,18 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     }
 
     async renderLED(hexColor: string): Promise<void> {
-        if (this.hasHardware(Hardware.LED_COMMON_ANODE)) {
+        if (this.shineConfig.hasCommonAnodeLED) {
             const rgb: [number, number, number] = convertHexToRgbColor(hexColor);
             this.renderLEDCommonAnode(rgb);
         }
-        if (this.hasHardware(Hardware.LED_NEOPIXEL)) {
+        if (this.shineConfig.hasNeopixelLED) {
             await this.renderLEDNeopixel(hexColor);
         }
     }
 
     async playAudio(audioPath: string): Promise<void> {
         if (this.speakerController === undefined) {
-            throw new TJBotError('Speaker not initialized. Make sure to call setupSpeaker() before playing audio.');
+            throw new TJBotError('Speaker controller not initialized. Make sure to call setupSpeaker() before playing audio.');
         }
         return this.speakerController.playAudio(audioPath);
     }

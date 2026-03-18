@@ -234,6 +234,8 @@ export type LEDCommonAnodeConfig = z.infer<typeof ledCommonAnodeConfigSchema>;
 
 export const shineConfigSchema = z
     .object({
+        hasNeopixelLED: z.boolean().optional(),
+        hasCommonAnodeLED: z.boolean().optional(),
         neopixel: ledNeopixelConfigSchema.optional(),
         commonanode: ledCommonAnodeConfigSchema.optional(),
     })
@@ -342,8 +344,7 @@ export const hardwareConfigSchema = z
     .object({
         speaker: z.boolean().optional(),
         microphone: z.boolean().optional(),
-        led_common_anode: z.boolean().optional(),
-        led_neopixel: z.boolean().optional(),
+        led: z.boolean().optional(),
         servo: z.boolean().optional(),
         camera: z.boolean().optional(),
     })

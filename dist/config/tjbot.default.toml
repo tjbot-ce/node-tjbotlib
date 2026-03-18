@@ -15,12 +15,11 @@ level = 'info'
 # Set to true to enable, false (or omit) to disable
 
 [hardware]
-speaker = false          # Text-to-speech synthesis output
-microphone = false       # Speech-to-text audio input
-led_common_anode = false # LED with common anode (traditional RGB LED)
-led_neopixel = false     # Addressable RGB NeoPixel LED
+camera = false           # Camera for image capture
+led = false              # LED (either NeoPixel or Common Anode)
+microphone = false       # Microphone for audio input (for STT)
 servo = false            # Servo motor for arm/movement
-camera = false           # Camera module for image capture
+speaker = false          # Speaker for audio playback (including TTS)
 
 # =============================================================================
 # Listen
@@ -183,6 +182,10 @@ model = ''
 # Shine
 # =============================================================================
 # Configuration for TJBot's ability to shine its LED
+
+[shine]
+hasNeopixelLED = false       # set to true if your TJBot has a NeoPixel LED
+hasCommonAnodeLED = false    # set to true if your TJBot has a Common Anode LED
 
 [shine.neopixel]
 # NeoPixel LED Pin Configuration

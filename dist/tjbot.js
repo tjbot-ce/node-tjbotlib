@@ -176,11 +176,8 @@ class TJBot {
         if (hwConfig.camera) {
             hardwareToInit.push(Hardware.CAMERA);
         }
-        if (hwConfig.led_neopixel) {
-            hardwareToInit.push(Hardware.LED_NEOPIXEL);
-        }
-        if (hwConfig.led_common_anode) {
-            hardwareToInit.push(Hardware.LED_COMMON_ANODE);
+        if (hwConfig.led) {
+            hardwareToInit.push(Hardware.LED);
         }
         if (hwConfig.servo) {
             hardwareToInit.push(Hardware.SERVO);
@@ -196,21 +193,28 @@ class TJBot {
                     this.rpiDriver.setupCamera(config);
                     break;
                 }
-                case Hardware.LED_NEOPIXEL: {
+                case Hardware.LED: {
                     const shineConfig = this.config.shine;
-                    winston.info(`${LogEmoji.LED} Setting up NeoPixel LED ` +
-                        '[' +
-                        (shineConfig?.neopixel?.gpioPin ? `pin: ${shineConfig?.neopixel?.gpioPin}` : '') +
-                        ' ' +
-                        (shineConfig?.neopixel?.spiInterface ? `SPI: ${shineConfig.neopixel?.spiInterface}` : '') +
-                        ']');
-                    this.rpiDriver.setupLEDNeopixel(shineConfig.neopixel ?? {});
-                    break;
-                }
-                case Hardware.LED_COMMON_ANODE: {
-                    const shineConfig = this.config.shine;
-                    winston.info(`${LogEmoji.LED} Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`);
-                    this.rpiDriver.setupLEDCommonAnode(shineConfig.commonanode ?? {});
+                    const hasNeopixel = shineConfig?.hasNeopixelLED ?? false;
+                    const hasCommonAnode = shineConfig?.hasCommonAnodeLED ?? false;
+                    if (!hasNeopixel && !hasCommonAnode) {
+                        throw new TJBotError('LED hardware enabled but no LED type configured. Set shine.hasNeopixelLED or shine.hasCommonAnodeLED to true.');
+                    }
+                    if (hasNeopixel) {
+                        winston.info(`${LogEmoji.LED} Setting up NeoPixel LED ` +
+                            '[' +
+                            (shineConfig?.neopixel?.gpioPin ? `pin: ${shineConfig?.neopixel?.gpioPin}` : '') +
+                            ' ' +
+                            (shineConfig?.neopixel?.spiInterface
+                                ? `SPI: ${shineConfig.neopixel?.spiInterface}`
+                                : '') +
+                            ']');
+                        this.rpiDriver.setupLEDNeopixel(shineConfig.neopixel ?? {});
+                    }
+                    if (hasCommonAnode) {
+                        winston.info(`${LogEmoji.LED} Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`);
+                        this.rpiDriver.setupLEDCommonAnode(shineConfig.commonanode ?? {});
+                    }
                     break;
                 }
                 case Hardware.MICROPHONE: {
@@ -325,7 +329,7 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.SHINE)) {
                     throw new TJBotError('TJBot is not configured with an LED. ' +
                         'Please check that you included the ' +
-                        `${Hardware.LED_NEOPIXEL} or ${Hardware.LED_COMMON_ANODE} ` +
+                        `${Hardware.LED} ` +
                         "hardware in TJBot's configuration.");
                 }
                 break;
