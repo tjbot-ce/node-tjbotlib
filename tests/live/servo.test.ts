@@ -38,6 +38,8 @@ async function runTest(): Promise<void> {
         wave: {
             servoPin,
         },
+        listen: { backend: { type: 'none' } },
+        speak: { backend: { type: 'none' } },
     });
 
     console.log(formatSection('Testing TJBot Wave API'));

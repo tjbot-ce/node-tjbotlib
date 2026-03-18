@@ -19,7 +19,6 @@ import * as ort from 'onnxruntime-node';
 import path from 'path';
 import sharp from 'sharp';
 import winston from 'winston';
-import type { VisionEngineConfig } from '../../config/config-types.js';
 import { ModelRegistry, TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import type { VisionModelMetadata } from '../../utils/model-registry.js';
@@ -44,59 +43,50 @@ interface LoadedModel {
 export class ONNXVisionEngine extends VisionEngine {
     private manager: ModelRegistry = ModelRegistry.getInstance();
     private models: Map<string, LoadedModel> = new Map();
-    private objectDetectionModel?: string;
-    private imageClassificationModel?: string;
-    private faceDetectionModel?: string;
-    private objectDetectionConfidence?: number;
-    private imageClassificationConfidence?: number;
-    private faceDetectionConfidence?: number;
 
     /**
      * Initialize the ONNX vision engine.
      */
-    async initialize(config?: VisionEngineConfig): Promise<void> {
-        if (config === undefined) {
+    async initialize(): Promise<void> {
+        if (this.config === undefined) {
             throw new TJBotError('ONNX vision engine config is missing');
         }
 
-        if (config.objectDetectionModel === undefined) {
+        if (this.config.objectDetectionModel === undefined) {
             throw new TJBotError('ONNX vision engine config is missing required parameter: objectDetectionModel');
         }
 
-        if (config.imageClassificationModel === undefined) {
+        if (this.config.imageClassificationModel === undefined) {
             throw new TJBotError('ONNX vision engine config is missing required parameter: imageClassificationModel');
         }
 
-        if (config.faceDetectionModel === undefined) {
+        if (this.config.faceDetectionModel === undefined) {
             throw new TJBotError('ONNX vision engine config is missing required parameter: faceDetectionModel');
         }
 
-        this.objectDetectionModel = config.objectDetectionModel as string;
-        this.imageClassificationModel = config.imageClassificationModel as string;
-        this.faceDetectionModel = config.faceDetectionModel as string;
-        this.objectDetectionConfidence = (config.objectDetectionConfidence as number) ?? 0.8;
-        this.imageClassificationConfidence = (config.imageClassificationConfidence as number) ?? 0.8;
-        this.faceDetectionConfidence = (config.faceDetectionConfidence as number) ?? 0.35;
-
         // Eagerly load all models
-        await this.loadModel(this.objectDetectionModel);
-        await this.loadModel(this.imageClassificationModel);
-        await this.loadModel(this.faceDetectionModel);
+        await this.loadModel(this.config.objectDetectionModel as string);
+        await this.loadModel(this.config.imageClassificationModel as string);
+        await this.loadModel(this.config.faceDetectionModel as string);
 
         winston.info(`${EMO} ONNX vision engine initialized`);
         winston.debug(`${EMO} Initialized ONNXVisionEngine with config:
-            objectDetectionModel: ${this.objectDetectionModel},
-            objectDetectionConfidence: ${this.objectDetectionConfidence},
-            imageClassificationModel: ${this.imageClassificationModel},
-            imageClassificationConfidence: ${this.imageClassificationConfidence},
-            faceDetectionModel: ${this.faceDetectionModel},
-            faceDetectionConfidence: ${this.faceDetectionConfidence}`);
+            objectDetectionModel: ${this.config.objectDetectionModel},
+            objectDetectionConfidence: ${this.config.objectDetectionConfidence},
+            imageClassificationModel: ${this.config.imageClassificationModel},
+            imageClassificationConfidence: ${this.config.imageClassificationConfidence},
+            faceDetectionModel: ${this.config.faceDetectionModel},
+            faceDetectionConfidence: ${this.config.faceDetectionConfidence}`);
     }
 
     /**
      * Load a model
      */
     private async loadModel(modelName: string): Promise<void> {
+        if (modelName === undefined) {
+            throw new TJBotError('Cannot load model: modelName is undefined');
+        }
+
         if (this.models.has(modelName)) {
             return; // Already loaded
         }
@@ -249,15 +239,19 @@ export class ONNXVisionEngine extends VisionEngine {
      * Detect objects in an image.
      */
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
-        if (this.objectDetectionModel === undefined) {
+        if (this.config.objectDetectionModel === undefined) {
             throw new TJBotError('Object detection model is not configured for ONNX vision engine');
         }
-        if (this.objectDetectionConfidence === undefined) {
+        if (this.config.objectDetectionConfidence === undefined) {
             throw new TJBotError('Object detection confidence threshold is not configured for ONNX vision engine');
         }
 
-        winston.info(`${EMO} Running object detection with confidence threshold: ${this.objectDetectionConfidence}`);
-        const model = await this.getOrLoadModel(this.objectDetectionModel);
+        const modelName = this.config.objectDetectionModel as string;
+        const confidenceThreshold = this.config.objectDetectionConfidence as number;
+        winston.info(
+            `${EMO} Running object detection using model ${modelName} with confidence threshold ${confidenceThreshold}`
+        );
+        const model = await this.getOrLoadModel(modelName);
 
         try {
             // Preprocess image using model's expected input size
@@ -270,12 +264,7 @@ export class ONNXVisionEngine extends VisionEngine {
             const results = await model.session.run(feeds);
 
             // Postprocess YOLO output
-            return this.postprocessDetection(
-                results,
-                model.labels,
-                model.session.outputNames,
-                this.objectDetectionConfidence
-            );
+            return this.postprocessDetection(results, model.labels, model.session.outputNames, confidenceThreshold);
         } catch (error) {
             throw new TJBotError('Object detection failed', { cause: error as Error });
         }
@@ -285,17 +274,19 @@ export class ONNXVisionEngine extends VisionEngine {
      * Classify an image.
      */
     async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
-        if (this.imageClassificationModel === undefined) {
+        if (this.config.imageClassificationModel === undefined) {
             throw new TJBotError('Image classification model is not configured for ONNX vision engine');
         }
-        if (this.imageClassificationConfidence === undefined) {
+        if (this.config.imageClassificationConfidence === undefined) {
             throw new TJBotError('Image classification confidence threshold is not configured for ONNX vision engine');
         }
 
+        const modelName = this.config.imageClassificationModel as string;
+        const confidenceThreshold = this.config.imageClassificationConfidence as number;
         winston.info(
-            `${EMO} Running image classification with confidence threshold: ${this.imageClassificationConfidence}`
+            `${EMO} Running image classification using model ${modelName} with confidence threshold ${confidenceThreshold}`
         );
-        const model = await this.getOrLoadModel(this.imageClassificationModel);
+        const model = await this.getOrLoadModel(modelName);
 
         try {
             // Preprocess image using model's expected input size
@@ -311,7 +302,7 @@ export class ONNXVisionEngine extends VisionEngine {
             return this.postprocessClassification(
                 results,
                 model.labels,
-                this.imageClassificationConfidence,
+                confidenceThreshold,
                 model.session.outputNames
             );
         } catch (error) {
@@ -323,20 +314,24 @@ export class ONNXVisionEngine extends VisionEngine {
      * Detect faces in an image.
      */
     async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
-        if (this.faceDetectionModel === undefined) {
+        if (this.config.faceDetectionModel === undefined) {
             throw new TJBotError('Face detection model is not configured for ONNX vision engine');
         }
-        if (this.faceDetectionConfidence === undefined) {
+        if (this.config.faceDetectionConfidence === undefined) {
             throw new TJBotError('Face detection confidence threshold is not configured for ONNX vision engine');
         }
 
-        winston.info(`${EMO} Running face detection with confidence threshold: ${this.faceDetectionConfidence}`);
-        const model = await this.getOrLoadModel(this.faceDetectionModel);
+        const modelName = this.config.faceDetectionModel as string;
+        const confidenceThreshold = this.config.faceDetectionConfidence as number;
+        winston.info(
+            `${EMO} Running face detection using model ${modelName} with confidence threshold ${confidenceThreshold}`
+        );
+        const model = await this.getOrLoadModel(modelName);
 
         try {
             // Preprocess image using model's expected input size
             const [, , height, width] = model.inputShape;
-            const input = await this.preprocessFaceImage(image, [width, height], this.faceDetectionModel);
+            const input = await this.preprocessFaceImage(image, [width, height], modelName);
 
             // Run inference
             const feeds: Record<string, ort.Tensor> = {};
@@ -348,7 +343,7 @@ export class ONNXVisionEngine extends VisionEngine {
             winston.debug(`Output shape: [${outputTensor.dims.join(', ')}], size: ${outputTensor.size}`);
 
             // Postprocess face detection output
-            const metadata = this.postprocessFaceDetection(results, this.faceDetectionConfidence, [width, height]);
+            const metadata = this.postprocessFaceDetection(results, confidenceThreshold, [width, height]);
             return {
                 isFaceDetected: metadata.length > 0,
                 metadata,

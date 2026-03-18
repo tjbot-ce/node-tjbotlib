@@ -13,21 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { VisionEngineConfig } from '../../config/config-types.js';
 import { FaceDetectionMetadata, ImageClassificationResult, ImageDescriptionResult, ObjectDetectionResult, VisionEngine } from '../vision-engine.js';
 export declare class ONNXVisionEngine extends VisionEngine {
     private manager;
     private models;
-    private objectDetectionModel?;
-    private imageClassificationModel?;
-    private faceDetectionModel?;
-    private objectDetectionConfidence?;
-    private imageClassificationConfidence?;
-    private faceDetectionConfidence?;
     /**
      * Initialize the ONNX vision engine.
      */
-    initialize(config?: VisionEngineConfig): Promise<void>;
+    initialize(): Promise<void>;
     /**
      * Load a model
      */

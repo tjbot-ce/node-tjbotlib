@@ -319,14 +319,18 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
 
     async capturePhoto(atPath?: string): Promise<string> {
         if (this.cameraController === undefined) {
-            throw new TJBotError('Camera controller not initialized. Make sure to call setupCamera() before using the camera.');
+            throw new TJBotError(
+                'Camera controller not initialized. Make sure to call setupCamera() before using the camera.'
+            );
         }
         return this.cameraController.capturePhoto(atPath);
     }
 
     async capturePhotoBuffer(): Promise<Buffer> {
         if (this.cameraController === undefined) {
-            throw new TJBotError('Camera controller not initialized. Make sure to call setupCamera() before using the camera.');
+            throw new TJBotError(
+                'Camera controller not initialized. Make sure to call setupCamera() before using the camera.'
+            );
         }
         return this.cameraController.capturePhotoBuffer();
     }
@@ -379,7 +383,9 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
 
     async playAudio(audioPath: string): Promise<void> {
         if (this.speakerController === undefined) {
-            throw new TJBotError('Speaker controller not initialized. Make sure to call setupSpeaker() before playing audio.');
+            throw new TJBotError(
+                'Speaker controller not initialized. Make sure to call setupSpeaker() before playing audio.'
+            );
         }
         return this.speakerController.playAudio(audioPath);
     }

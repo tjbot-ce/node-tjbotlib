@@ -189,7 +189,7 @@ class TJBot {
         // Initialize hardware
         await this.initializeHardware();
 
-        // Eagerly initialize AI models if configured
+        // Eagerly initialize AI models (if configured)
         await this.initializeAIModels();
 
         this._initialized = true;
@@ -309,8 +309,6 @@ class TJBot {
      * @async
      */
     private async initializeAIModels(): Promise<void> {
-        winston.info(`${LogEmoji.MODEL} Initializing AI models...`);
-
         // Initialize STT engine if microphone is configured
         if (this.rpiDriver.hasCapability(Capability.LISTEN)) {
             const listenConfig = this.config.listen;
