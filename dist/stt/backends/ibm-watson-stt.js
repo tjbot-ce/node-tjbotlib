@@ -16,7 +16,7 @@
  */
 import SpeechToTextV1 from 'ibm-watson/speech-to-text/v1.js';
 import winston from 'winston';
-import { loadCredentials } from '../../utils/backends/ibm-watson.js';
+import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { STTEngine } from '../stt-engine.js';
@@ -32,12 +32,11 @@ export class IBMWatsonSTTEngine extends STTEngine {
     sttService;
     async initialize() {
         const config = this.config;
-        const credentialsPath = config?.credentialsPath;
-        loadCredentials(credentialsPath);
+        loadIBMWatsonCloudCredentials(config?.credentialsPath);
         this.sttService = new SpeechToTextV1({});
         winston.info(`${EMO} IBM Watson STT engine initialized`);
         winston.debug(`${EMO} Initialized IBMWatsonSTTEngine with config:
-            credentialsPath: ${credentialsPath}`);
+            credentialsPath: ${config?.credentialsPath}`);
     }
     async transcribe(micStream, options) {
         if (!this.sttService) {

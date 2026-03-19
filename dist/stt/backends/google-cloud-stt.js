@@ -15,7 +15,7 @@
  */
 import { SpeechClient, protos as speechProtos } from '@google-cloud/speech';
 import winston from 'winston';
-import { resolveCredentialsPath } from '../../utils/backends/google-cloud.js';
+import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { STTEngine } from '../stt-engine.js';
@@ -31,15 +31,11 @@ export class GoogleCloudSTTEngine extends STTEngine {
     client;
     async initialize() {
         const config = this.config;
-        const credentialsPath = resolveCredentialsPath(config?.credentialsPath);
-        // Set credentials path in environment variable
-        if (credentialsPath) {
-            process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-        }
+        const credentials = loadGoogleCloudCredentials(config?.credentialsPath);
         this.client = new SpeechClient();
         winston.info(`${EMO} Google Cloud STT engine initialized`);
         winston.debug(`${EMO} Initialized GoogleCloudSTTEngine with config:
-            credentialsPath: ${credentialsPath}`);
+            credentialsPath: ${credentials.credentialsPath}`);
     }
     async transcribe(micStream, options) {
         if (!this.client) {

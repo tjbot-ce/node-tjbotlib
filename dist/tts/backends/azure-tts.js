@@ -15,7 +15,7 @@
  */
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 import winston from 'winston';
-import { loadCredentialsFromFile, resolveCredentialsPath } from '../../utils/backends/azure.js';
+import { loadAzureCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { TTSEngine } from '../tts-engine.js';
@@ -41,21 +41,9 @@ export class AzureTTSEngine extends TTSEngine {
             subscriptionKey: ${this.subscriptionKey ? '***' : 'not set'}`);
     }
     loadCredentials(config) {
-        // First try environment variables
-        if (process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION) {
-            this.subscriptionKey = process.env.AZURE_SPEECH_KEY;
-            this.region = process.env.AZURE_SPEECH_REGION;
-            return;
-        }
-        // Then try credentials file
-        const credentialsPath = resolveCredentialsPath(config?.credentialsPath);
-        if (credentialsPath) {
-            const credentials = loadCredentialsFromFile(credentialsPath);
-            this.subscriptionKey = credentials.subscriptionKey;
-            this.region = credentials.region;
-            return;
-        }
-        throw new TJBotError('Azure Speech credentials not found. Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION environment variables, or place credentials at: ./azure-credentials.env or ~/.tjbot/azure-credentials.env');
+        const credentials = loadAzureCredentials(config?.credentialsPath);
+        this.subscriptionKey = credentials.speechKey;
+        this.region = credentials.speechRegion;
     }
     async synthesize(text) {
         if (!this.subscriptionKey || !this.region) {

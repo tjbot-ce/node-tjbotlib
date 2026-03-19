@@ -13,257 +13,112 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import createImageAnalysisClient, { isUnexpected, } from '@azure-rest/ai-vision-image-analysis';
+import { AzureKeyCredential } from '@azure/core-auth';
 import fs from 'fs';
-import fetch from 'node-fetch';
-import { VisionEngine, } from '../vision-engine.js';
-import { TJBotError } from '../../utils/index.js';
 import winston from 'winston';
+import { loadAzureCredentials } from '../../utils/credentials.js';
+import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
+import { VisionEngine, } from '../vision-engine.js';
 const EMO = LogEmoji.VISION;
 export class AzureVisionEngine extends VisionEngine {
-    apiKey;
-    url;
+    imageAnalysisKey;
+    imageAnalysisUrl;
+    client;
+    model;
     async initialize(config) {
-        this.apiKey = config?.apiKey;
-        this.url = config?.url;
+        const credentials = loadAzureCredentials(config?.credentialsPath);
+        this.imageAnalysisKey = credentials.imageAnalysisKey;
+        this.imageAnalysisUrl = this.normalizeEndpoint(credentials.imageAnalysisUrl ?? '');
+        if (!this.imageAnalysisKey || !this.imageAnalysisUrl) {
+            throw new TJBotError('Azure Vision imageAnalysisKey and imageAnalysisUrl are required');
+        }
+        this.model = config?.model;
+        this.client = createImageAnalysisClient(this.imageAnalysisUrl, new AzureKeyCredential(this.imageAnalysisKey));
         winston.info(`${EMO} Azure Vision engine initialized`);
         winston.debug(`${EMO} Initialized AzureVisionEngine with config:
-            apiKey: ${this.apiKey ? '***' : 'not set'},
-            url: ${this.url ? this.url : 'not set'}`);
+            imageAnalysisKey: ${this.imageAnalysisKey ? '***' : 'not set'},
+            imageAnalysisUrl: ${this.imageAnalysisUrl ? this.imageAnalysisUrl : 'not set'},
+            model: ${this.model ?? 'default'}`);
+    }
+    normalizeEndpoint(endpoint) {
+        try {
+            const parsed = new URL(endpoint.trim());
+            const normalizedEndpoint = parsed.origin;
+            if (parsed.pathname !== '/' || parsed.search || parsed.hash) {
+                winston.warn(`${EMO} Azure Vision endpoint included a path or query string; using resource root endpoint ${normalizedEndpoint}`);
+            }
+            return normalizedEndpoint;
+        }
+        catch (error) {
+            throw new TJBotError(`Azure Vision endpoint is not a valid URL: ${endpoint}`, {
+                cause: error,
+            });
+        }
+    }
+    readImageBuffer(image) {
+        if (typeof image === 'string') {
+            return fs.readFileSync(image);
+        }
+        return image;
+    }
+    async analyzeImage(image, features) {
+        if (!this.client) {
+            throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
+        }
+        const imageBuffer = this.readImageBuffer(image);
+        const response = await this.client.path('/imageanalysis:analyze').post({
+            body: imageBuffer,
+            queryParameters: {
+                features,
+                ...(this.model ? { 'model-version': this.model } : {}),
+            },
+            contentType: 'application/octet-stream',
+        });
+        if (isUnexpected(response)) {
+            throw new TJBotError(`Azure Vision API error: ${response.status} ${JSON.stringify(response.body)}`);
+        }
+        return response.body;
     }
     async detectObjects(image) {
-        if (!this.apiKey) {
-            throw new TJBotError('Azure Vision API key not configured');
-        }
-        if (!this.url) {
-            throw new TJBotError('Azure Vision API URL not configured');
-        }
-        winston.verbose(`${EMO} Detecting objects in image with Azure Vision API`);
-        // Prepare image buffer
-        let imgBuf;
-        if (typeof image === 'string') {
-            imgBuf = fs.readFileSync(image);
-        }
-        else {
-            imgBuf = image;
-        }
-        // Call Azure Computer Vision API (analyze for objects)
-        const endpoint = `${this.url}?visualFeatures=Objects`;
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Ocp-Apim-Subscription-Key': this.apiKey,
-                'Content-Type': 'application/octet-stream',
-            },
-            body: imgBuf,
-        });
-        if (!res.ok) {
-            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
-        }
-        // Parse objects from response
-        const data = (await res.json());
-        const results = [];
-        if (data.objects) {
-            for (const obj of data.objects) {
-                results.push({
-                    label: obj.object,
-                    confidence: obj.confidence,
-                    bbox: [obj.rectangle.x, obj.rectangle.y, obj.rectangle.w, obj.rectangle.h],
-                });
-            }
-        }
-        return results;
+        winston.verbose(`${EMO} Detecting objects in image with Azure Image Analysis API`);
+        const result = await this.analyzeImage(image, ['Objects']);
+        const objects = result.objectsResult?.values ?? [];
+        return objects
+            .map((object) => {
+            const primaryTag = object.tags[0];
+            return {
+                label: primaryTag?.name ?? 'unknown',
+                confidence: primaryTag?.confidence ?? 0,
+                bbox: [object.boundingBox.x, object.boundingBox.y, object.boundingBox.w, object.boundingBox.h],
+            };
+        })
+            .sort((a, b) => b.confidence - a.confidence);
     }
     async classifyImage(image, confidenceThreshold = 0.5) {
-        if (!this.apiKey) {
-            throw new TJBotError('Azure Vision API key not configured');
-        }
-        if (!this.url) {
-            throw new TJBotError('Azure Vision API URL not configured');
-        }
-        winston.verbose(`${EMO} Classifying image with Azure Vision API`);
-        // Prepare image buffer
-        let imgBuf;
-        if (typeof image === 'string') {
-            imgBuf = fs.readFileSync(image);
-        }
-        else {
-            imgBuf = image;
-        }
-        // Call Azure Computer Vision API (analyze for tags)
-        const endpoint = `${this.url}?visualFeatures=Tags`;
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Ocp-Apim-Subscription-Key': this.apiKey,
-                'Content-Type': 'application/octet-stream',
-            },
-            body: imgBuf,
-        });
-        if (!res.ok) {
-            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
-        }
-        // Parse tags from response
-        const data = (await res.json());
-        const results = [];
-        if (data.tags) {
-            for (const tag of data.tags) {
-                if (tag.confidence >= confidenceThreshold) {
-                    results.push({
-                        label: tag.name,
-                        confidence: tag.confidence,
-                    });
-                }
-            }
-        }
-        // Sort by confidence descending
-        results.sort((a, b) => b.confidence - a.confidence);
-        return results;
+        winston.verbose(`${EMO} Classifying image with Azure Image Analysis API`);
+        const result = await this.analyzeImage(image, ['Tags']);
+        return (result.tagsResult?.values ?? [])
+            .filter((tag) => tag.confidence >= confidenceThreshold)
+            .map((tag) => ({
+            label: tag.name,
+            confidence: tag.confidence,
+        }))
+            .sort((a, b) => b.confidence - a.confidence);
     }
     async detectFaces(image) {
-        if (!this.apiKey) {
-            throw new TJBotError('Azure Vision API key not configured');
-        }
-        if (!this.url) {
-            throw new TJBotError('Azure Vision API URL not configured');
-        }
-        winston.verbose(`${EMO} Detecting faces in image with Azure Vision API`);
-        let imgBuf;
-        if (typeof image === 'string') {
-            imgBuf = fs.readFileSync(image);
-        }
-        else {
-            imgBuf = image;
-        }
-        // Call Azure Computer Vision API for face detection
-        const endpoint = `${this.url}?visualFeatures=Faces`;
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Ocp-Apim-Subscription-Key': this.apiKey,
-                'Content-Type': 'application/octet-stream',
-            },
-            body: imgBuf,
-        });
-        if (!res.ok) {
-            throw new TJBotError(`Azure Vision API error: ${res.status} ${res.statusText}`);
-        }
-        // Parse faces from response
-        // FIXME: Figure out what data type is returned by the Azure Face API and replace 'any' with the correct type
-        // const data = (await res.json()) as AzureVisionAPIResponse;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = (await res.json());
-        const metadata = [];
-        if (data.faces && Array.isArray(data.faces)) {
-            for (const face of data.faces) {
-                const rect = face.faceRectangle || {};
-                // Extract landmarks from faceLandmarks
-                const landmarks = [];
-                const faceLandmarks = face.faceLandmarks || {};
-                const landmarkMap = {
-                    pupilLeft: 'eye-left',
-                    pupilRight: 'eye-right',
-                    noseTip: 'nose',
-                    mouthLeft: 'mouth-left',
-                    mouthRight: 'mouth-right',
-                };
-                for (const [azureType, standardType] of Object.entries(landmarkMap)) {
-                    if (faceLandmarks[azureType]) {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        const point = faceLandmarks[azureType];
-                        landmarks.push({
-                            x: point.x || 0,
-                            y: point.y || 0,
-                            type: standardType,
-                        });
-                    }
-                }
-                // Extract head pose angles
-                const faceAttributes = face.faceAttributes || {};
-                let headPose;
-                if (faceAttributes.headPose) {
-                    headPose = {
-                        roll: faceAttributes.headPose.roll || 0,
-                        yaw: faceAttributes.headPose.yaw || 0,
-                        pitch: faceAttributes.headPose.pitch || 0,
-                    };
-                }
-                // Extract quality metrics if available
-                let qualityMetrics = undefined;
-                if (faceAttributes.blur || faceAttributes.noise || faceAttributes.exposure) {
-                    const blurLevel = faceAttributes.blur?.blurLevel;
-                    const blurValue = blurLevel === 'high' ? 0.8 : blurLevel === 'medium' ? 0.5 : blurLevel ? 0.2 : undefined;
-                    const exposureLevel = faceAttributes.exposure?.exposureLevel;
-                    let exposure;
-                    if (exposureLevel === 'overExposure')
-                        exposure = 'overExposed';
-                    else if (exposureLevel === 'underExposure')
-                        exposure = 'underExposed';
-                    else if (exposureLevel)
-                        exposure = 'goodExposure';
-                    const noiseLevel = faceAttributes.noise?.noiseLevel;
-                    const noise = noiseLevel === 'high' ? 0.8 : noiseLevel === 'medium' ? 0.5 : noiseLevel ? 0.2 : undefined;
-                    qualityMetrics = { blurValue, exposure, noise };
-                }
-                // Extract occlusion data
-                let occlusion;
-                if (faceAttributes.occlusion) {
-                    occlusion = {
-                        eyeOccluded: faceAttributes.occlusion.eyeOccluded || false,
-                        foreheadOccluded: faceAttributes.occlusion.foreheadOccluded || false,
-                        mouthOccluded: faceAttributes.occlusion.mouthOccluded || false,
-                    };
-                }
-                metadata.push({
-                    boundingBox: [rect.left || 0, rect.top || 0, rect.width || 0, rect.height || 0],
-                    confidence: face.confidence || 0,
-                    landmarks,
-                    headPose,
-                    qualityMetrics,
-                    occlusion,
-                });
-            }
-        }
-        return {
-            isFaceDetected: metadata.length > 0,
-            metadata,
-        };
+        void image;
+        throw new TJBotError('Face detection is not supported by the Azure Image Analysis service. Please use another backend for face detection.');
     }
     async describeImage(image) {
-        if (!this.apiKey) {
-            throw new TJBotError('Azure Vision API key not configured');
-        }
-        if (!this.url) {
-            throw new TJBotError('Azure Vision API URL not configured');
-        }
-        winston.verbose(`${EMO} Describing image with Azure Vision API`);
-        let imgBuf;
-        if (typeof image === 'string') {
-            imgBuf = fs.readFileSync(image);
-        }
-        else {
-            imgBuf = image;
-        }
-        // Call Azure Computer Vision API for image description
-        const endpoint = `${this.url}?visualFeatures=Description`;
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Ocp-Apim-Subscription-Key': this.apiKey,
-                'Content-Type': 'application/octet-stream',
-            },
-            body: imgBuf,
-        });
-        if (!res.ok) {
-            throw new Error(`Azure Computer Vision API error: ${res.status} ${res.statusText}`);
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const data = (await res.json());
-        if (data.description && data.description.captions && data.description.captions.length > 0) {
-            const caption = data.description.captions[0];
+        winston.verbose(`${EMO} Describing image with Azure Image Analysis API`);
+        const result = await this.analyzeImage(image, ['Caption']);
+        const caption = result.captionResult;
+        if (caption) {
             return {
-                description: caption.text || '',
-                confidence: caption.confidence || 0,
+                description: caption.text,
+                confidence: caption.confidence,
             };
         }
         return {

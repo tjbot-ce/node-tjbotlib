@@ -229,11 +229,16 @@ async function promptTaskChoice(selectedBackend: BackendId): Promise<VisionTask>
             name: `Image classification (${classificationLabel})`,
             value: 'classifyImage',
         },
-        {
+    ];
+
+    // Azure Vision (Image Analysis 4.0 API) does not support face detection,
+    // so onluy show the face detection task for other vision backends.
+    if (selectedBackend !== 'azure-vision') {
+        tasks.push({
             name: `Face detection (${faceDetectionLabel})`,
             value: 'detectFaces',
-        },
-    ];
+        });
+    }
 
     // Add image description only for Azure backend
     if (selectedBackend === 'azure-vision' && imageDescriptionModels.length > 0) {

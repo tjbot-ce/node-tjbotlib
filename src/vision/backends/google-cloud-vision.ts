@@ -18,7 +18,7 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 import winston from 'winston';
 import type { SeeBackendGoogleCloudConfig } from '../../config/config-types.js';
-import { resolveCredentialsPath } from '../../utils/backends/azure.js';
+import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { LogEmoji } from '../../utils/logging.js';
 import {
     VisionEngine,
@@ -52,19 +52,14 @@ export class GoogleCloudVisionEngine extends VisionEngine {
     private endpoint?: string;
 
     async initialize(config?: SeeBackendGoogleCloudConfig): Promise<void> {
-        const credentialsPath = resolveCredentialsPath(config?.credentialsPath);
-
-        // Set credentials path in environment variable
-        if (credentialsPath) {
-            process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-        }
+        const credentials = loadGoogleCloudCredentials(config?.credentialsPath);
 
         this.model = config?.model as string | undefined;
         this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
 
         winston.info(`${EMO} Google Cloud Vision engine initialized`);
         winston.debug(`${EMO} Initialized GoogleCloudVisionEngine with config:
-            credentialsPath: ${credentialsPath},
+            credentialsPath: ${credentials.credentialsPath},
             model: ${this.model},
             endpoint: ${this.endpoint}`);
     }

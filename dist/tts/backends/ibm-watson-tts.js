@@ -16,7 +16,7 @@
  */
 import TextToSpeechV1 from 'ibm-watson/text-to-speech/v1.js';
 import winston from 'winston';
-import { loadCredentials } from '../../utils/backends/ibm-watson.js';
+import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { TTSEngine } from '../tts-engine.js';
@@ -35,12 +35,11 @@ export class IBMTTSEngine extends TTSEngine {
      * Creates a new TextToSpeechV1 instance.
      */
     async initialize(config) {
-        const credentialsPath = config?.credentialsPath;
-        loadCredentials(credentialsPath);
+        loadIBMWatsonCloudCredentials(config?.credentialsPath);
         this.ttsService = new TextToSpeechV1({});
         winston.info(`${EMO} IBM Watson TTS engine initialized`);
         winston.debug(`${EMO} Initialized IBMWatsonTTSEngine with config:
-            credentialsPath: ${credentialsPath}`);
+            credentialsPath: ${config?.credentialsPath ?? ''}`);
     }
     /**
      * Synthesize text to WAV audio using IBM Watson TTS.

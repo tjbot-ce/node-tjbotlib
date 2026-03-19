@@ -16,9 +16,14 @@
 import type { SeeBackendAzureConfig } from '../../config/config-types.js';
 import { VisionEngine, type FaceDetectionMetadata, type ImageClassificationResult, type ImageDescriptionResult, type ObjectDetectionResult } from '../vision-engine.js';
 export declare class AzureVisionEngine extends VisionEngine {
-    private apiKey?;
-    private url?;
+    private imageAnalysisKey?;
+    private imageAnalysisUrl?;
+    private client?;
+    private model?;
     initialize(config?: SeeBackendAzureConfig): Promise<void>;
+    private normalizeEndpoint;
+    private readImageBuffer;
+    private analyzeImage;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
     detectFaces(image: Buffer | string): Promise<{

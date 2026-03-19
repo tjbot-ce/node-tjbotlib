@@ -17,7 +17,7 @@
 import { TextToSpeechClient, protos as ttsProtos } from '@google-cloud/text-to-speech';
 import winston from 'winston';
 import type { TTSBackendGoogleCloudConfig } from '../../config/config-types.js';
-import { resolveCredentialsPath } from '../../utils/backends/azure.js';
+import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { TTSEngine } from '../tts-engine.js';
@@ -35,18 +35,13 @@ export class GoogleCloudTTSEngine extends TTSEngine {
     private client: TextToSpeechClient | undefined;
 
     async initialize(config?: TTSBackendGoogleCloudConfig): Promise<void> {
-        const credentialsPath = resolveCredentialsPath(config?.credentialsPath);
-
-        // Set credentials path in environment variable
-        if (credentialsPath) {
-            process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-        }
+        const credentials = loadGoogleCloudCredentials(config?.credentialsPath);
 
         this.client = new TextToSpeechClient();
 
         winston.info(`${EMO} Google Cloud TTS engine initialized`);
         winston.debug(`${EMO} Initialized GoogleCloudTTSEngine with config:
-            credentialsPath: ${credentialsPath}`);
+            credentialsPath: ${credentials.credentialsPath}`);
     }
 
     async synthesize(text: string): Promise<Buffer> {

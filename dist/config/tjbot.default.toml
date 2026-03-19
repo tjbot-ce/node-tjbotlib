@@ -82,7 +82,7 @@ backgroundAudioSuppression = 0.4
 # If true, interim results will be returned during streaming recognition.
 interimResults = false
 
-# Optional: path to ibm-credentials.env file containing IBM API credentials
+# Path to ibm-credentials.env file containing IBM API credentials
 # If not specified, TJBot will search for the file in this order:
 #   1. Current working directory (./ibm-credentials.env)
 #   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
@@ -97,8 +97,7 @@ credentialsPath = ''
 #   2. .tjbot directory (~/.tjbot/google-credentials.json)
 credentialsPath = ''
 
-# Optional: Google Cloud Speech-to-Text model to use (e.g., 'latest_long',
-# 'latest_short')
+# Google Cloud Speech-to-Text model to use (e.g., 'latest_long', 'latest_short')
 model = ''
 
 [listen.backend.azure-stt]
@@ -110,7 +109,7 @@ model = ''
 #   2. .tjbot directory (~/.tjbot/azure-credentials.env)
 credentialsPath = ''
 
-# Optional: Language code (e.g., 'en-US', 'en-GB', 'fr-FR')
+# Azure Speech-to-Text language code (e.g., 'en-US', 'en-GB', 'fr-FR')
 language = ''
 
 # =============================================================================
@@ -269,7 +268,7 @@ model = 'vits-piper-en_US-ryan-medium'
 #   https://cloud.ibm.com/docs/text-to-speech?topic=text-to-speech-voices
 voice = 'en-US_MichaelV3Voice'
 
-# Optional: path to ibm-credentials.env file containing IBM API credentials
+# Path to ibm-credentials.env file containing IBM API credentials
 # If not specified, TJBot will search for the file in this order:
 #   1. Current working directory (./ibm-credentials.env)
 #   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
@@ -284,7 +283,7 @@ credentialsPath = ''
 #   2. .tjbot directory (~/.tjbot/google-credentials.json)
 credentialsPath = ''
 
-# Optional: Google Cloud language code (e.g., 'en-US', 'en-GB', 'fr-FR')
+# Google Cloud language code (e.g., 'en-US', 'en-GB', 'fr-FR')
 languageCode = ''
 
 [speak.backend.azure-tts]
@@ -296,7 +295,7 @@ languageCode = ''
 #   2. .tjbot directory (~/.tjbot/azure-credentials.env)
 credentialsPath = ''
 
-# Optional: Azure voice name (e.g., 'en-US-JennyNeural')
+# Azure voice name (e.g., 'en-US-JennyNeural')
 voice = ''
 
 # =============================================================================
