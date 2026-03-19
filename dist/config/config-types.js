@@ -229,7 +229,6 @@ export const speakConfigSchema = z
  */
 export const waveConfigSchema = z
     .object({
-    gpioChip: z.number().optional(),
     servoPin: z.number().optional(),
 })
     .loose();

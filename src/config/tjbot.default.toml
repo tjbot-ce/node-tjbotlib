@@ -305,9 +305,7 @@ voice = ''
 # Configuration for TJBot's ability to wave its arm using a servo motor
 
 [wave]
-# The GPIO chip and pin number for controlling a servo motor
-# connected to TJBot's arm.
-gpioChip = 0  # GPIO chip 0
+# The GPIO pin number for controlling a servo motor connected to TJBot's arm.
 servoPin = 18 # GPIO18 / Physical Pin 12
 
 # ============================================================================

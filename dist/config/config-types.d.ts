@@ -398,7 +398,6 @@ export type SpeakConfig = z.infer<typeof speakConfigSchema>;
  * Servo/Arm (Wave) configuration
  */
 export declare const waveConfigSchema: z.ZodObject<{
-    gpioChip: z.ZodOptional<z.ZodNumber>;
     servoPin: z.ZodOptional<z.ZodNumber>;
 }, z.core.$loose>;
 export type WaveConfig = z.infer<typeof waveConfigSchema>;
@@ -612,7 +611,6 @@ export declare const tjbotConfigSchema: z.ZodObject<{
         }, z.core.$strict>>;
     }, z.core.$loose>>;
     wave: z.ZodOptional<z.ZodObject<{
-        gpioChip: z.ZodOptional<z.ZodNumber>;
         servoPin: z.ZodOptional<z.ZodNumber>;
     }, z.core.$loose>>;
     models: z.ZodOptional<z.ZodArray<z.ZodObject<{

@@ -45,7 +45,7 @@ class RPi5Driver extends RPiBaseHardwareDriver {
     }
     setupServo(config) {
         const pin = config.servoPin ?? 18;
-        const chipNumber = config.gpioChip ?? 0;
+        const chipNumber = 0; // GPIO chip 0 (standard Raspberry Pi configuration)
         this.servo = new LGPIOServoController(chipNumber, pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
