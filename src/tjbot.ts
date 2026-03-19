@@ -250,7 +250,7 @@ class TJBot {
 
                     if (!hasNeopixel && !hasCommonAnode) {
                         throw new TJBotError(
-                            'LED hardware enabled but no LED type configured. Set shine.hasNeopixelLED or shine.hasCommonAnodeLED to true.'
+                            'LED hardware enabled but no LED type configured. Set shine.hasNeopixelLED or shine.hasCommonAnodeLED to true in your tjbot configuration file (~/.tjbot/tjbot.toml).'
                         );
                     }
 

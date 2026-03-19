@@ -198,7 +198,7 @@ class TJBot {
                     const hasNeopixel = shineConfig?.hasNeopixelLED ?? false;
                     const hasCommonAnode = shineConfig?.hasCommonAnodeLED ?? false;
                     if (!hasNeopixel && !hasCommonAnode) {
-                        throw new TJBotError('LED hardware enabled but no LED type configured. Set shine.hasNeopixelLED or shine.hasCommonAnodeLED to true.');
+                        throw new TJBotError('LED hardware enabled but no LED type configured. Set shine.hasNeopixelLED or shine.hasCommonAnodeLED to true in your tjbot configuration file (~/.tjbot/tjbot.toml).');
                     }
                     if (hasNeopixel) {
                         winston.info(`${LogEmoji.LED} Setting up NeoPixel LED ` +
