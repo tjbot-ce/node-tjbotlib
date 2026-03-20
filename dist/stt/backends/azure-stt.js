@@ -60,6 +60,7 @@ export class AzureSTTEngine extends STTEngine {
             throw new TJBotError('Azure STT not initialized. Call initialize() first.');
         }
         const interimResults = config?.interimResults ?? false;
+        winston.verbose(`${EMO} Transcribing speech with Azure STT (language=${config?.language})`);
         // Create speech config
         const speechConfig = sdk.SpeechConfig.fromSubscription(this.subscriptionKey, this.region);
         speechConfig.speechRecognitionLanguage = config?.language;
@@ -89,7 +90,9 @@ export class AzureSTTEngine extends STTEngine {
                         resolve(result.text.trim());
                     }
                     else if (result.reason === sdk.ResultReason.NoMatch) {
-                        reject(new TJBotError('Azure STT: No speech could be recognized'));
+                        reject(new TJBotError('Azure STT: No speech could be recognized', {
+                            code: 'stt.no-speech',
+                        }));
                     }
                     else if (result.reason === sdk.ResultReason.Canceled) {
                         const cancellation = sdk.CancellationDetails.fromResult(result);
@@ -164,7 +167,9 @@ export class AzureSTTEngine extends STTEngine {
                     return;
                 }
                 if (event.result.reason === sdk.ResultReason.NoMatch) {
-                    settleReject(new TJBotError('Azure STT: No speech could be recognized'));
+                    settleReject(new TJBotError('Azure STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    }));
                 }
             };
             recognizer.canceled = (_sender, event) => {

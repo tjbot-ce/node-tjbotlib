@@ -292,7 +292,7 @@ async function promptGoogleCloudTTSOptions(): Promise<BackendConfig> {
             { name: 'en-US-Studio-O (US, Female)', value: 'en-US-Studio-O' },
             { name: 'en-US-Studio-Q (US, Male)', value: 'en-US-Studio-Q' },
         ],
-        default: 'en-US-Neural2-C',
+        default: 'en-US-Neural2-A',
     });
 
     return { voice };
@@ -317,7 +317,7 @@ async function promptAzureTTSOptions(): Promise<BackendConfig> {
             { name: 'Steffan (US, Male)', value: 'en-US-SteffanNeural' },
             { name: 'Zira (US, Female)', value: 'en-US-ZiraNeural' },
         ],
-        default: 'en-US-AmberNeutral',
+        default: 'en-US-AmberNeural',
     });
 
     return { voice };

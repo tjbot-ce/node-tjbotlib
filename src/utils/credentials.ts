@@ -26,8 +26,8 @@ const EMO = LogEmoji.CONFIG;
 export interface AzureCredentials {
     speechKey?: string;
     speechRegion?: string;
-    imageAnalysisKey?: string;
-    imageAnalysisUrl?: string;
+    visionKey?: string;
+    visionEndpoint?: string;
 }
 
 /**
@@ -105,8 +105,8 @@ export function loadAzureCredentials(providedPath?: string): AzureCredentials {
         return {
             speechKey: raw.AZURE_SPEECH_KEY,
             speechRegion: raw.AZURE_SPEECH_REGION,
-            imageAnalysisKey: raw.AZURE_VISION_KEY,
-            imageAnalysisUrl: raw.AZURE_VISION_URL,
+            visionKey: raw.AZURE_VISION_KEY,
+            visionEndpoint: raw.AZURE_VISION_ENDPOINT,
         };
     } catch (err) {
         throw new TJBotError(`Failed to load Azure credentials from ${credentialsPath}`, { cause: err as Error });

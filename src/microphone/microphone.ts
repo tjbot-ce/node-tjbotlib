@@ -159,8 +159,7 @@ export class MicrophoneController {
             this.isStarted = true;
             this.isPaused = false;
         } else if (this.mic !== undefined && this.isPaused) {
-            this.mic.resume();
-            this.isPaused = false;
+            this.resume();
         }
     }
 
@@ -181,6 +180,9 @@ export class MicrophoneController {
         if (this.mic !== undefined && this.isStarted && this.isPaused) {
             this.mic.resume();
             this.isPaused = false;
+
+            // there is no resume event, so log it here
+            winston.verbose(`${EMO} Microphone resumed`);
         }
     }
 

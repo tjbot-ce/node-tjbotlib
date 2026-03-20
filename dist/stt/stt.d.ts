@@ -43,6 +43,7 @@ export declare class STTController {
         onFinalResult?: (text: string) => void;
         abortSignal?: AbortSignal;
     }): Promise<string>;
+    private isNoSpeechError;
     /**
      * Clean up STT resources.
      */

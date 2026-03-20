@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import createImageAnalysisClient, { isUnexpected, } from '@azure-rest/ai-vision-image-analysis';
+import imageAnalysisClientModule, { isUnexpected, } from '@azure-rest/ai-vision-image-analysis';
 import { AzureKeyCredential } from '@azure/core-auth';
 import fs from 'fs';
 import winston from 'winston';
@@ -22,38 +22,43 @@ import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { VisionEngine, } from '../vision-engine.js';
 const EMO = LogEmoji.VISION;
+function resolveImageAnalysisClientFactory() {
+    // SDK package may be exposed as function, { default: fn }, or { default: { default: fn } }
+    // depending on ESM/CJS interop at runtime.
+    const moduleRef = imageAnalysisClientModule;
+    let maybeFactory;
+    if (typeof imageAnalysisClientModule === 'function') {
+        maybeFactory = imageAnalysisClientModule;
+    }
+    else if (typeof moduleRef.default === 'function') {
+        maybeFactory = moduleRef.default;
+    }
+    else {
+        maybeFactory = moduleRef.default?.default;
+    }
+    if (typeof maybeFactory !== 'function') {
+        throw new TJBotError('Azure Vision SDK is not exposing a callable image analysis client factory');
+    }
+    return maybeFactory;
+}
 export class AzureVisionEngine extends VisionEngine {
-    imageAnalysisKey;
-    imageAnalysisUrl;
+    visionKey;
+    visionEndpoint;
     client;
     async initialize() {
         const config = this.config;
         const credentials = loadAzureCredentials(config?.credentialsPath);
-        this.imageAnalysisKey = credentials.imageAnalysisKey;
-        this.imageAnalysisUrl = this.normalizeEndpoint(credentials.imageAnalysisUrl ?? '');
-        if (!this.imageAnalysisKey || !this.imageAnalysisUrl) {
-            throw new TJBotError('Azure Vision imageAnalysisKey and imageAnalysisUrl are required');
+        this.visionKey = credentials.visionKey;
+        this.visionEndpoint = credentials.visionEndpoint;
+        if (!this.visionKey || !this.visionEndpoint) {
+            throw new TJBotError('Azure Vision visionKey and visionEndpoint are required');
         }
-        this.client = createImageAnalysisClient(this.imageAnalysisUrl, new AzureKeyCredential(this.imageAnalysisKey));
+        const createImageAnalysisClient = resolveImageAnalysisClientFactory();
+        this.client = createImageAnalysisClient(this.visionEndpoint, new AzureKeyCredential(this.visionKey));
         winston.info(`${EMO} Azure Vision engine initialized`);
         winston.debug(`${EMO} Initialized AzureVisionEngine with config:
-            imageAnalysisKey: ${this.imageAnalysisKey ? '***' : 'not set'},
-            imageAnalysisUrl: ${this.imageAnalysisUrl ? this.imageAnalysisUrl : 'not set'}`);
-    }
-    normalizeEndpoint(endpoint) {
-        try {
-            const parsed = new URL(endpoint.trim());
-            const normalizedEndpoint = parsed.origin;
-            if (parsed.pathname !== '/' || parsed.search || parsed.hash) {
-                winston.warn(`${EMO} Azure Vision endpoint included a path or query string; using resource root endpoint ${normalizedEndpoint}`);
-            }
-            return normalizedEndpoint;
-        }
-        catch (error) {
-            throw new TJBotError(`Azure Vision endpoint is not a valid URL: ${endpoint}`, {
-                cause: error,
-            });
-        }
+            visionKey: ${this.visionKey ? '***' : 'not set'},
+            visionEndpoint: ${this.visionEndpoint ? this.visionEndpoint : 'not set'}`);
     }
     readImageBuffer(image) {
         if (typeof image === 'string') {

@@ -83,6 +83,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
         if (!this.modelInfo) {
             throw new TJBotError('Model info not set. Ensure initialize() was called.');
         }
+        winston.verbose(`${EMO} Transcribing speech with Sherpa-ONNX STT (model=${this.modelInfo.key}, kind=${this.modelInfo.kind})`);
         try {
             this.ensureStream(micStream);
             const inputRate = config.microphoneRate ?? 16000;

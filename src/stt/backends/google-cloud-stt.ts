@@ -82,7 +82,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
         const interimResults: boolean = (config?.interimResults as boolean) ?? true;
 
         winston.verbose(
-            `${EMO} Synthesizing speech with Google Cloud TTS (model=${model}, languageCode=${languageCode})`
+            `${EMO} Transcribing speech with Google Cloud STT (model=${model}, languageCode=${languageCode})`
         );
 
         const request: speechProtos.google.cloud.speech.v1.IStreamingRecognitionConfig = {
@@ -107,6 +107,26 @@ export class GoogleCloudSTTEngine extends STTEngine {
         this.ensureStream(micStream).pipe(recognizeStream);
 
         return new Promise<string>((resolve, reject) => {
+            let settled = false;
+
+            const settleResolve = (transcript: string) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                resolve(transcript);
+            };
+
+            const settleReject = (error: TJBotError) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                reject(error);
+            };
+
             const handleData = (data: speechProtos.google.cloud.speech.v1.IStreamingRecognizeResponse) => {
                 if (data.results && data.results.length > 0) {
                     const result = data.results[0];
@@ -129,21 +149,41 @@ export class GoogleCloudSTTEngine extends STTEngine {
                         if (interimResults) {
                             options.onFinalResult?.(transcript);
                         }
-                        cleanup();
-                        resolve(transcript);
+                        settleResolve(transcript);
                     }
                 }
             };
 
             const handleError = (err: Error) => {
                 winston.error(`${EMO} Google Cloud STT stream error:`, err);
-                cleanup();
-                reject(new TJBotError('Google Cloud STT recognition failed', { cause: err }));
+                settleReject(new TJBotError('Google Cloud STT recognition failed', { cause: err }));
+            };
+
+            const handleEndWithoutTranscript = () => {
+                settleReject(
+                    new TJBotError('Google Cloud STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    })
+                );
+            };
+
+            const handleStatus = (status: { code?: number; details?: string }) => {
+                if (status.code === 0 || status.code === undefined) {
+                    return;
+                }
+                settleReject(
+                    new TJBotError(`Google Cloud STT recognition failed: ${status.details || 'unknown error'}`, {
+                        cause: new Error(`gRPC status ${String(status.code)}: ${status.details || 'unknown error'}`),
+                    })
+                );
             };
 
             const cleanup = () => {
                 recognizeStream.removeListener('data', handleData);
                 recognizeStream.removeListener('error', handleError);
+                recognizeStream.removeListener('close', handleEndWithoutTranscript);
+                recognizeStream.removeListener('end', handleEndWithoutTranscript);
+                recognizeStream.removeListener('status', handleStatus);
                 try {
                     this.ensureStream(micStream).unpipe(recognizeStream);
                 } catch (err) {
@@ -154,6 +194,9 @@ export class GoogleCloudSTTEngine extends STTEngine {
 
             recognizeStream.on('data', handleData);
             recognizeStream.once('error', handleError);
+            recognizeStream.once('close', handleEndWithoutTranscript);
+            recognizeStream.once('end', handleEndWithoutTranscript);
+            recognizeStream.on('status', handleStatus);
         });
     }
 }

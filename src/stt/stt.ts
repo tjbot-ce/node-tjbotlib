@@ -76,23 +76,35 @@ export class STTController {
             throw new TJBotError('STT engine not initialized. Call initialize() before transcribing.');
         }
 
-        // Start microphone
-        this.microphoneController.start();
+        while (true) {
+            // Start microphone
+            this.microphoneController.start();
 
-        try {
-            const micStream = this.microphoneController.getInputStream();
-            const transcript = await this.sttEngine.transcribe(micStream, {
-                onPartialResult: options?.onPartialResult,
-                onFinalResult: options?.onFinalResult,
-                abortSignal: options?.abortSignal,
-            });
+            try {
+                const micStream = this.microphoneController.getInputStream();
+                const transcript = await this.sttEngine.transcribe(micStream, {
+                    onPartialResult: options?.onPartialResult,
+                    onFinalResult: options?.onFinalResult,
+                    abortSignal: options?.abortSignal,
+                });
 
-            winston.debug(`${EMO} Transcript: ${transcript}`);
-            return transcript;
-        } finally {
-            // Pause between utterances so repeated listen() calls can reuse the live stream.
-            this.microphoneController.pause();
+                winston.debug(`${EMO} Transcript: ${transcript}`);
+                return transcript;
+            } catch (error) {
+                if (this.isNoSpeechError(error)) {
+                    winston.verbose(`${EMO} No speech detected; continuing to listen`);
+                    continue;
+                }
+                throw error;
+            } finally {
+                // Pause between utterances so repeated listen() calls can reuse the live stream.
+                this.microphoneController.pause();
+            }
         }
+    }
+
+    private isNoSpeechError(error: unknown): boolean {
+        return error instanceof TJBotError && error.code === 'stt.no-speech';
     }
 
     /**

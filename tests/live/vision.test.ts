@@ -228,11 +228,12 @@ async function promptTaskChoice(selectedBackend: BackendId): Promise<VisionTask>
 
     const tasks: Array<{ name: string; value: VisionTask }> = [
         {
-            name: `Object detection (${detectionLabel})`,
+            name: selectedBackend === 'local' ? `Object detection (${detectionLabel})` : 'Object detection',
             value: 'detectObjects',
         },
         {
-            name: `Image classification (${classificationLabel})`,
+            name:
+                selectedBackend === 'local' ? `Image classification (${classificationLabel})` : 'Image classification',
             value: 'classifyImage',
         },
     ];
@@ -241,7 +242,7 @@ async function promptTaskChoice(selectedBackend: BackendId): Promise<VisionTask>
     // so onluy show the face detection task for other vision backends.
     if (selectedBackend !== 'azure-vision') {
         tasks.push({
-            name: `Face detection (${faceDetectionLabel})`,
+            name: selectedBackend === 'local' ? `Face detection (${faceDetectionLabel})` : 'Face detection',
             value: 'detectFaces',
         });
     }

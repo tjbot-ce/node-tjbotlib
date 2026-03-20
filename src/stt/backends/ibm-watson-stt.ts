@@ -75,6 +75,8 @@ export class IBMWatsonSTTEngine extends STTEngine {
         const backgroundAudioSuppression: number = (config?.backgroundAudioSuppression as number) ?? 0.4;
         const interimResults: boolean = (config?.interimResults as boolean) ?? false;
 
+        winston.verbose(`${EMO} Transcribing speech with IBM Watson STT (model=${model})`);
+
         const params = {
             objectMode: true,
             contentType: `audio/l16; rate=${this.microphoneRate}; channels=${this.microphoneChannels}`,
@@ -92,6 +94,26 @@ export class IBMWatsonSTTEngine extends STTEngine {
         this.ensureStream(micStream).pipe(recognizeStream);
 
         return new Promise<string>((resolve, reject) => {
+            let settled = false;
+
+            const settleResolve = (transcript: string) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                resolve(transcript);
+            };
+
+            const settleReject = (error: TJBotError) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                reject(error);
+            };
+
             const handleData = (data: unknown) => {
                 const payload = data as {
                     results?: Array<{
@@ -126,20 +148,28 @@ export class IBMWatsonSTTEngine extends STTEngine {
                     if (interimResults) {
                         options.onFinalResult?.(transcript);
                     }
-                    cleanup();
-                    resolve(transcript);
+                    settleResolve(transcript);
                 }
             };
 
             const handleError = (err: Error) => {
                 winston.error(`${EMO} IBM Watson STT stream error:`, err);
-                cleanup();
-                reject(new TJBotError('IBM Watson STT recognition failed', { cause: err }));
+                settleReject(new TJBotError('IBM Watson STT recognition failed', { cause: err }));
+            };
+
+            const handleEndWithoutTranscript = () => {
+                settleReject(
+                    new TJBotError('IBM Watson STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    })
+                );
             };
 
             const cleanup = () => {
                 recognizeStream.removeListener('data', handleData);
                 recognizeStream.removeListener('error', handleError);
+                recognizeStream.removeListener('close', handleEndWithoutTranscript);
+                recognizeStream.removeListener('end', handleEndWithoutTranscript);
                 try {
                     this.ensureStream(micStream).unpipe(recognizeStream);
                 } catch (err) {
@@ -152,6 +182,8 @@ export class IBMWatsonSTTEngine extends STTEngine {
 
             recognizeStream.on('data', handleData);
             recognizeStream.once('error', handleError);
+            recognizeStream.once('close', handleEndWithoutTranscript);
+            recognizeStream.once('end', handleEndWithoutTranscript);
         });
     }
 }

@@ -192,7 +192,7 @@ faceDetectionConfidence = 0.5
 credentialsPath = ''
 
 [see.backend.azure-vision]
-# Path to the azure-credentials.env file containing Azure Image Analysis API credentials
+# Path to the azure-credentials.env file containing Azure Vision API credentials
 # By default, TJBot will search for the file in this order:
 #   1. Current working directory (./azure-credentials.env)
 #   2. .tjbot directory (~/.tjbot/azure-credentials.env)

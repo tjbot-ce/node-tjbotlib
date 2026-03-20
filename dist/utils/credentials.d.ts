@@ -16,8 +16,8 @@
 export interface AzureCredentials {
     speechKey?: string;
     speechRegion?: string;
-    imageAnalysisKey?: string;
-    imageAnalysisUrl?: string;
+    visionKey?: string;
+    visionEndpoint?: string;
 }
 /**
  * Resolves a credentials file path by checking provided path, then CWD, then ~/.tjbot.

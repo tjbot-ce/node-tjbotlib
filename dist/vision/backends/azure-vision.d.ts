@@ -15,11 +15,10 @@
  */
 import { VisionEngine, type FaceDetectionMetadata, type ImageClassificationResult, type ImageDescriptionResult, type ObjectDetectionResult } from '../vision-engine.js';
 export declare class AzureVisionEngine extends VisionEngine {
-    private imageAnalysisKey?;
-    private imageAnalysisUrl?;
+    private visionKey?;
+    private visionEndpoint?;
     private client?;
     initialize(): Promise<void>;
-    private normalizeEndpoint;
     private readImageBuffer;
     private analyzeImage;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;

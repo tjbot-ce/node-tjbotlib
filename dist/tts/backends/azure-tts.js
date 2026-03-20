@@ -59,9 +59,7 @@ export class AzureTTSEngine extends TTSEngine {
             }
             winston.verbose(`${EMO} Synthesizing speech with Azure TTS (voice=${voiceName})`);
             // Create speech config
-            const subscriptionKey = this.config?.subscriptionKey;
-            const region = this.config?.region;
-            const speechConfig = sdk.SpeechConfig.fromSubscription(subscriptionKey, region);
+            const speechConfig = sdk.SpeechConfig.fromSubscription(this.subscriptionKey, this.region);
             speechConfig.speechSynthesisVoiceName = voiceName;
             speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
             // Create synthesizer with null audio config to get result in memory
@@ -83,7 +81,7 @@ export class AzureTTSEngine extends TTSEngine {
                     }
                 }, (error) => {
                     synthesizer.close();
-                    reject(new TJBotError('Azure TTS synthesis error', { cause: new Error(error) }));
+                    reject(new TJBotError(`Azure TTS synthesis error: ${error}`));
                 });
             });
         }

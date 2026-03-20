@@ -85,8 +85,8 @@ export function loadAzureCredentials(providedPath) {
         return {
             speechKey: raw.AZURE_SPEECH_KEY,
             speechRegion: raw.AZURE_SPEECH_REGION,
-            imageAnalysisKey: raw.AZURE_VISION_KEY,
-            imageAnalysisUrl: raw.AZURE_VISION_URL,
+            visionKey: raw.AZURE_VISION_KEY,
+            visionEndpoint: raw.AZURE_VISION_ENDPOINT,
         };
     }
     catch (err) {
