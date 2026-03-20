@@ -250,11 +250,25 @@ async function promptIBMWatsonTTSOptions(): Promise<BackendConfig> {
     const voice = await select({
         message: 'Select IBM Watson voice:',
         choices: [
-            { name: 'Allison (US, Female)', value: 'en-US_AllisonV3Voice' },
-            { name: 'Emily (US, Female)', value: 'en-US_EmilyV3Voice' },
-            { name: 'Henry (US, Male)', value: 'en-US_HenryV3Voice' },
-            { name: 'Kevin (US, Male)', value: 'en-US_KevinV3Voice' },
-            { name: 'Olivia (US, Female)', value: 'en-US_OliviaV3Voice' },
+            // Enhanced neural voices
+            { name: 'Allison (US, Female, Enhanced)', value: 'en-US_AllisonV3Voice' },
+            { name: 'Emily (US, Female, Enhanced)', value: 'en-US_EmilyV3Voice' },
+            { name: 'Henry (US, Male, Enhanced)', value: 'en-US_HenryV3Voice' },
+            { name: 'Kevin (US, Male, Enhanced)', value: 'en-US_KevinV3Voice' },
+            { name: 'Lisa (US, Female, Enhanced)', value: 'en-US_LisaV3Voice' },
+            { name: 'Michael (US, Male, Enhanced)', value: 'en-US_MichaelV3Voice' },
+            { name: 'Olivia (US, Female, Enhanced)', value: 'en-US_OliviaV3Voice' },
+            // Expressive neural voices
+            { name: 'Allison (US, Female, Expressive)', value: 'en-US_AllisonExpressive' },
+            { name: 'Emma (US, Female, Expressive)', value: 'en-US_EmmaExpressive' },
+            { name: 'Lisa (US, Female, Expressive)', value: 'en-US_LisaExpressive' },
+            { name: 'Michael (US, Male, Expressive)', value: 'en-US_MichaelExpressive' },
+            // Natural voices
+            { name: 'Ellie (US, Female, Natural)', value: 'en-US_EllieNatural' },
+            { name: 'Emma (US, Female, Natural)', value: 'en-US_EmmaNatural' },
+            { name: 'Ethan (US, Male, Natural)', value: 'en-US_EthanNatural' },
+            { name: 'Jackson (US, Male, Natural)', value: 'en-US_JacksonNatural' },
+            { name: 'Victoria (US, Female, Natural)', value: 'en-US_VictoriaNatural' },
         ],
         default: 'en-US_AllisonV3Voice',
     });
@@ -266,13 +280,19 @@ async function promptGoogleCloudTTSOptions(): Promise<BackendConfig> {
     const voice = await select({
         message: 'Select Google Cloud voice:',
         choices: [
-            { name: 'Joelle (US, Female, Neural2)', value: 'en-US-Neural2-J' },
-            { name: 'Jude (US, Male, Neural2)', value: 'en-US-Neural2-D' },
-            { name: 'Journey (US, Non-Binary, Neural2)', value: 'en-US-Neural2-E' },
-            { name: 'Aria (US, Female, Studio)', value: 'en-US-Studio-A' },
-            { name: 'Essence (US, Non-Binary, Studio)', value: 'en-US-Studio-B' },
+            { name: 'en-US-Neural2-A (US, Male)', value: 'en-US-Neural2-A' },
+            { name: 'en-US-Neural2-C (US, Female)', value: 'en-US-Neural2-C' },
+            { name: 'en-US-Neural2-D (US, Male)', value: 'en-US-Neural2-D' },
+            { name: 'en-US-Neural2-E (US, Female)', value: 'en-US-Neural2-E' },
+            { name: 'en-US-Neural2-F (US, Female)', value: 'en-US-Neural2-F' },
+            { name: 'en-US-Neural2-G (US, Female)', value: 'en-US-Neural2-G' },
+            { name: 'en-US-Neural2-H (US, Female)', value: 'en-US-Neural2-H' },
+            { name: 'en-US-Neural2-I (US, Male)', value: 'en-US-Neural2-I' },
+            { name: 'en-US-Neural2-J (US, Male)', value: 'en-US-Neural2-J' },
+            { name: 'en-US-Studio-O (US, Female)', value: 'en-US-Studio-O' },
+            { name: 'en-US-Studio-Q (US, Male)', value: 'en-US-Studio-Q' },
         ],
-        default: 'en-US-Neural2-J',
+        default: 'en-US-Neural2-C',
     });
 
     return { voice };
@@ -282,13 +302,22 @@ async function promptAzureTTSOptions(): Promise<BackendConfig> {
     const voice = await select({
         message: 'Select Azure voice:',
         choices: [
-            { name: 'Jenny (US, Female)', value: 'en-US-JennyNeural' },
-            { name: 'Guy (US, Male)', value: 'en-US-GuyNeural' },
+            { name: 'Amber (US, Female)', value: 'en-US-AmberNeural' },
+            { name: 'Andrew (US, Male)', value: 'en-US-AndrewNeural' },
             { name: 'Aria (US, Female)', value: 'en-US-AriaNeural' },
+            { name: 'Ashley (US, Female)', value: 'en-US-AshleyNeural' },
+            { name: 'Ava (US, Female)', value: 'en-US-AvaNeural' },
+            { name: 'Brian (US, Male)', value: 'en-US-BrianNeural' },
+            { name: 'Davis (US, Male)', value: 'en-US-DavisNeural' },
+            { name: 'Emma (US, Female)', value: 'en-US-EmmaNeural' },
+            { name: 'Guy (US, Male)', value: 'en-US-GuyNeural' },
+            { name: 'Jenny (US, Female)', value: 'en-US-JennyNeural' },
+            { name: 'Roger (US, Male)', value: 'en-US-RogerNeural' },
             { name: 'Ryan (US, Male)', value: 'en-US-RyanNeural' },
+            { name: 'Steffan (US, Male)', value: 'en-US-SteffanNeural' },
             { name: 'Zira (US, Female)', value: 'en-US-ZiraNeural' },
         ],
-        default: 'en-US-JennyNeural',
+        default: 'en-US-AmberNeutral',
     });
 
     return { voice };

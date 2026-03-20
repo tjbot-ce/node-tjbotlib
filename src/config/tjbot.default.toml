@@ -286,13 +286,22 @@ credentialsPath = ''
 
 # 'voice' specifies the IBM Watson Text-to-Speech voice to use.
 # Available IBM voices include:
+#   en-US_AllisonExpressive
 #   en-US_AllisonV3Voice
+#   en-US_EllieNatural
 #   en-US_EmilyV3Voice
+#   en-US_EmmaExpressive
+#   en-US_EmmaNatural
+#   en-US_EthanNatural
 #   en-US_HenryV3Voice
+#   en-US_JacksonNatural
 #   en-US_KevinV3Voice
+#   en-US_LisaExpressive
 #   en-US_LisaV3Voice
+#   en-US_MichaelExpressive
 #   en-US_MichaelV3Voice
 #   en-US_OliviaV3Voice
+#   en-US_VictoriaNatural
 # For a complete list of available voices, see:
 #   https://cloud.ibm.com/docs/text-to-speech?topic=text-to-speech-voices
 voice = 'en-US_MichaelV3Voice'
@@ -309,8 +318,15 @@ credentialsPath = ''
 # Examples:
 #   en-US-Neural2-A
 #   en-US-Neural2-C
-#   en-US-Wavenet-D
+#   en-US-Neural2-D
+#   en-US-Neural2-E
+#   en-US-Neural2-F
+#   en-US-Neural2-G
+#   en-US-Neural2-H
+#   en-US-Neural2-I
+#   en-US-Neural2-J
 #   en-US-Studio-O
+#   en-US-Studio-Q
 # For a complete list of available voices, see:
 #   https://docs.cloud.google.com/text-to-speech/docs/list-voices-and-types
 voice = 'en-US-Neural2-C'
@@ -329,18 +345,18 @@ credentialsPath = ''
 
 # Azure TTS voice name
 # Examples:
-#   en-US-AvaNeural
+#   en-US-AmberNeural
 #   en-US-AndrewNeural
+#   en-US-AriaNeural
+#   en-US-AshleyNeural
+#   en-US-AvaNeural
 #   en-US-BrianNeural
+#   en-US-DavisNeural
 #   en-US-EmmaNeural
-#   en-US-JennyNeural
 #   en-US-GuyNeural
+#   en-US-JennyNeural
 #   en-US-RogerNeural
 #   en-US-SteffanNeural
-#   en-US-AriaNeural
-#   en-US-DavisNeural
-#   en-US-AmberNeural
-#   en-US-AshleyNeural
 # For a complete list of available voices, see:
 #   https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts
 voice = 'en-US-EmmaNeural'
