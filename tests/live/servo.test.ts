@@ -34,7 +34,13 @@ async function runTest(): Promise<void> {
 
     const tjbot = await TJBot.getInstance().initialize({
         log: { level: LOG_LEVEL },
-        hardware: { servo: true },
+        hardware: {
+            camera: false,
+            led: false,
+            microphone: false,
+            servo: true,
+            speaker: false,
+        },
         wave: {
             servoPin,
         },

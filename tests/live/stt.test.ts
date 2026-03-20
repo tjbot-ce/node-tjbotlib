@@ -37,7 +37,7 @@ const COLORS = {
     YELLOW: '\x1b[33m',
 };
 
-const LOG_LEVEL = 'info';
+const LOG_LEVEL = 'verbose';
 
 const BACKENDS = [
     { key: 'local', label: 'Local (Sherpa-ONNX)' },
@@ -81,7 +81,13 @@ async function runTest(): Promise<void> {
     // Instantiate TJBot with override configuration
     const tjbot = await TJBot.getInstance().initialize({
         log: { level: LOG_LEVEL },
-        hardware: { microphone: true },
+        hardware: {
+            camera: false,
+            led: false,
+            microphone: true,
+            servo: false,
+            speaker: false,
+        },
         listen: listenConfig,
     });
     console.log('✓ TJBot initialized');

@@ -13,7 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { TTSBackendGoogleCloudConfig } from '../../config/config-types.js';
 import { TTSEngine } from '../tts-engine.js';
 /**
  * Google Cloud Text-to-Speech Engine
@@ -23,8 +22,8 @@ import { TTSEngine } from '../tts-engine.js';
  * @public
  */
 export declare class GoogleCloudTTSEngine extends TTSEngine {
-    private client;
-    initialize(config?: TTSBackendGoogleCloudConfig): Promise<void>;
+    private client?;
+    initialize(): Promise<void>;
     synthesize(text: string): Promise<Buffer>;
     /**
      * Add WAV header to raw PCM audio data

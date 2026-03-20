@@ -91,9 +91,6 @@ export async function createSTTEngine(listenConfig) {
         throw new TJBotError(`Unknown STT backend type: ${backend}`);
     }
     catch (error) {
-        if (error instanceof TJBotError) {
-            throw error;
-        }
         throw new TJBotError(`Failed to load STT backend "${backend}". Ensure dependencies are installed.`, {
             cause: error,
         });

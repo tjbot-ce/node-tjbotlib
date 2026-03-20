@@ -30,20 +30,22 @@ const EMO = LogEmoji.TTS;
 export class AzureTTSEngine extends TTSEngine {
     subscriptionKey;
     region;
-    async initialize(config) {
-        this.loadCredentials(config);
-        if (!this.subscriptionKey || !this.region) {
-            throw new TJBotError('Azure Speech subscription key and region are required');
-        }
-        winston.info(`${EMO} Azure TTS engine initialized`);
-        winston.debug(`${EMO} Initialized AzureTTSEngine with config:
-            region: ${this.region},
-            subscriptionKey: ${this.subscriptionKey ? '***' : 'not set'}`);
-    }
-    loadCredentials(config) {
+    async initialize() {
+        const config = this.config;
         const credentials = loadAzureCredentials(config?.credentialsPath);
         this.subscriptionKey = credentials.speechKey;
         this.region = credentials.speechRegion;
+        if (!config?.voice) {
+            throw new TJBotError('Azure TTS voice not specified. Provide voice in speak.backend.azure-tts config.');
+        }
+        if (!this.subscriptionKey || !this.region) {
+            throw new TJBotError('Azure Speech subscription key and region are required.');
+        }
+        winston.info(`${EMO} Azure TTS engine initialized`);
+        winston.debug(`${EMO} Initialized AzureTTSEngine with config:
+            voice: ${config?.voice},
+            region: ${this.region},
+            subscriptionKey: ${this.subscriptionKey ? '***' : 'not set'}`);
     }
     async synthesize(text) {
         if (!this.subscriptionKey || !this.region) {
@@ -57,7 +59,9 @@ export class AzureTTSEngine extends TTSEngine {
             }
             winston.verbose(`${EMO} Synthesizing speech with Azure TTS (voice=${voiceName})`);
             // Create speech config
-            const speechConfig = sdk.SpeechConfig.fromSubscription(this.subscriptionKey, this.region);
+            const subscriptionKey = this.config?.subscriptionKey;
+            const region = this.config?.region;
+            const speechConfig = sdk.SpeechConfig.fromSubscription(subscriptionKey, region);
             speechConfig.speechSynthesisVoiceName = voiceName;
             speechConfig.speechSynthesisOutputFormat = sdk.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
             // Create synthesizer with null audio config to get result in memory

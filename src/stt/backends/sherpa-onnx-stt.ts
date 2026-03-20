@@ -76,14 +76,19 @@ export class SherpaONNXSTTEngine extends STTEngine {
 
     async initialize(): Promise<void> {
         const config = this.config as STTBackendLocalConfig;
+        const vadConfig = config.vad as VADConfig;
 
-        // Set environment variables to reduce noisy logging
-        if (!process.env.SHERPA_ONNX_LOG_LEVEL) {
-            process.env.SHERPA_ONNX_LOG_LEVEL = 'OFF';
+        if (!config.model) {
+            throw new TJBotError(
+                'Sherpa-ONNX STT model not specified. Provide model name in listen.backend.sherpa-onnx config.'
+            );
         }
 
         // Load sherpa-onnx
         if (!sherpa) {
+            // Set environment variables to reduce noisy logging
+            process.env.SHERPA_ONNX_LOG_LEVEL = 'OFF';
+
             const module = await import('sherpa-onnx-node');
             // CommonJS module imported as ES module has exports in .default
             sherpa = (module.default || module) as unknown as SherpaSTTModule;
@@ -99,8 +104,6 @@ export class SherpaONNXSTTEngine extends STTEngine {
         this.modelPaths = this.pathsForModelKey(this.modelInfo.key, modelDir);
 
         // Download VAD model if needed for offline recognition
-        const vadConfig = this.config.vad as VADConfig;
-
         if (vadConfig && this.modelInfo) {
             if (this.modelInfo.kind.startsWith('offline') && vadConfig.enabled) {
                 const vadModelName = vadConfig.model as string;
@@ -118,6 +121,8 @@ export class SherpaONNXSTTEngine extends STTEngine {
     }
 
     async transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string> {
+        const config = this.config as STTBackendLocalConfig;
+
         if (!sherpa || !this.recognizer) {
             throw new TJBotError('Sherpa-ONNX STT service not initialized. Call initialize() first.');
         }
@@ -128,7 +133,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
 
         try {
             this.ensureStream(micStream);
-            const inputRate = (this.config.microphoneRate as number) ?? 16000;
+            const inputRate = (config.microphoneRate as number) ?? 16000;
 
             // Route to appropriate transcription method based on model type
             if (this.modelInfo.kind === 'streaming' || this.modelInfo.kind === 'streaming-zipformer') {
@@ -146,11 +151,13 @@ export class SherpaONNXSTTEngine extends STTEngine {
      * Determine if VAD should be used
      */
     private shouldUseVad(): boolean {
+        const config = this.config as STTBackendLocalConfig;
+
         if (!this.modelInfo) {
             throw new TJBotError('Model info not set. Ensure initialize() was called.');
         }
 
-        const vadConfig = this.config.vad as VADConfig;
+        const vadConfig = config.vad as VADConfig;
         const vadEnabled = vadConfig.enabled ?? true;
         const isOffline = this.modelInfo.kind.startsWith('offline');
         return isOffline && vadEnabled;

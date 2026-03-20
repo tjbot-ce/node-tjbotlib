@@ -63,13 +63,11 @@ export type STTBackendIBMWatsonConfig = z.infer<typeof sttBackendIBMWatsonConfig
 
 export const sttBackendGoogleCloudConfigSchema = z
     .object({
+        credentialsPath: z.string().optional(),
         model: z.string().optional(),
         languageCode: z.string().optional(),
-        credentialsPath: z.string().optional(),
-        encoding: z.string().optional(),
-        sampleRateHertz: z.number().optional(),
-        audioChannelCount: z.number().optional(),
         enableAutomaticPunctuation: z.boolean().optional(),
+        profanityFilter: z.boolean().optional(),
         interimResults: z.boolean().optional(),
     })
     .loose();
@@ -79,6 +77,7 @@ export const sttBackendAzureConfigSchema = z
     .object({
         language: z.string().optional(),
         credentialsPath: z.string().optional(),
+        interimResults: z.boolean().optional(),
     })
     .loose();
 export type STTBackendAzureConfig = z.infer<typeof sttBackendAzureConfigSchema>;
@@ -159,7 +158,6 @@ export type SeeBackendLocalConfig = z.infer<typeof seeBackendLocalConfigSchema>;
 export const seeBackendGoogleCloudConfigSchema = z
     .object({
         credentialsPath: z.string().optional(),
-        model: z.string().optional(),
     })
     .loose();
 export type SeeBackendGoogleCloudConfig = z.infer<typeof seeBackendGoogleCloudConfigSchema>;
@@ -167,7 +165,6 @@ export type SeeBackendGoogleCloudConfig = z.infer<typeof seeBackendGoogleCloudCo
 export const seeBackendAzureConfigSchema = z
     .object({
         credentialsPath: z.string().optional(),
-        model: z.string().optional(),
     })
     .loose();
 export type SeeBackendAzureConfig = z.infer<typeof seeBackendAzureConfigSchema>;
@@ -265,16 +262,17 @@ export type TTSBackendIBMWatsonConfig = z.infer<typeof ttsBackendIBMWatsonConfig
 
 export const ttsBackendGoogleCloudConfigSchema = z
     .object({
-        languageCode: z.string().optional(),
         credentialsPath: z.string().optional(),
+        languageCode: z.string().optional(),
+        voice: z.string().optional(),
     })
     .loose();
 export type TTSBackendGoogleCloudConfig = z.infer<typeof ttsBackendGoogleCloudConfigSchema>;
 
 export const ttsBackendAzureConfigSchema = z
     .object({
-        voice: z.string().optional(),
         credentialsPath: z.string().optional(),
+        voice: z.string().optional(),
     })
     .loose();
 export type TTSBackendAzureConfig = z.infer<typeof ttsBackendAzureConfigSchema>;

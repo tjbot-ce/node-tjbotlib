@@ -42,9 +42,9 @@ export class AzureVisionEngine extends VisionEngine {
     private imageAnalysisKey?: string;
     private imageAnalysisUrl?: string;
     private client?: ImageAnalysisClient;
-    private model?: string;
 
-    async initialize(config?: SeeBackendAzureConfig): Promise<void> {
+    async initialize(): Promise<void> {
+        const config = this.config as SeeBackendAzureConfig;
         const credentials = loadAzureCredentials(config?.credentialsPath);
         this.imageAnalysisKey = credentials.imageAnalysisKey;
         this.imageAnalysisUrl = this.normalizeEndpoint(credentials.imageAnalysisUrl ?? '');
@@ -53,7 +53,6 @@ export class AzureVisionEngine extends VisionEngine {
             throw new TJBotError('Azure Vision imageAnalysisKey and imageAnalysisUrl are required');
         }
 
-        this.model = config?.model as string | undefined;
         this.client = (createImageAnalysisClient as unknown as ImageAnalysisClientFactory)(
             this.imageAnalysisUrl,
             new AzureKeyCredential(this.imageAnalysisKey)
@@ -62,8 +61,7 @@ export class AzureVisionEngine extends VisionEngine {
         winston.info(`${EMO} Azure Vision engine initialized`);
         winston.debug(`${EMO} Initialized AzureVisionEngine with config:
             imageAnalysisKey: ${this.imageAnalysisKey ? '***' : 'not set'},
-            imageAnalysisUrl: ${this.imageAnalysisUrl ? this.imageAnalysisUrl : 'not set'},
-            model: ${this.model ?? 'default'}`);
+            imageAnalysisUrl: ${this.imageAnalysisUrl ? this.imageAnalysisUrl : 'not set'}`);
     }
 
     private normalizeEndpoint(endpoint: string): string {
@@ -103,7 +101,6 @@ export class AzureVisionEngine extends VisionEngine {
             body: imageBuffer,
             queryParameters: {
                 features,
-                ...(this.model ? { 'model-version': this.model } : {}),
             },
             contentType: 'application/octet-stream',
         });

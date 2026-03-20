@@ -51,10 +51,24 @@ export function toModelType(flavor: STTModelFlavor): STTModelType {
 }
 
 export function inferSTTMode(listenConfig: ListenConfig): STTModelType {
-    const backend = (listenConfig.backend?.type as STTBackendType) ?? 'local';
+    const backend = listenConfig.backend?.type as STTBackendType;
 
-    if (backend === 'ibm-watson-stt' || backend === 'google-cloud-stt') {
-        return 'streaming';
+    if (backend === 'ibm-watson-stt') {
+        const config = listenConfig.backend?.['ibm-watson-stt'] as Record<string, unknown>;
+        if (config.interimResults) {
+            return 'streaming';
+        } else {
+            return 'offline';
+        }
+    }
+
+    if (backend === 'google-cloud-stt') {
+        const config = listenConfig.backend?.['google-cloud-stt'] as Record<string, unknown>;
+        if (config.interimResults) {
+            return 'streaming';
+        } else {
+            return 'offline';
+        }
     }
 
     if (backend === 'azure-stt') {
@@ -71,5 +85,6 @@ export function inferSTTMode(listenConfig: ListenConfig): STTModelType {
         const flavor = inferLocalModelFlavor(modelName, modelUrl);
         return toModelType(flavor);
     }
+
     throw new TJBotError(`Unknown STT backend type: ${backend}`);
 }

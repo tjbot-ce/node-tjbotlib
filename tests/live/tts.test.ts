@@ -85,7 +85,13 @@ async function runTest(): Promise<void> {
     // Instantiate TJBot with override configuration
     const tjbot = await TJBot.getInstance().initialize({
         log: { level: LOG_LEVEL },
-        hardware: { speaker: true },
+        hardware: {
+            camera: false,
+            led: false,
+            microphone: false,
+            servo: false,
+            speaker: true,
+        },
         speak: speakConfig,
     });
     console.log('✓ TJBot initialized');

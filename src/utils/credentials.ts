@@ -49,6 +49,7 @@ export function resolveCredentialsPath(filename: string, providedPath?: string):
 
     for (const defaultPath of defaultPaths) {
         if (fs.existsSync(defaultPath)) {
+            winston.verbose(`${EMO} Found credentials file at: ${defaultPath}`);
             return defaultPath;
         }
     }

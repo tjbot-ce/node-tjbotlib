@@ -23,8 +23,10 @@ import { STTEngine, STTRequestOptions } from '../stt-engine.js';
  * @public
  */
 export declare class IBMWatsonSTTEngine extends STTEngine {
+    private microphoneRate;
+    private microphoneChannels;
     private sttService;
-    initialize(): Promise<void>;
+    initialize(microphoneRate: number, microphoneChannels: number): Promise<void>;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
 }
 //# sourceMappingURL=ibm-watson-stt.d.ts.map

@@ -30,6 +30,7 @@ import {
     ObjectDetectionResult,
     VisionEngine,
 } from '../vision-engine.js';
+import { SeeBackendLocalConfig } from '../../config/config-types.js';
 
 const EMO = LogEmoji.VISION;
 
@@ -48,35 +49,33 @@ export class ONNXVisionEngine extends VisionEngine {
      * Initialize the ONNX vision engine.
      */
     async initialize(): Promise<void> {
-        if (this.config === undefined) {
-            throw new TJBotError('ONNX vision engine config is missing');
-        }
+        const config = this.config as SeeBackendLocalConfig;
 
-        if (this.config.objectDetectionModel === undefined) {
+        if (!config.objectDetectionModel) {
             throw new TJBotError('ONNX vision engine config is missing required parameter: objectDetectionModel');
         }
 
-        if (this.config.imageClassificationModel === undefined) {
+        if (!config.imageClassificationModel) {
             throw new TJBotError('ONNX vision engine config is missing required parameter: imageClassificationModel');
         }
 
-        if (this.config.faceDetectionModel === undefined) {
+        if (!config.faceDetectionModel) {
             throw new TJBotError('ONNX vision engine config is missing required parameter: faceDetectionModel');
         }
 
         // Eagerly load all models
-        await this.loadModel(this.config.objectDetectionModel as string);
-        await this.loadModel(this.config.imageClassificationModel as string);
-        await this.loadModel(this.config.faceDetectionModel as string);
+        await this.loadModel(config.objectDetectionModel as string);
+        await this.loadModel(config.imageClassificationModel as string);
+        await this.loadModel(config.faceDetectionModel as string);
 
         winston.info(`${EMO} ONNX vision engine initialized`);
         winston.debug(`${EMO} Initialized ONNXVisionEngine with config:
-            objectDetectionModel: ${this.config.objectDetectionModel},
-            objectDetectionConfidence: ${this.config.objectDetectionConfidence},
-            imageClassificationModel: ${this.config.imageClassificationModel},
-            imageClassificationConfidence: ${this.config.imageClassificationConfidence},
-            faceDetectionModel: ${this.config.faceDetectionModel},
-            faceDetectionConfidence: ${this.config.faceDetectionConfidence}`);
+            objectDetectionModel: ${config.objectDetectionModel},
+            objectDetectionConfidence: ${config.objectDetectionConfidence},
+            imageClassificationModel: ${config.imageClassificationModel},
+            imageClassificationConfidence: ${config.imageClassificationConfidence},
+            faceDetectionModel: ${config.faceDetectionModel},
+            faceDetectionConfidence: ${config.faceDetectionConfidence}`);
     }
 
     /**

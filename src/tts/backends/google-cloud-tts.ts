@@ -32,15 +32,29 @@ const EMO = LogEmoji.TTS;
  * @public
  */
 export class GoogleCloudTTSEngine extends TTSEngine {
-    private client: TextToSpeechClient | undefined;
+    private client?: TextToSpeechClient;
 
-    async initialize(config?: TTSBackendGoogleCloudConfig): Promise<void> {
+    async initialize(): Promise<void> {
+        const config = this.config as TTSBackendGoogleCloudConfig;
         const credentials = loadGoogleCloudCredentials(config?.credentialsPath);
+
+        if (!config?.voice) {
+            throw new TJBotError(
+                'Google Cloud TTS voice not specified. Provide voice in speak.backend.google-cloud-tts config.'
+            );
+        }
+        if (!config?.languageCode) {
+            throw new TJBotError(
+                'Google Cloud TTS languageCode not specified. Provide languageCode in speak.backend.google-cloud-tts config.'
+            );
+        }
 
         this.client = new TextToSpeechClient();
 
         winston.info(`${EMO} Google Cloud TTS engine initialized`);
         winston.debug(`${EMO} Initialized GoogleCloudTTSEngine with config:
+            voice: ${config?.voice},
+            languageCode: ${config?.languageCode},
             credentialsPath: ${credentials.credentialsPath}`);
     }
 
@@ -52,25 +66,17 @@ export class GoogleCloudTTSEngine extends TTSEngine {
         this.validateText(text);
 
         try {
-            const voiceName = this.config?.voice as string;
-            if (!voiceName) {
-                throw new TJBotError('Google Cloud TTS voice not specified. Provide voice in speak config.');
-            }
+            const voice = this.config?.voice as string;
             const languageCode = this.config?.languageCode as string;
-            if (!languageCode) {
-                throw new TJBotError(
-                    'Google Cloud TTS languageCode not specified. Provide languageCode in speak config.'
-                );
-            }
 
             winston.verbose(
-                `${EMO} Synthesizing speech with Google Cloud TTS (voice=${voiceName}, language=${languageCode})`
+                `${EMO} Synthesizing speech with Google Cloud TTS (voice=${voice}, language=${languageCode})`
             );
 
             const request: ttsProtos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest = {
                 input: { text },
                 voice: {
-                    name: voiceName,
+                    name: voice,
                     languageCode,
                 },
                 audioConfig: {

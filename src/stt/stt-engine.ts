@@ -25,7 +25,6 @@ import {
 import { TJBotError } from '../utils/index.js';
 
 export interface STTRequestOptions {
-    listenConfig: ListenConfig;
     /** Optional callback for streaming partial results */
     onPartialResult?: (text: string) => void;
     /** Optional callback for final result */
@@ -48,10 +47,12 @@ export abstract class STTEngine {
 
     /**
      * Initialize the STT engine. Must be called before transcribe().
+     * @param microphoneRate Sample rate of the microphone audio (e.g., 44100)
+     * @param microphoneChannels Number of audio channels from the microphone (e.g., 2 for stereo)
      * @throws {TJBotError} if initialization fails
      * @public
      */
-    abstract initialize(): Promise<void>;
+    abstract initialize(microphoneRate: number, microphoneChannels: number): Promise<void>;
 
     /**
      * Clean up resources used by the STT engine.
@@ -149,9 +150,6 @@ export async function createSTTEngine(listenConfig: ListenConfig): Promise<STTEn
 
         throw new TJBotError(`Unknown STT backend type: ${backend}`);
     } catch (error) {
-        if (error instanceof TJBotError) {
-            throw error;
-        }
         throw new TJBotError(`Failed to load STT backend "${backend}". Ensure dependencies are installed.`, {
             cause: error as Error,
         });

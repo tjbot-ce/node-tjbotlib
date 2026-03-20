@@ -13,14 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import type { SeeBackendAzureConfig } from '../../config/config-types.js';
 import { VisionEngine, type FaceDetectionMetadata, type ImageClassificationResult, type ImageDescriptionResult, type ObjectDetectionResult } from '../vision-engine.js';
 export declare class AzureVisionEngine extends VisionEngine {
     private imageAnalysisKey?;
     private imageAnalysisUrl?;
     private client?;
-    private model?;
-    initialize(config?: SeeBackendAzureConfig): Promise<void>;
+    initialize(): Promise<void>;
     private normalizeEndpoint;
     private readImageBuffer;
     private analyzeImage;

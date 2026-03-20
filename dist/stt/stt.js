@@ -39,7 +39,10 @@ export class STTController {
     async initialize(config) {
         this.listenConfig = config;
         this.sttEngine = await createSTTEngine(this.listenConfig);
-        await this.sttEngine.initialize();
+        const microphoneRate = this.listenConfig.microphoneRate;
+        const microphoneChannels = this.listenConfig.microphoneChannels;
+        winston.debug(`${EMO} Initializing STT engine with microphone settings: rate=${microphoneRate}, channels=${microphoneChannels}`);
+        await this.sttEngine.initialize(microphoneRate, microphoneChannels);
     }
     /**
      * Transcribe audio from a microphone stream.
@@ -60,7 +63,6 @@ export class STTController {
         try {
             const micStream = this.microphoneController.getInputStream();
             const transcript = await this.sttEngine.transcribe(micStream, {
-                listenConfig: this.listenConfig,
                 onPartialResult: options?.onPartialResult,
                 onFinalResult: options?.onFinalResult,
                 abortSignal: options?.abortSignal,

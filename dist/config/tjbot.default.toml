@@ -40,10 +40,10 @@ microphoneChannels = 2
 [listen.backend]
 # 'type' chooses the STT provider:
 #   'none'                -> disable STT
-#   'local'               -> on-device Sherpa-ONNX STT (OFFLINE by default, can also do streaming models)
-#   'ibm-watson-stt'      -> IBM Cloud STT (STREAMING)
-#   'google-cloud-stt'    -> Google Cloud STT (STREAMING)
-#   'azure-stt'           -> Microsoft Azure STT ((single-shot, treated as OFFLINE for API usage))
+#   'local'               -> on-device Sherpa-ONNX STT
+#   'ibm-watson-stt'      -> IBM Cloud STT
+#   'google-cloud-stt'    -> Google Cloud STT
+#   'azure-stt'           -> Microsoft Azure STT
 type = 'local'
 
 [listen.backend.local]
@@ -63,7 +63,7 @@ enabled = true
 model = 'silero-vad'
 
 [listen.backend.ibm-watson-stt]
-# Specify the STT model to use.
+# IBM Watson STT model to use.
 #
 # Full list of IBM Watson STT models:
 # https://cloud.ibm.com/docs/speech-to-text?topic=speech-to-text-models-ng
@@ -89,28 +89,44 @@ interimResults = false
 credentialsPath = ''
 
 [listen.backend.google-cloud-stt]
-# Google Cloud Speech-to-Text API credentials and configuration
-#
-# Path to google-credentials.json file containing Google Cloud API credentials
-# If not specified, TJBot will search for the file in this order:
+# Path to the google-credentials.json file containing Google Cloud API credentials
+# By default, TJBot will search for the file in this order:
 #   1. Current working directory (./google-credentials.json)
 #   2. .tjbot directory (~/.tjbot/google-credentials.json)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
 
-# Google Cloud Speech-to-Text model to use (e.g., 'latest_long', 'latest_short')
-model = ''
+# Google Cloud Speech-to-Text model to use
+# Full list of Google Cloud STT models:
+#   https://docs.cloud.google.com/speech-to-text/docs/transcription-model
+model = 'chirp_3'
+
+# Google Cloud Speech-to-Text language code (e.g., 'en-US', 'en-GB', 'fr-FR')
+languageCode = 'en-US'
+
+# If true, automatically add punctuation to transcriptions (e.g., commas, periods).
+enableAutomaticPunctuation = true
+
+# If true, Google Cloud Speech-to-Text will attempt to detect profane words
+# and return only the first letter followed by asterisks in the transcript.
+profanityFilter = true
+
+# If true, interim results will be returned during streaming recognition.
+interimResults = false
 
 [listen.backend.azure-stt]
-# Microsoft Azure Speech-to-Text API credentials and configuration
-#
-# Path to azure-credentials.env file containing Azure API credentials
-# If not specified, TJBot will search for the file in this order:
+# Path to the azure-credentials.env file containing Azure Speech API credentials
+# By default, TJBot will search for the file in this order:
 #   1. Current working directory (./azure-credentials.env)
 #   2. .tjbot directory (~/.tjbot/azure-credentials.env)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
 
 # Azure Speech-to-Text language code (e.g., 'en-US', 'en-GB', 'fr-FR')
 language = ''
+
+# If true, interim results will be returned during streaming recognition.
+interimResults = false
 
 # =============================================================================
 # See
@@ -168,14 +184,20 @@ imageClassificationConfidence = 0.8
 faceDetectionConfidence = 0.5
 
 [see.backend.google-cloud-vision]
-# Google Cloud Vision API credentials and model
+# Path to the google-credentials.json file containing Google Cloud Vision API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./google-credentials.json)
+#   2. .tjbot directory (~/.tjbot/google-credentials.json)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
-model = ''
 
 [see.backend.azure-vision]
-# Microsoft Azure Vision API credentials and model
+# Path to the azure-credentials.env file containing Azure Image Analysis API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./azure-credentials.env)
+#   2. .tjbot directory (~/.tjbot/azure-credentials.env)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
-model = ''
 
 # =============================================================================
 # Shine
@@ -250,11 +272,18 @@ device = ''
 type = 'local'
 
 [speak.backend.local]
-# DEFAULT MODEL: Whisper base.en (good accuracy, English-only, ~140MB)
+# DEFAULT MODEL: VITS Piper en_US Ryan medium
 # See model-registry.yaml for other available models.
 model = 'vits-piper-en_US-ryan-medium'
 
 [speak.backend.ibm-watson-tts]
+# Path to the ibm-credentials.env file containing IBM Cloud Watson API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./ibm-credentials.env)
+#   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
+credentialsPath = ''
+
 # 'voice' specifies the IBM Watson Text-to-Speech voice to use.
 # Available IBM voices include:
 #   en-US_AllisonV3Voice
@@ -268,35 +297,53 @@ model = 'vits-piper-en_US-ryan-medium'
 #   https://cloud.ibm.com/docs/text-to-speech?topic=text-to-speech-voices
 voice = 'en-US_MichaelV3Voice'
 
-# Path to ibm-credentials.env file containing IBM API credentials
-# If not specified, TJBot will search for the file in this order:
-#   1. Current working directory (./ibm-credentials.env)
-#   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
-credentialsPath = ''
-
 [speak.backend.google-cloud-tts]
-# Google Cloud Text-to-Speech API credentials and configuration
-#
-# Path to google-credentials.json file containing Google Cloud API credentials
-# If not specified, TJBot will search for the file in this order:
+# Path to the google-credentials.json file containing Google Cloud API credentials
+# By default, TJBot will search for the file in this order:
 #   1. Current working directory (./google-credentials.json)
 #   2. .tjbot directory (~/.tjbot/google-credentials.json)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
+
+# Google Cloud TTS voice name
+# Examples:
+#   en-US-Neural2-A
+#   en-US-Neural2-C
+#   en-US-Wavenet-D
+#   en-US-Studio-O
+# For a complete list of available voices, see:
+#   https://docs.cloud.google.com/text-to-speech/docs/list-voices-and-types
+voice = 'en-US-Neural2-C'
 
 # Google Cloud language code (e.g., 'en-US', 'en-GB', 'fr-FR')
-languageCode = ''
+# This should match the locale prefix of the voice specified above (e.g., 'en-US' for 'en-US-Neural2-A').
+languageCode = 'en-US'
 
 [speak.backend.azure-tts]
-# Microsoft Azure Text-to-Speech API credentials and configuration
-#
-# Path to azure-credentials.env file containing Azure API credentials
-# If not specified, TJBot will search for the file in this order:
+# Path to the azure-credentials.env file containing Azure Speech API credentials
+# By default, TJBot will search for the file in this order:
 #   1. Current working directory (./azure-credentials.env)
 #   2. .tjbot directory (~/.tjbot/azure-credentials.env)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
 
-# Azure voice name (e.g., 'en-US-JennyNeural')
-voice = ''
+# Azure TTS voice name
+# Examples:
+#   en-US-AvaNeural
+#   en-US-AndrewNeural
+#   en-US-BrianNeural
+#   en-US-EmmaNeural
+#   en-US-JennyNeural
+#   en-US-GuyNeural
+#   en-US-RogerNeural
+#   en-US-SteffanNeural
+#   en-US-AriaNeural
+#   en-US-DavisNeural
+#   en-US-AmberNeural
+#   en-US-AshleyNeural
+# For a complete list of available voices, see:
+#   https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts
+voice = 'en-US-EmmaNeural'
 
 # =============================================================================
 # Wave

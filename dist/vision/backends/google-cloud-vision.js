@@ -22,22 +22,17 @@ import { VisionEngine, } from '../vision-engine.js';
 import { TJBotError } from '../../utils/errors.js';
 const EMO = LogEmoji.VISION;
 export class GoogleCloudVisionEngine extends VisionEngine {
-    model;
     endpoint;
-    async initialize(config) {
+    async initialize() {
+        const config = this.config;
         const credentials = loadGoogleCloudCredentials(config?.credentialsPath);
-        this.model = config?.model;
         this.endpoint = 'https://vision.googleapis.com/v1/images:annotate';
         winston.info(`${EMO} Google Cloud Vision engine initialized`);
         winston.debug(`${EMO} Initialized GoogleCloudVisionEngine with config:
             credentialsPath: ${credentials.credentialsPath},
-            model: ${this.model},
             endpoint: ${this.endpoint}`);
     }
     async detectObjects(image) {
-        if (this.model === undefined) {
-            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
-        }
         if (this.endpoint === undefined) {
             throw new Error('Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.');
         }
@@ -91,9 +86,6 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         return results;
     }
     async classifyImage(image, confidenceThreshold = 0.5) {
-        if (this.model === undefined) {
-            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
-        }
         if (this.endpoint === undefined) {
             throw new Error('Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.');
         }
@@ -142,9 +134,6 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         return results;
     }
     async detectFaces(image) {
-        if (this.model === undefined) {
-            throw new Error('Google Cloud Vision model not specified. Provide model in see.backend.config.model.');
-        }
         if (this.endpoint === undefined) {
             throw new Error('Google Cloud Vision endpoint not specified. Provide endpoint in see.backend.config.endpoint.');
         }

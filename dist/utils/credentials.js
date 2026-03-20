@@ -37,6 +37,7 @@ export function resolveCredentialsPath(filename, providedPath) {
     const defaultPaths = [path.join(process.cwd(), filename), path.join(os.homedir(), '.tjbot', filename)];
     for (const defaultPath of defaultPaths) {
         if (fs.existsSync(defaultPath)) {
+            winston.verbose(`${EMO} Found credentials file at: ${defaultPath}`);
             return defaultPath;
         }
     }

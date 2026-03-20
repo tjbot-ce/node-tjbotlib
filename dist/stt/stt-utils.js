@@ -41,9 +41,24 @@ export function toModelType(flavor) {
     return flavor.startsWith('streaming') ? 'streaming' : 'offline';
 }
 export function inferSTTMode(listenConfig) {
-    const backend = listenConfig.backend?.type ?? 'local';
-    if (backend === 'ibm-watson-stt' || backend === 'google-cloud-stt') {
-        return 'streaming';
+    const backend = listenConfig.backend?.type;
+    if (backend === 'ibm-watson-stt') {
+        const config = listenConfig.backend?.['ibm-watson-stt'];
+        if (config.interimResults) {
+            return 'streaming';
+        }
+        else {
+            return 'offline';
+        }
+    }
+    if (backend === 'google-cloud-stt') {
+        const config = listenConfig.backend?.['google-cloud-stt'];
+        if (config.interimResults) {
+            return 'streaming';
+        }
+        else {
+            return 'offline';
+        }
     }
     if (backend === 'azure-stt') {
         // Azure is single-shot request/response; treat as offline for listen() API usage

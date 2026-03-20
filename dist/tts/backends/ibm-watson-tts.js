@@ -34,12 +34,17 @@ export class IBMTTSEngine extends TTSEngine {
      * Initialize the IBM Watson TTS service.
      * Creates a new TextToSpeechV1 instance.
      */
-    async initialize(config) {
+    async initialize() {
+        const config = this.config;
         loadIBMWatsonCloudCredentials(config?.credentialsPath);
+        if (!config?.voice) {
+            throw new TJBotError('IBM Watson TTS voice not specified. Provide voice in speak.backend.ibm-watson-tts config.');
+        }
         this.ttsService = new TextToSpeechV1({});
         winston.info(`${EMO} IBM Watson TTS engine initialized`);
         winston.debug(`${EMO} Initialized IBMWatsonTTSEngine with config:
-            credentialsPath: ${config?.credentialsPath ?? ''}`);
+            voice: ${config?.voice},
+            credentialsPath: ${config?.credentialsPath}`);
     }
     /**
      * Synthesize text to WAV audio using IBM Watson TTS.

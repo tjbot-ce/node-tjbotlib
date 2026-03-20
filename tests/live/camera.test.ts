@@ -47,6 +47,10 @@ async function runTest(): Promise<void> {
         log: { level: LOG_LEVEL },
         hardware: {
             camera: true,
+            led: false,
+            microphone: false,
+            servo: false,
+            speaker: false,
         },
         see: {
             cameraResolution: [640, 480],

@@ -40,6 +40,9 @@ export class SherpaONNXTTSEngine extends TTSEngine {
      */
     async initialize() {
         const config = this.config;
+        if (!config.model) {
+            throw new TJBotError('Sherpa-ONNX TTS model not specified. Provide model name in speak.backend.sherpa-onnx config.');
+        }
         // Set environment variables to reduce noisy logging
         if (!process.env.SHERPA_ONNX_LOG_LEVEL) {
             process.env.SHERPA_ONNX_LOG_LEVEL = 'OFF';

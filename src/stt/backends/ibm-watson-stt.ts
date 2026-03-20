@@ -19,7 +19,6 @@ import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 import SpeechToTextV1 from 'ibm-watson/speech-to-text/v1.js';
 import winston from 'winston';
 import type { STTBackendIBMWatsonConfig } from '../../config/config-types.js';
-import { ListenConfig } from '../../config/index.js';
 import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
@@ -35,41 +34,50 @@ const EMO = LogEmoji.STT;
  * @public
  */
 export class IBMWatsonSTTEngine extends STTEngine {
+    private microphoneRate: number = 44100;
+    private microphoneChannels: number = 2;
     private sttService: SpeechToTextV1 | undefined;
 
-    async initialize(): Promise<void> {
+    async initialize(microphoneRate: number, microphoneChannels: number): Promise<void> {
         const config = this.config as STTBackendIBMWatsonConfig;
         loadIBMWatsonCloudCredentials(config?.credentialsPath);
+
+        if (!config?.model) {
+            throw new TJBotError(
+                'IBM Watson STT model not specified. Provide model in listen.backend.ibm-watson-stt config.'
+            );
+        }
+
+        this.microphoneRate = microphoneRate;
+        this.microphoneChannels = microphoneChannels;
 
         this.sttService = new SpeechToTextV1({});
         winston.info(`${EMO} IBM Watson STT engine initialized`);
         winston.debug(`${EMO} Initialized IBMWatsonSTTEngine with config:
+            model: ${config?.model},
+            inactivityTimeout: ${config?.inactivityTimeout},
+            backgroundAudioSuppression: ${config?.backgroundAudioSuppression},
+            interimResults: ${config?.interimResults},
+            microphoneRate: ${this.microphoneRate},
+            microphoneChannels: ${this.microphoneChannels},
             credentialsPath: ${config?.credentialsPath}`);
     }
 
     async transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string> {
+        const config = this.config as STTBackendIBMWatsonConfig;
+
         if (!this.sttService) {
             throw new TJBotError('IBM Watson STT service not initialized. Call initialize() first.');
         }
 
-        const listenConfig: ListenConfig = options.listenConfig ?? {};
-        const backendConfig = (listenConfig.backend?.['ibm-watson-stt'] ?? {}) as STTBackendIBMWatsonConfig;
-
-        const rate: number = (listenConfig.microphoneRate as number) ?? 44100;
-        const channels: number = (listenConfig.microphoneChannels as number) ?? 2;
-        const inactivityTimeout: number =
-            backendConfig.inactivityTimeout ?? (listenConfig.inactivityTimeout as number) ?? -1;
-        const backgroundAudioSuppression: number =
-            backendConfig.backgroundAudioSuppression ?? (listenConfig.backgroundAudioSuppression as number) ?? 0.4;
-        const model: string = backendConfig.model ?? (listenConfig.model as string);
-        if (!model) {
-            throw new TJBotError('IBM Watson STT model not specified. Provide model in listen config.');
-        }
-        const interimResults: boolean = backendConfig.interimResults ?? false;
+        const model: string = config?.model as string;
+        const inactivityTimeout: number = (config?.inactivityTimeout as number) ?? -1;
+        const backgroundAudioSuppression: number = (config?.backgroundAudioSuppression as number) ?? 0.4;
+        const interimResults: boolean = (config?.interimResults as boolean) ?? false;
 
         const params = {
-            objectMode: false,
-            contentType: `audio/l16; rate=${rate}; channels=${channels}`,
+            objectMode: true,
+            contentType: `audio/l16; rate=${this.microphoneRate}; channels=${this.microphoneChannels}`,
             model,
             inactivityTimeout,
             interimResults,
@@ -79,22 +87,54 @@ export class IBMWatsonSTTEngine extends STTEngine {
         winston.silly(`${EMO} IBM Watson STT params:`, JSON.stringify(params, null, 2));
 
         const recognizeStream: RecognizeStream = this.sttService.recognizeUsingWebSocket(params) as RecognizeStream;
-        recognizeStream.setEncoding('utf8');
 
         // Pipe microphone to STT
         this.ensureStream(micStream).pipe(recognizeStream);
 
         return new Promise<string>((resolve, reject) => {
-            const handleData = (data: string) => {
-                winston.debug(`${EMO} IBM Watson STT recognized: ${data.trim()}`);
-                cleanup();
-                resolve(data.trim());
+            const handleData = (data: unknown) => {
+                const payload = data as {
+                    results?: Array<{
+                        final?: boolean;
+                        alternatives?: Array<{
+                            transcript?: string;
+                        }>;
+                    }>;
+                };
+
+                if (!payload.results || payload.results.length === 0) {
+                    return;
+                }
+
+                const result = payload.results[0];
+                if (!result.alternatives || result.alternatives.length === 0) {
+                    return;
+                }
+
+                const transcript = result.alternatives[0].transcript?.trim();
+                if (!transcript) {
+                    return;
+                }
+
+                if (interimResults && !result.final) {
+                    options.onPartialResult?.(transcript);
+                    return;
+                }
+
+                if (result.final) {
+                    winston.debug(`${EMO} IBM Watson STT recognized: ${transcript}`);
+                    if (interimResults) {
+                        options.onFinalResult?.(transcript);
+                    }
+                    cleanup();
+                    resolve(transcript);
+                }
             };
 
             const handleError = (err: Error) => {
                 winston.error(`${EMO} IBM Watson STT stream error:`, err);
                 cleanup();
-                reject(err);
+                reject(new TJBotError('IBM Watson STT recognition failed', { cause: err }));
             };
 
             const cleanup = () => {
@@ -110,7 +150,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
                 }
             };
 
-            recognizeStream.once('data', handleData);
+            recognizeStream.on('data', handleData);
             recognizeStream.once('error', handleError);
         });
     }

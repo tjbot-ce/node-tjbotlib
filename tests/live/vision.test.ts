@@ -85,7 +85,13 @@ async function runTest(): Promise<void> {
     console.log(formatSection(`Initializing TJBot with Vision (${backendLabel})`));
 
     const tj = await TJBot.getInstance().initialize({
-        hardware: { camera: true },
+        hardware: {
+            camera: true,
+            led: false,
+            microphone: false,
+            servo: false,
+            speaker: false,
+        },
         see: seeConfig,
     });
     console.log('✓ TJBot initialized');

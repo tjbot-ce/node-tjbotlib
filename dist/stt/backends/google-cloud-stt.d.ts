@@ -22,8 +22,10 @@ import { STTEngine, STTRequestOptions } from '../stt-engine.js';
  * @public
  */
 export declare class GoogleCloudSTTEngine extends STTEngine {
+    private microphoneRate;
+    private microphoneChannels;
     private client;
-    initialize(): Promise<void>;
+    initialize(microphoneRate: number, microphoneChannels: number): Promise<void>;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
 }
 //# sourceMappingURL=google-cloud-stt.d.ts.map

@@ -29,33 +29,40 @@ const EMO = LogEmoji.STT;
  * @public
  */
 export class IBMWatsonSTTEngine extends STTEngine {
+    microphoneRate = 44100;
+    microphoneChannels = 2;
     sttService;
-    async initialize() {
+    async initialize(microphoneRate, microphoneChannels) {
         const config = this.config;
         loadIBMWatsonCloudCredentials(config?.credentialsPath);
+        if (!config?.model) {
+            throw new TJBotError('IBM Watson STT model not specified. Provide model in listen.backend.ibm-watson-stt config.');
+        }
+        this.microphoneRate = microphoneRate;
+        this.microphoneChannels = microphoneChannels;
         this.sttService = new SpeechToTextV1({});
         winston.info(`${EMO} IBM Watson STT engine initialized`);
         winston.debug(`${EMO} Initialized IBMWatsonSTTEngine with config:
+            model: ${config?.model},
+            inactivityTimeout: ${config?.inactivityTimeout},
+            backgroundAudioSuppression: ${config?.backgroundAudioSuppression},
+            interimResults: ${config?.interimResults},
+            microphoneRate: ${this.microphoneRate},
+            microphoneChannels: ${this.microphoneChannels},
             credentialsPath: ${config?.credentialsPath}`);
     }
     async transcribe(micStream, options) {
+        const config = this.config;
         if (!this.sttService) {
             throw new TJBotError('IBM Watson STT service not initialized. Call initialize() first.');
         }
-        const listenConfig = options.listenConfig ?? {};
-        const backendConfig = (listenConfig.backend?.['ibm-watson-stt'] ?? {});
-        const rate = listenConfig.microphoneRate ?? 44100;
-        const channels = listenConfig.microphoneChannels ?? 2;
-        const inactivityTimeout = backendConfig.inactivityTimeout ?? listenConfig.inactivityTimeout ?? -1;
-        const backgroundAudioSuppression = backendConfig.backgroundAudioSuppression ?? listenConfig.backgroundAudioSuppression ?? 0.4;
-        const model = backendConfig.model ?? listenConfig.model;
-        if (!model) {
-            throw new TJBotError('IBM Watson STT model not specified. Provide model in listen config.');
-        }
-        const interimResults = backendConfig.interimResults ?? false;
+        const model = config?.model;
+        const inactivityTimeout = config?.inactivityTimeout ?? -1;
+        const backgroundAudioSuppression = config?.backgroundAudioSuppression ?? 0.4;
+        const interimResults = config?.interimResults ?? false;
         const params = {
-            objectMode: false,
-            contentType: `audio/l16; rate=${rate}; channels=${channels}`,
+            objectMode: true,
+            contentType: `audio/l16; rate=${this.microphoneRate}; channels=${this.microphoneChannels}`,
             model,
             inactivityTimeout,
             interimResults,
@@ -63,19 +70,39 @@ export class IBMWatsonSTTEngine extends STTEngine {
         };
         winston.silly(`${EMO} IBM Watson STT params:`, JSON.stringify(params, null, 2));
         const recognizeStream = this.sttService.recognizeUsingWebSocket(params);
-        recognizeStream.setEncoding('utf8');
         // Pipe microphone to STT
         this.ensureStream(micStream).pipe(recognizeStream);
         return new Promise((resolve, reject) => {
             const handleData = (data) => {
-                winston.debug(`${EMO} IBM Watson STT recognized: ${data.trim()}`);
-                cleanup();
-                resolve(data.trim());
+                const payload = data;
+                if (!payload.results || payload.results.length === 0) {
+                    return;
+                }
+                const result = payload.results[0];
+                if (!result.alternatives || result.alternatives.length === 0) {
+                    return;
+                }
+                const transcript = result.alternatives[0].transcript?.trim();
+                if (!transcript) {
+                    return;
+                }
+                if (interimResults && !result.final) {
+                    options.onPartialResult?.(transcript);
+                    return;
+                }
+                if (result.final) {
+                    winston.debug(`${EMO} IBM Watson STT recognized: ${transcript}`);
+                    if (interimResults) {
+                        options.onFinalResult?.(transcript);
+                    }
+                    cleanup();
+                    resolve(transcript);
+                }
             };
             const handleError = (err) => {
                 winston.error(`${EMO} IBM Watson STT stream error:`, err);
                 cleanup();
-                reject(err);
+                reject(new TJBotError('IBM Watson STT recognition failed', { cause: err }));
             };
             const cleanup = () => {
                 recognizeStream.removeListener('data', handleData);
@@ -90,7 +117,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
                     recognizeStream.destroy();
                 }
             };
-            recognizeStream.once('data', handleData);
+            recognizeStream.on('data', handleData);
             recognizeStream.once('error', handleError);
         });
     }

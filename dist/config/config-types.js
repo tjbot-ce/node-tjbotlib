@@ -51,13 +51,11 @@ export const sttBackendIBMWatsonConfigSchema = z
     .loose();
 export const sttBackendGoogleCloudConfigSchema = z
     .object({
+    credentialsPath: z.string().optional(),
     model: z.string().optional(),
     languageCode: z.string().optional(),
-    credentialsPath: z.string().optional(),
-    encoding: z.string().optional(),
-    sampleRateHertz: z.number().optional(),
-    audioChannelCount: z.number().optional(),
     enableAutomaticPunctuation: z.boolean().optional(),
+    profanityFilter: z.boolean().optional(),
     interimResults: z.boolean().optional(),
 })
     .loose();
@@ -65,6 +63,7 @@ export const sttBackendAzureConfigSchema = z
     .object({
     language: z.string().optional(),
     credentialsPath: z.string().optional(),
+    interimResults: z.boolean().optional(),
 })
     .loose();
 /** Empty config for 'none' backend */
@@ -116,13 +115,11 @@ export const seeBackendLocalConfigSchema = z
 export const seeBackendGoogleCloudConfigSchema = z
     .object({
     credentialsPath: z.string().optional(),
-    model: z.string().optional(),
 })
     .loose();
 export const seeBackendAzureConfigSchema = z
     .object({
     credentialsPath: z.string().optional(),
-    model: z.string().optional(),
 })
     .loose();
 export const seeBackendConfigSchema = z
@@ -188,14 +185,15 @@ export const ttsBackendIBMWatsonConfigSchema = z
     .loose();
 export const ttsBackendGoogleCloudConfigSchema = z
     .object({
-    languageCode: z.string().optional(),
     credentialsPath: z.string().optional(),
+    languageCode: z.string().optional(),
+    voice: z.string().optional(),
 })
     .loose();
 export const ttsBackendAzureConfigSchema = z
     .object({
-    voice: z.string().optional(),
     credentialsPath: z.string().optional(),
+    voice: z.string().optional(),
 })
     .loose();
 export const ttsBackendConfigSchema = z
