@@ -30,10 +30,10 @@ const TRACKED_ENV_KEYS = [
     'AZURE_VISION_KEY',
     'AZURE_VISION_URL',
     'GOOGLE_APPLICATION_CREDENTIALS',
-    'IBM_WATSON_APIKEY',
-    'IBM_WATSON_URL',
-    'IBM_WATSON_AUTH_TYPE',
-    'IBM_WATSON_DISABLE_SSL',
+    'SPEECH_TO_TEXT_APIKEY',
+    'SPEECH_TO_TEXT_IAM_APIKEY',
+    'SPEECH_TO_TEXT_URL',
+    'SPEECH_TO_TEXT_AUTH_TYPE',
 ] as const;
 
 function createTempFile(filename: string, content: string): string {
@@ -87,7 +87,7 @@ describe('Credentials Loading', () => {
                 'AZURE_SPEECH_KEY=test-speech-key',
                 'AZURE_SPEECH_REGION=eastus',
                 'AZURE_VISION_KEY=test-vision-key',
-                'AZURE_VISION_URL=https://example.cognitiveservices.azure.com/',
+                'AZURE_VISION_ENDPOINT=https://example.cognitiveservices.azure.com/',
             ].join('\n')
         );
 
@@ -96,13 +96,13 @@ describe('Credentials Loading', () => {
 
             expect(credentials.speechKey).toBe('test-speech-key');
             expect(credentials.speechRegion).toBe('eastus');
-            expect(credentials.imageAnalysisKey).toBe('test-vision-key');
-            expect(credentials.imageAnalysisUrl).toBe('https://example.cognitiveservices.azure.com/');
+            expect(credentials.visionKey).toBe('test-vision-key');
+            expect(credentials.visionEndpoint).toBe('https://example.cognitiveservices.azure.com/');
 
             expect(process.env.AZURE_SPEECH_KEY).toBe('test-speech-key');
             expect(process.env.AZURE_SPEECH_REGION).toBe('eastus');
             expect(process.env.AZURE_VISION_KEY).toBe('test-vision-key');
-            expect(process.env.AZURE_VISION_URL).toBe('https://example.cognitiveservices.azure.com/');
+            expect(process.env.AZURE_VISION_ENDPOINT).toBe('https://example.cognitiveservices.azure.com/');
         } finally {
             restoreEnvSnapshot(envSnapshot);
             cleanupTempFile(filePath);
@@ -135,20 +135,20 @@ describe('Credentials Loading', () => {
         const filePath = createTempFile(
             'ibm-credentials.env',
             [
-                'IBM_WATSON_APIKEY=test-ibm-apikey',
-                'IBM_WATSON_URL=https://api.us-south.speech-to-text.watson.cloud.ibm.com',
-                'IBM_WATSON_AUTH_TYPE=iam',
-                'IBM_WATSON_DISABLE_SSL=false',
+                'SPEECH_TO_TEXT_APIKEY=test-stt-apikey',
+                'SPEECH_TO_TEXT_IAM_APIKEY=test-stt-iam-apikey',
+                'SPEECH_TO_TEXT_URL=https://api.us-south.speech-to-text.watson.cloud.ibm.com',
+                'SPEECH_TO_TEXT_AUTH_TYPE=iam',
             ].join('\n')
         );
 
         try {
             loadIBMWatsonCloudCredentials(filePath);
 
-            expect(process.env.IBM_WATSON_APIKEY).toBe('test-ibm-apikey');
-            expect(process.env.IBM_WATSON_URL).toBe('https://api.us-south.speech-to-text.watson.cloud.ibm.com');
-            expect(process.env.IBM_WATSON_AUTH_TYPE).toBe('iam');
-            expect(process.env.IBM_WATSON_DISABLE_SSL).toBe('false');
+            expect(process.env.SPEECH_TO_TEXT_APIKEY).toBe('test-stt-apikey');
+            expect(process.env.SPEECH_TO_TEXT_IAM_APIKEY).toBe('test-stt-iam-apikey');
+            expect(process.env.SPEECH_TO_TEXT_URL).toBe('https://api.us-south.speech-to-text.watson.cloud.ibm.com');
+            expect(process.env.SPEECH_TO_TEXT_AUTH_TYPE).toBe('iam');
         } finally {
             restoreEnvSnapshot(envSnapshot);
             cleanupTempFile(filePath);

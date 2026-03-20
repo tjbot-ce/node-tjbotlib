@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-import imageAnalysisClientModule, {
-    isUnexpected,
-    type ImageAnalysisClient,
-    type ImageAnalysisResultOutput,
-} from '@azure-rest/ai-vision-image-analysis';
-import { AzureKeyCredential } from '@azure/core-auth';
+import { ComputerVisionClient } from '@azure/cognitiveservices-computervision';
+import { ApiKeyCredentials } from '@azure/ms-rest-js';
 import fs from 'fs';
 import winston from 'winston';
 import type { SeeBackendAzureConfig } from '../../config/config-types.js';
@@ -36,35 +32,10 @@ import {
 
 const EMO = LogEmoji.VISION;
 
-type ImageAnalysisClientFactory = (endpoint: string, credential: AzureKeyCredential) => ImageAnalysisClient;
-
-function resolveImageAnalysisClientFactory(): ImageAnalysisClientFactory {
-    // SDK package may be exposed as function, { default: fn }, or { default: { default: fn } }
-    // depending on ESM/CJS interop at runtime.
-    const moduleRef = imageAnalysisClientModule as unknown as {
-        default?: unknown;
-    };
-    let maybeFactory: unknown;
-
-    if (typeof imageAnalysisClientModule === 'function') {
-        maybeFactory = imageAnalysisClientModule;
-    } else if (typeof moduleRef.default === 'function') {
-        maybeFactory = moduleRef.default;
-    } else {
-        maybeFactory = (moduleRef.default as { default?: unknown })?.default;
-    }
-
-    if (typeof maybeFactory !== 'function') {
-        throw new TJBotError('Azure Vision SDK is not exposing a callable image analysis client factory');
-    }
-
-    return maybeFactory as ImageAnalysisClientFactory;
-}
-
 export class AzureVisionEngine extends VisionEngine {
     private visionKey?: string;
     private visionEndpoint?: string;
-    private client?: ImageAnalysisClient;
+    private client?: ComputerVisionClient;
 
     async initialize(): Promise<void> {
         const config = this.config as SeeBackendAzureConfig;
@@ -76,8 +47,8 @@ export class AzureVisionEngine extends VisionEngine {
             throw new TJBotError('Azure Vision visionKey and visionEndpoint are required');
         }
 
-        const createImageAnalysisClient = resolveImageAnalysisClientFactory();
-        this.client = createImageAnalysisClient(this.visionEndpoint, new AzureKeyCredential(this.visionKey));
+        const apiKeyCredentials = new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': this.visionKey } });
+        this.client = new ComputerVisionClient(apiKeyCredentials, this.visionEndpoint);
 
         winston.info(`${EMO} Azure Vision engine initialized`);
         winston.debug(`${EMO} Initialized AzureVisionEngine with config:
@@ -93,92 +64,113 @@ export class AzureVisionEngine extends VisionEngine {
         return image;
     }
 
-    private async analyzeImage(image: Buffer | string, features: string[]): Promise<ImageAnalysisResultOutput> {
+    async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
         if (!this.client) {
             throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
 
-        const imageBuffer = this.readImageBuffer(image);
-        const response = await this.client.path('/imageanalysis:analyze').post({
-            body: imageBuffer,
-            queryParameters: {
-                features,
-            },
-            contentType: 'application/octet-stream',
-        });
+        winston.verbose(`${EMO} Detecting objects in image with Azure Computer Vision API`);
 
-        if (isUnexpected(response)) {
-            throw new TJBotError(`Azure Vision API error: ${response.status} ${JSON.stringify(response.body)}`);
+        const imageBuffer = this.readImageBuffer(image);
+
+        try {
+            const result = await this.client.analyzeImageInStream(
+                imageBuffer as unknown as Parameters<typeof this.client.analyzeImageInStream>[0],
+                {
+                    visualFeatures: ['Objects'],
+                } as unknown as Parameters<typeof this.client.analyzeImageInStream>[1]
+            );
+
+            const objects = (result as unknown as { objects?: Array<{ object: string; confidence: number; rectangle: { x: number; y: number; w: number; h: number } }> }).objects ?? [];
+
+            return objects
+                .map((obj) => ({
+                    label: obj.object ?? 'unknown',
+                    confidence: obj.confidence ?? 0,
+                    bbox: [obj.rectangle?.x ?? 0, obj.rectangle?.y ?? 0, obj.rectangle?.w ?? 0, obj.rectangle?.h ?? 0] as [number, number, number, number],
+                }))
+                .sort((a, b) => b.confidence - a.confidence);
+        } catch (error) {
+            throw new TJBotError(
+                `Azure Vision API error during object detection: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
+    }
+
+    async classifyImage(image: Buffer | string, confidenceThreshold: number = 0.5): Promise<ImageClassificationResult[]> {
+        if (!this.client) {
+            throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
 
-        return response.body;
-    }
+        winston.verbose(`${EMO} Classifying image with Azure Computer Vision API`);
 
-    async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
-        winston.verbose(`${EMO} Detecting objects in image with Azure Image Analysis API`);
+        const imageBuffer = this.readImageBuffer(image);
 
-        const result = await this.analyzeImage(image, ['Objects']);
-        const objects = result.objectsResult?.values ?? [];
+        try {
+            const result = await this.client.analyzeImageInStream(
+                imageBuffer as unknown as Parameters<typeof this.client.analyzeImageInStream>[0],
+                {
+                    visualFeatures: ['Tags'],
+                } as unknown as Parameters<typeof this.client.analyzeImageInStream>[1]
+            );
 
-        return objects
-            .map((object) => {
-                const primaryTag = object.tags[0];
+            const tags = (result as unknown as { tags?: Array<{ name?: string; confidence?: number }> }).tags ?? [];
 
-                return {
-                    label: primaryTag?.name ?? 'unknown',
-                    confidence: primaryTag?.confidence ?? 0,
-                    bbox: [object.boundingBox.x, object.boundingBox.y, object.boundingBox.w, object.boundingBox.h] as [
-                        number,
-                        number,
-                        number,
-                        number,
-                    ],
-                };
-            })
-            .sort((a, b) => b.confidence - a.confidence);
-    }
-
-    async classifyImage(
-        image: Buffer | string,
-        confidenceThreshold: number = 0.5
-    ): Promise<ImageClassificationResult[]> {
-        winston.verbose(`${EMO} Classifying image with Azure Image Analysis API`);
-
-        const result = await this.analyzeImage(image, ['Tags']);
-
-        return (result.tagsResult?.values ?? [])
-            .filter((tag) => tag.confidence >= confidenceThreshold)
-            .map((tag) => ({
-                label: tag.name,
-                confidence: tag.confidence,
-            }))
-            .sort((a, b) => b.confidence - a.confidence);
+            return tags
+                .filter((tag) => tag.confidence && tag.confidence >= confidenceThreshold)
+                .map((tag) => ({
+                    label: tag.name ?? 'unknown',
+                    confidence: tag.confidence ?? 0,
+                }))
+                .sort((a, b) => b.confidence - a.confidence);
+        } catch (error) {
+            throw new TJBotError(
+                `Azure Vision API error during classification: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
     }
 
     async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
         void image;
 
         throw new TJBotError(
-            'Face detection is not supported by the Azure Image Analysis service. Please use another backend for face detection.'
+            'Face detection is not supported by the Azure Computer Vision service. Please use another backend for face detection.'
         );
     }
 
     async describeImage(image: Buffer | string): Promise<ImageDescriptionResult> {
-        winston.verbose(`${EMO} Describing image with Azure Image Analysis API`);
-
-        const result = await this.analyzeImage(image, ['Caption']);
-        const caption = result.captionResult;
-
-        if (caption) {
-            return {
-                description: caption.text,
-                confidence: caption.confidence,
-            };
+        if (!this.client) {
+            throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
 
-        return {
-            description: '',
-            confidence: 0,
-        };
+        winston.verbose(`${EMO} Describing image with Azure Computer Vision API`);
+
+        const imageBuffer = this.readImageBuffer(image);
+
+        try {
+            const result = await this.client.analyzeImageInStream(imageBuffer as unknown as Parameters<typeof this.client.analyzeImageInStream>[0], {
+                visualFeatures: ['Description'],
+            } as unknown as Parameters<typeof this.client.analyzeImageInStream>[1]);
+
+            // Handle description array - take first caption if available
+            const descriptions = (result as unknown as { description?: { captions?: Array<{ text?: string; confidence?: number }> } }).description?.captions ?? [];
+            const firstCaption = descriptions[0];
+
+            if (firstCaption && firstCaption.text) {
+                return {
+                    description: firstCaption.text,
+                    confidence: firstCaption.confidence ?? 0,
+                };
+            }
+
+            return {
+                description: '',
+                confidence: 0,
+            };
+        } catch (error) {
+            throw new TJBotError(
+                `Azure Vision API error during description: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
     }
 }

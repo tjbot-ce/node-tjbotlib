@@ -20,7 +20,6 @@ export declare class AzureVisionEngine extends VisionEngine {
     private client?;
     initialize(): Promise<void>;
     private readImageBuffer;
-    private analyzeImage;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
     detectFaces(image: Buffer | string): Promise<{
