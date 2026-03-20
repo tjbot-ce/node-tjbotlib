@@ -15,8 +15,9 @@
  */
 import { VisionEngine, type FaceDetectionMetadata, type ImageClassificationResult, type ImageDescriptionResult, type ObjectDetectionResult } from '../vision-engine.js';
 export declare class GoogleCloudVisionEngine extends VisionEngine {
-    private endpoint?;
+    private client?;
     initialize(): Promise<void>;
+    private readImageBuffer;
     detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
     classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
     detectFaces(image: Buffer | string): Promise<{

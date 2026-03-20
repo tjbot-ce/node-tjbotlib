@@ -62,7 +62,12 @@ export class AzureVisionEngine extends VisionEngine {
                 .map((obj) => ({
                 label: obj.object ?? 'unknown',
                 confidence: obj.confidence ?? 0,
-                bbox: [obj.rectangle?.x ?? 0, obj.rectangle?.y ?? 0, obj.rectangle?.w ?? 0, obj.rectangle?.h ?? 0],
+                bbox: [
+                    obj.rectangle?.x ?? 0,
+                    obj.rectangle?.y ?? 0,
+                    obj.rectangle?.w ?? 0,
+                    obj.rectangle?.h ?? 0,
+                ],
             }))
                 .sort((a, b) => b.confidence - a.confidence);
         }
@@ -108,7 +113,8 @@ export class AzureVisionEngine extends VisionEngine {
                 visualFeatures: ['Description'],
             });
             // Handle description array - take first caption if available
-            const descriptions = result.description?.captions ?? [];
+            const descriptions = result
+                .description?.captions ?? [];
             const firstCaption = descriptions[0];
             if (firstCaption && firstCaption.text) {
                 return {

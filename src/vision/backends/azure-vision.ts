@@ -81,13 +81,27 @@ export class AzureVisionEngine extends VisionEngine {
                 } as unknown as Parameters<typeof this.client.analyzeImageInStream>[1]
             );
 
-            const objects = (result as unknown as { objects?: Array<{ object: string; confidence: number; rectangle: { x: number; y: number; w: number; h: number } }> }).objects ?? [];
+            const objects =
+                (
+                    result as unknown as {
+                        objects?: Array<{
+                            object: string;
+                            confidence: number;
+                            rectangle: { x: number; y: number; w: number; h: number };
+                        }>;
+                    }
+                ).objects ?? [];
 
             return objects
                 .map((obj) => ({
                     label: obj.object ?? 'unknown',
                     confidence: obj.confidence ?? 0,
-                    bbox: [obj.rectangle?.x ?? 0, obj.rectangle?.y ?? 0, obj.rectangle?.w ?? 0, obj.rectangle?.h ?? 0] as [number, number, number, number],
+                    bbox: [
+                        obj.rectangle?.x ?? 0,
+                        obj.rectangle?.y ?? 0,
+                        obj.rectangle?.w ?? 0,
+                        obj.rectangle?.h ?? 0,
+                    ] as [number, number, number, number],
                 }))
                 .sort((a, b) => b.confidence - a.confidence);
         } catch (error) {
@@ -97,7 +111,10 @@ export class AzureVisionEngine extends VisionEngine {
         }
     }
 
-    async classifyImage(image: Buffer | string, confidenceThreshold: number = 0.5): Promise<ImageClassificationResult[]> {
+    async classifyImage(
+        image: Buffer | string,
+        confidenceThreshold: number = 0.5
+    ): Promise<ImageClassificationResult[]> {
         if (!this.client) {
             throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
@@ -148,12 +165,17 @@ export class AzureVisionEngine extends VisionEngine {
         const imageBuffer = this.readImageBuffer(image);
 
         try {
-            const result = await this.client.analyzeImageInStream(imageBuffer as unknown as Parameters<typeof this.client.analyzeImageInStream>[0], {
-                visualFeatures: ['Description'],
-            } as unknown as Parameters<typeof this.client.analyzeImageInStream>[1]);
+            const result = await this.client.analyzeImageInStream(
+                imageBuffer as unknown as Parameters<typeof this.client.analyzeImageInStream>[0],
+                {
+                    visualFeatures: ['Description'],
+                } as unknown as Parameters<typeof this.client.analyzeImageInStream>[1]
+            );
 
             // Handle description array - take first caption if available
-            const descriptions = (result as unknown as { description?: { captions?: Array<{ text?: string; confidence?: number }> } }).description?.captions ?? [];
+            const descriptions =
+                (result as unknown as { description?: { captions?: Array<{ text?: string; confidence?: number }> } })
+                    .description?.captions ?? [];
             const firstCaption = descriptions[0];
 
             if (firstCaption && firstCaption.text) {
