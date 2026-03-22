@@ -37,7 +37,7 @@ const COLORS = {
     YELLOW: '\x1b[33m',
 };
 
-const LOG_LEVEL = 'verbose';
+const LOG_LEVEL = 'info';
 
 const BACKENDS = [
     { key: 'local', label: 'Local (Sherpa-ONNX)' },
