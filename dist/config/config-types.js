@@ -54,6 +54,7 @@ export const sttBackendGoogleCloudConfigSchema = z
     credentialsPath: z.string().optional(),
     model: z.string().optional(),
     languageCode: z.string().optional(),
+    region: z.string().optional(),
     enableAutomaticPunctuation: z.boolean().optional(),
     profanityFilter: z.boolean().optional(),
     interimResults: z.boolean().optional(),

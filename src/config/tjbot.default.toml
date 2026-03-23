@@ -96,10 +96,17 @@ credentialsPath = ''
 # You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
 
-# Google Cloud Speech-to-Text model to use
-# Full list of Google Cloud STT models:
-#   https://docs.cloud.google.com/speech-to-text/docs/transcription-model
+# Google Cloud Speech-to-Text supports the following models:
+#   chirp_3 (supported in regions: us, eu)
+#   chirp_2 (supported in regions: us-central1, europe-west4, asia-southeast1)
+# See these pages for more information:
+#   https://docs.cloud.google.com/speech-to-text/docs/models/chirp-3
+#   https://docs.cloud.google.com/speech-to-text/docs/models/chirp-2
 model = 'chirp_3'
+
+# The region in which the STT service operates. It must match a region supported
+# by the model.
+region = 'us'
 
 # Google Cloud Speech-to-Text language code (e.g., 'en-US', 'en-GB', 'fr-FR')
 languageCode = 'en-US'

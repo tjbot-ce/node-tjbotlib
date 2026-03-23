@@ -58,6 +58,7 @@ export declare const sttBackendGoogleCloudConfigSchema: z.ZodObject<{
     credentialsPath: z.ZodOptional<z.ZodString>;
     model: z.ZodOptional<z.ZodString>;
     languageCode: z.ZodOptional<z.ZodString>;
+    region: z.ZodOptional<z.ZodString>;
     enableAutomaticPunctuation: z.ZodOptional<z.ZodBoolean>;
     profanityFilter: z.ZodOptional<z.ZodBoolean>;
     interimResults: z.ZodOptional<z.ZodBoolean>;
@@ -110,6 +111,7 @@ export declare const sttBackendConfigSchema: z.ZodObject<{
         credentialsPath: z.ZodOptional<z.ZodString>;
         model: z.ZodOptional<z.ZodString>;
         languageCode: z.ZodOptional<z.ZodString>;
+        region: z.ZodOptional<z.ZodString>;
         enableAutomaticPunctuation: z.ZodOptional<z.ZodBoolean>;
         profanityFilter: z.ZodOptional<z.ZodBoolean>;
         interimResults: z.ZodOptional<z.ZodBoolean>;
@@ -154,6 +156,7 @@ export declare const listenConfigSchema: z.ZodObject<{
             credentialsPath: z.ZodOptional<z.ZodString>;
             model: z.ZodOptional<z.ZodString>;
             languageCode: z.ZodOptional<z.ZodString>;
+            region: z.ZodOptional<z.ZodString>;
             enableAutomaticPunctuation: z.ZodOptional<z.ZodBoolean>;
             profanityFilter: z.ZodOptional<z.ZodBoolean>;
             interimResults: z.ZodOptional<z.ZodBoolean>;
@@ -535,6 +538,7 @@ export declare const tjbotConfigSchema: z.ZodObject<{
                 credentialsPath: z.ZodOptional<z.ZodString>;
                 model: z.ZodOptional<z.ZodString>;
                 languageCode: z.ZodOptional<z.ZodString>;
+                region: z.ZodOptional<z.ZodString>;
                 enableAutomaticPunctuation: z.ZodOptional<z.ZodBoolean>;
                 profanityFilter: z.ZodOptional<z.ZodBoolean>;
                 interimResults: z.ZodOptional<z.ZodBoolean>;

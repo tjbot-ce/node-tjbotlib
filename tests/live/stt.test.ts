@@ -56,6 +56,7 @@ interface BackendConfig {
     vad?: { enabled: boolean };
     backgroundAudioSuppression?: number;
     languageCode?: string;
+    region?: string;
     language?: string;
 }
 
@@ -310,6 +311,18 @@ async function promptIBMWatsonOptions(): Promise<BackendConfig> {
 }
 
 async function promptGoogleCloudOptions(): Promise<BackendConfig> {
+    const supportedRegionsByModel = {
+        chirp_3: [
+            { name: 'US (multi-region)', value: 'us' },
+            { name: 'EU (multi-region)', value: 'eu' },
+        ],
+        chirp_2: [
+            { name: 'US Central 1', value: 'us-central1' },
+            { name: 'Europe West 4', value: 'europe-west4' },
+            { name: 'Asia Southeast 1', value: 'asia-southeast1' },
+        ],
+    } as const;
+
     const languageCode = await select({
         message: 'Select language:',
         choices: [
@@ -329,17 +342,23 @@ async function promptGoogleCloudOptions(): Promise<BackendConfig> {
     const modelType = await select({
         message: 'Select model type:',
         choices: [
-            { name: 'Default (general audio)', value: 'default' },
-            { name: 'Command and Search', value: 'command_and_search' },
-            { name: 'Phone Call', value: 'phone_call' },
-            { name: 'Video', value: 'video' },
+            { name: 'Chirp 3 (v2)', value: 'chirp_3' },
+            { name: 'Chirp 2 (v2)', value: 'chirp_2' },
         ],
-        default: 'default',
+        default: 'chirp_3',
+    });
+
+    const regionChoices = supportedRegionsByModel[modelType as keyof typeof supportedRegionsByModel];
+    const region = await select({
+        message: 'Select region:',
+        choices: regionChoices,
+        default: regionChoices[0].value,
     });
 
     return {
         languageCode,
         model: modelType,
+        region,
     };
 }
 
@@ -386,6 +405,7 @@ function buildListenConfig(selectedBackend: string, backendConfig: BackendConfig
         backend['google-cloud-stt'] = {
             languageCode: backendConfig.languageCode,
             model: backendConfig.model,
+            region: backendConfig.region,
         };
     } else if (selectedBackend === 'azure-stt') {
         backend['azure-stt'] = {
