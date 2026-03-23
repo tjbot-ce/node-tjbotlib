@@ -27,9 +27,8 @@ export declare class VisionController {
     /**
      * Classify an image using the configured Vision engine.
      * @param image Image buffer or file path
-     * @param confidenceThreshold Optional confidence threshold (default 0.5). Only return labels above this threshold.
      */
-    classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<import("./vision-engine.js").ImageClassificationResult[]>;
+    classifyImage(image: Buffer | string): Promise<import("./vision-engine.js").ImageClassificationResult[]>;
     /**
      * Detect faces in an image using the configured Vision engine.
      * @param image Image buffer or file path

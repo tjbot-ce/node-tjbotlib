@@ -39,10 +39,32 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         }
         return image;
     }
+    getObjectDetectionConfidenceThreshold() {
+        const config = this.config;
+        if (config.objectDetectionConfidence === undefined) {
+            throw new TJBotError('Object detection confidence threshold is not configured for Google Cloud Vision engine');
+        }
+        return config.objectDetectionConfidence;
+    }
+    getImageClassificationConfidenceThreshold() {
+        const config = this.config;
+        if (config.imageClassificationConfidence === undefined) {
+            throw new TJBotError('Image classification confidence threshold is not configured for Google Cloud Vision engine');
+        }
+        return config.imageClassificationConfidence;
+    }
+    getFaceDetectionConfidenceThreshold() {
+        const config = this.config;
+        if (config.faceDetectionConfidence === undefined) {
+            throw new TJBotError('Face detection confidence threshold is not configured for Google Cloud Vision engine');
+        }
+        return config.faceDetectionConfidence;
+    }
     async detectObjects(image) {
         if (!this.client) {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
+        const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
         winston.verbose(`${EMO} Detecting objects in image with Google Cloud Vision API`);
         const imageBuffer = this.readImageBuffer(image);
         try {
@@ -70,16 +92,18 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                 };
             })
                 .filter((obj) => obj !== null)
+                .filter((obj) => obj.confidence >= resolvedConfidenceThreshold)
                 .sort((a, b) => b.confidence - a.confidence);
         }
         catch (error) {
             throw new TJBotError(`Google Cloud Vision API error during object detection: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
-    async classifyImage(image, confidenceThreshold = 0.5) {
+    async classifyImage(image) {
         if (!this.client) {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
+        const resolvedConfidenceThreshold = this.getImageClassificationConfidenceThreshold();
         winston.verbose(`${EMO} Classifying image with Google Cloud Vision API`);
         const imageBuffer = this.readImageBuffer(image);
         try {
@@ -90,7 +114,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             const [result] = await this.client.annotateImage(request);
             const labels = result.labelAnnotations ?? [];
             return labels
-                .filter((label) => (label.score ?? 0) >= confidenceThreshold)
+                .filter((label) => (label.score ?? 0) >= resolvedConfidenceThreshold)
                 .map((label) => ({
                 label: label.description ?? 'unknown',
                 confidence: label.score ?? 0,
@@ -105,6 +129,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         if (!this.client) {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
+        const confidenceThreshold = this.getFaceDetectionConfidenceThreshold();
         winston.verbose(`${EMO} Detecting faces in image with Google Cloud Vision API`);
         const imageBuffer = this.readImageBuffer(image);
         try {
@@ -151,7 +176,8 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                     headPose,
                 };
             })
-                .filter((meta) => meta !== null);
+                .filter((meta) => meta !== null)
+                .filter((meta) => meta.confidence >= confidenceThreshold);
             return {
                 isFaceDetected: metadata.length > 0,
                 metadata,

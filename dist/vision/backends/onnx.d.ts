@@ -33,6 +33,9 @@ export declare class ONNXVisionEngine extends VisionEngine {
      * Get a model, loading it if necessary
      */
     private getOrLoadModel;
+    private getObjectDetectionConfidenceThreshold;
+    private getImageClassificationConfidenceThreshold;
+    private getFaceDetectionConfidenceThreshold;
     /**
      * Detect objects in an image.
      */

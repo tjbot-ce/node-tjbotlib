@@ -56,11 +56,42 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         return image;
     }
 
+    private getObjectDetectionConfidenceThreshold(): number {
+        const config = this.config as SeeBackendGoogleCloudConfig;
+        if (config.objectDetectionConfidence === undefined) {
+            throw new TJBotError(
+                'Object detection confidence threshold is not configured for Google Cloud Vision engine'
+            );
+        }
+        return config.objectDetectionConfidence;
+    }
+
+    private getImageClassificationConfidenceThreshold(): number {
+        const config = this.config as SeeBackendGoogleCloudConfig;
+        if (config.imageClassificationConfidence === undefined) {
+            throw new TJBotError(
+                'Image classification confidence threshold is not configured for Google Cloud Vision engine'
+            );
+        }
+        return config.imageClassificationConfidence;
+    }
+
+    private getFaceDetectionConfidenceThreshold(): number {
+        const config = this.config as SeeBackendGoogleCloudConfig;
+        if (config.faceDetectionConfidence === undefined) {
+            throw new TJBotError(
+                'Face detection confidence threshold is not configured for Google Cloud Vision engine'
+            );
+        }
+        return config.faceDetectionConfidence;
+    }
+
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
         if (!this.client) {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
 
+        const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
         winston.verbose(`${EMO} Detecting objects in image with Google Cloud Vision API`);
 
         const imageBuffer = this.readImageBuffer(image);
@@ -94,6 +125,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                     };
                 })
                 .filter((obj): obj is ObjectDetectionResult => obj !== null)
+                .filter((obj) => obj.confidence >= resolvedConfidenceThreshold)
                 .sort((a, b) => b.confidence - a.confidence);
         } catch (error) {
             throw new TJBotError(
@@ -102,14 +134,12 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         }
     }
 
-    async classifyImage(
-        image: Buffer | string,
-        confidenceThreshold: number = 0.5
-    ): Promise<ImageClassificationResult[]> {
+    async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
         if (!this.client) {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
 
+        const resolvedConfidenceThreshold = this.getImageClassificationConfidenceThreshold();
         winston.verbose(`${EMO} Classifying image with Google Cloud Vision API`);
 
         const imageBuffer = this.readImageBuffer(image);
@@ -124,7 +154,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             const labels = result.labelAnnotations ?? [];
 
             return labels
-                .filter((label) => (label.score ?? 0) >= confidenceThreshold)
+                .filter((label) => (label.score ?? 0) >= resolvedConfidenceThreshold)
                 .map((label) => ({
                     label: label.description ?? 'unknown',
                     confidence: label.score ?? 0,
@@ -142,6 +172,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
 
+        const confidenceThreshold = this.getFaceDetectionConfidenceThreshold();
         winston.verbose(`${EMO} Detecting faces in image with Google Cloud Vision API`);
 
         const imageBuffer = this.readImageBuffer(image);
@@ -203,7 +234,8 @@ export class GoogleCloudVisionEngine extends VisionEngine {
                         headPose,
                     };
                 })
-                .filter((meta): meta is FaceDetectionMetadata => meta !== null);
+                .filter((meta): meta is FaceDetectionMetadata => meta !== null)
+                .filter((meta) => meta.confidence >= confidenceThreshold);
 
             return {
                 isFaceDetected: metadata.length > 0,

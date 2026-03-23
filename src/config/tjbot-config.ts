@@ -99,10 +99,8 @@ export class TJBotConfig {
             }
         }
 
-        // Validate vision backend models if local backend is configured
-        if (this.config.see?.backend?.type === 'local' && this.config.see?.backend?.local) {
-            this.validateVisionLocalModels(this.config.see.backend.local);
-        }
+        // Validate vision backend config when configured.
+        this.validateVisionBackendConfig();
 
         this.log = this.config.log ?? {};
         this.hardware = this.config.hardware ?? {};
@@ -330,6 +328,51 @@ export class TJBotConfig {
                 (typeof threshold.value !== 'number' || threshold.value < 0 || threshold.value > 1)
             ) {
                 throw new TJBotError(`Vision local backend: ${threshold.field} must be a number between 0.0 and 1.0`);
+            }
+        }
+    }
+
+    /**
+     * Validate vision backend configuration for all backend types.
+     * @private
+     */
+    private validateVisionBackendConfig(): void {
+        const backend = this.config.see?.backend;
+        if (!backend) {
+            return;
+        }
+
+        if (backend.type === 'local' && backend.local) {
+            this.validateVisionLocalModels(backend.local);
+            return;
+        }
+
+        if (backend.type === 'google-cloud-vision' && backend['google-cloud-vision']) {
+            this.validateVisionThresholds('google-cloud-vision', backend['google-cloud-vision'], [
+                'objectDetectionConfidence',
+                'imageClassificationConfidence',
+                'faceDetectionConfidence',
+            ]);
+            return;
+        }
+
+        if (backend.type === 'azure-vision' && backend['azure-vision']) {
+            this.validateVisionThresholds('azure-vision', backend['azure-vision'], [
+                'objectDetectionConfidence',
+                'imageClassificationConfidence',
+            ]);
+        }
+    }
+
+    /**
+     * Validate confidence thresholds in a backend config object.
+     * @private
+     */
+    private validateVisionThresholds(backendName: string, config: Record<string, unknown>, fields: string[]): void {
+        for (const field of fields) {
+            const value = config[field];
+            if (value !== undefined && (typeof value !== 'number' || value < 0 || value > 1)) {
+                throw new TJBotError(`Vision ${backendName} backend: ${field} must be a number between 0.0 and 1.0`);
             }
         }
     }

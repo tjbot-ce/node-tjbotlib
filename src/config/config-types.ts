@@ -158,6 +158,9 @@ export type SeeBackendLocalConfig = z.infer<typeof seeBackendLocalConfigSchema>;
 export const seeBackendGoogleCloudConfigSchema = z
     .object({
         credentialsPath: z.string().optional(),
+        objectDetectionConfidence: z.number().optional(),
+        imageClassificationConfidence: z.number().optional(),
+        faceDetectionConfidence: z.number().optional(),
     })
     .loose();
 export type SeeBackendGoogleCloudConfig = z.infer<typeof seeBackendGoogleCloudConfigSchema>;
@@ -165,6 +168,8 @@ export type SeeBackendGoogleCloudConfig = z.infer<typeof seeBackendGoogleCloudCo
 export const seeBackendAzureConfigSchema = z
     .object({
         credentialsPath: z.string().optional(),
+        objectDetectionConfidence: z.number().optional(),
+        imageClassificationConfidence: z.number().optional(),
     })
     .loose();
 export type SeeBackendAzureConfig = z.infer<typeof seeBackendAzureConfigSchema>;

@@ -64,11 +64,28 @@ export class AzureVisionEngine extends VisionEngine {
         return image;
     }
 
+    private getObjectDetectionConfidenceThreshold(): number {
+        const config = this.config as SeeBackendAzureConfig;
+        if (config.objectDetectionConfidence === undefined) {
+            throw new TJBotError('Object detection confidence threshold is not configured for Azure Vision engine');
+        }
+        return config.objectDetectionConfidence;
+    }
+
+    private getImageClassificationConfidenceThreshold(): number {
+        const config = this.config as SeeBackendAzureConfig;
+        if (config.imageClassificationConfidence === undefined) {
+            throw new TJBotError('Image classification confidence threshold is not configured for Azure Vision engine');
+        }
+        return config.imageClassificationConfidence;
+    }
+
     async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
         if (!this.client) {
             throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
 
+        const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
         winston.verbose(`${EMO} Detecting objects in image with Azure Computer Vision API`);
 
         const imageBuffer = this.readImageBuffer(image);
@@ -103,6 +120,7 @@ export class AzureVisionEngine extends VisionEngine {
                         obj.rectangle?.h ?? 0,
                     ] as [number, number, number, number],
                 }))
+                .filter((obj) => obj.confidence >= resolvedConfidenceThreshold)
                 .sort((a, b) => b.confidence - a.confidence);
         } catch (error) {
             throw new TJBotError(
@@ -111,14 +129,12 @@ export class AzureVisionEngine extends VisionEngine {
         }
     }
 
-    async classifyImage(
-        image: Buffer | string,
-        confidenceThreshold: number = 0.5
-    ): Promise<ImageClassificationResult[]> {
+    async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
         if (!this.client) {
             throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
 
+        const resolvedConfidenceThreshold = this.getImageClassificationConfidenceThreshold();
         winston.verbose(`${EMO} Classifying image with Azure Computer Vision API`);
 
         const imageBuffer = this.readImageBuffer(image);
@@ -134,7 +150,7 @@ export class AzureVisionEngine extends VisionEngine {
             const tags = (result as unknown as { tags?: Array<{ name?: string; confidence?: number }> }).tags ?? [];
 
             return tags
-                .filter((tag) => tag.confidence && tag.confidence >= confidenceThreshold)
+                .filter((tag) => tag.confidence && tag.confidence >= resolvedConfidenceThreshold)
                 .map((tag) => ({
                     label: tag.name ?? 'unknown',
                     confidence: tag.confidence ?? 0,

@@ -119,12 +119,11 @@ export abstract class VisionEngine {
      * Classify an image.
      *
      * @param image - Image buffer or file path
-     * @param confidenceThreshold - Optional confidence threshold (default 0.5). Only return labels with confidence >= threshold.
      * @returns Array of classification results with labels and confidence scores, sorted by confidence descending
      * @throws {TJBotError} if classification fails
      * @public
      */
-    abstract classifyImage(image: Buffer | string, confidenceThreshold?: number): Promise<ImageClassificationResult[]>;
+    abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
 
     /**
      * Detect faces in an image.
@@ -166,7 +165,7 @@ export async function createVisionEngine(seeConfig: SeeConfig): Promise<VisionEn
                     // No-op for 'none' backend
                 }
 
-                async detectObjects(): Promise<ObjectDetectionResult[]> {
+                async detectObjects(_image: Buffer | string): Promise<ObjectDetectionResult[]> {
                     throw new TJBotError(
                         'Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.'
                     );

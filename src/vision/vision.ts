@@ -46,14 +46,13 @@ export class VisionController {
     /**
      * Classify an image using the configured Vision engine.
      * @param image Image buffer or file path
-     * @param confidenceThreshold Optional confidence threshold (default 0.5). Only return labels above this threshold.
      */
-    async classifyImage(image: Buffer | string, confidenceThreshold?: number) {
+    async classifyImage(image: Buffer | string) {
         if (this.visionEngine === undefined) {
             throw new Error('Vision engine not initialized. Call initialize() before classifying images.');
         }
         winston.verbose(`${EMO} Classifying image`);
-        return this.visionEngine.classifyImage(image, confidenceThreshold);
+        return this.visionEngine.classifyImage(image);
     }
 
     /**

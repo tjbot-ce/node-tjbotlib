@@ -115,11 +115,16 @@ export const seeBackendLocalConfigSchema = z
 export const seeBackendGoogleCloudConfigSchema = z
     .object({
     credentialsPath: z.string().optional(),
+    objectDetectionConfidence: z.number().optional(),
+    imageClassificationConfidence: z.number().optional(),
+    faceDetectionConfidence: z.number().optional(),
 })
     .loose();
 export const seeBackendAzureConfigSchema = z
     .object({
     credentialsPath: z.string().optional(),
+    objectDetectionConfidence: z.number().optional(),
+    imageClassificationConfidence: z.number().optional(),
 })
     .loose();
 export const seeBackendConfigSchema = z

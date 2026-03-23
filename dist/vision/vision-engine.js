@@ -44,7 +44,7 @@ export async function createVisionEngine(seeConfig) {
                 async initialize() {
                     // No-op for 'none' backend
                 }
-                async detectObjects() {
+                async detectObjects(_image) {
                     throw new TJBotError('Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.');
                 }
                 async classifyImage() {

@@ -188,19 +188,38 @@ export class ONNXVisionEngine extends VisionEngine {
         }
         return model;
     }
+    getObjectDetectionConfidenceThreshold() {
+        const config = this.config;
+        if (config.objectDetectionConfidence === undefined) {
+            throw new TJBotError('Object detection confidence threshold is not configured for ONNX vision engine');
+        }
+        return config.objectDetectionConfidence;
+    }
+    getImageClassificationConfidenceThreshold() {
+        const config = this.config;
+        if (config.imageClassificationConfidence === undefined) {
+            throw new TJBotError('Image classification confidence threshold is not configured for ONNX vision engine');
+        }
+        return config.imageClassificationConfidence;
+    }
+    getFaceDetectionConfidenceThreshold() {
+        const config = this.config;
+        if (config.faceDetectionConfidence === undefined) {
+            throw new TJBotError('Face detection confidence threshold is not configured for ONNX vision engine');
+        }
+        return config.faceDetectionConfidence;
+    }
     /**
      * Detect objects in an image.
      */
     async detectObjects(image) {
-        if (this.config.objectDetectionModel === undefined) {
+        const config = this.config;
+        if (config.objectDetectionModel === undefined) {
             throw new TJBotError('Object detection model is not configured for ONNX vision engine');
         }
-        if (this.config.objectDetectionConfidence === undefined) {
-            throw new TJBotError('Object detection confidence threshold is not configured for ONNX vision engine');
-        }
-        const modelName = this.config.objectDetectionModel;
-        const confidenceThreshold = this.config.objectDetectionConfidence;
-        winston.info(`${EMO} Running object detection using model ${modelName} with confidence threshold ${confidenceThreshold}`);
+        const modelName = config.objectDetectionModel;
+        const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
+        winston.info(`${EMO} Running object detection using model ${modelName} with confidence threshold ${resolvedConfidenceThreshold}`);
         const model = await this.getOrLoadModel(modelName);
         try {
             // Preprocess image using model's expected input size
@@ -211,7 +230,7 @@ export class ONNXVisionEngine extends VisionEngine {
             feeds[model.session.inputNames[0]] = input;
             const results = await model.session.run(feeds);
             // Postprocess YOLO output
-            return this.postprocessDetection(results, model.labels, model.session.outputNames, confidenceThreshold);
+            return this.postprocessDetection(results, model.labels, model.session.outputNames, resolvedConfidenceThreshold);
         }
         catch (error) {
             throw new TJBotError('Object detection failed', { cause: error });
@@ -221,15 +240,13 @@ export class ONNXVisionEngine extends VisionEngine {
      * Classify an image.
      */
     async classifyImage(image) {
-        if (this.config.imageClassificationModel === undefined) {
+        const config = this.config;
+        if (config.imageClassificationModel === undefined) {
             throw new TJBotError('Image classification model is not configured for ONNX vision engine');
         }
-        if (this.config.imageClassificationConfidence === undefined) {
-            throw new TJBotError('Image classification confidence threshold is not configured for ONNX vision engine');
-        }
-        const modelName = this.config.imageClassificationModel;
-        const confidenceThreshold = this.config.imageClassificationConfidence;
-        winston.info(`${EMO} Running image classification using model ${modelName} with confidence threshold ${confidenceThreshold}`);
+        const modelName = config.imageClassificationModel;
+        const resolvedConfidenceThreshold = this.getImageClassificationConfidenceThreshold();
+        winston.info(`${EMO} Running image classification using model ${modelName} with confidence threshold ${resolvedConfidenceThreshold}`);
         const model = await this.getOrLoadModel(modelName);
         try {
             // Preprocess image using model's expected input size
@@ -240,7 +257,7 @@ export class ONNXVisionEngine extends VisionEngine {
             feeds[model.session.inputNames[0]] = input;
             const results = await model.session.run(feeds);
             // Postprocess classification output
-            return this.postprocessClassification(results, model.labels, confidenceThreshold, model.session.outputNames);
+            return this.postprocessClassification(results, model.labels, resolvedConfidenceThreshold, model.session.outputNames);
         }
         catch (error) {
             throw new TJBotError('Image classification failed', { cause: error });
@@ -250,14 +267,12 @@ export class ONNXVisionEngine extends VisionEngine {
      * Detect faces in an image.
      */
     async detectFaces(image) {
-        if (this.config.faceDetectionModel === undefined) {
+        const config = this.config;
+        if (config.faceDetectionModel === undefined) {
             throw new TJBotError('Face detection model is not configured for ONNX vision engine');
         }
-        if (this.config.faceDetectionConfidence === undefined) {
-            throw new TJBotError('Face detection confidence threshold is not configured for ONNX vision engine');
-        }
-        const modelName = this.config.faceDetectionModel;
-        const confidenceThreshold = this.config.faceDetectionConfidence;
+        const modelName = config.faceDetectionModel;
+        const confidenceThreshold = this.getFaceDetectionConfidenceThreshold();
         winston.info(`${EMO} Running face detection using model ${modelName} with confidence threshold ${confidenceThreshold}`);
         const model = await this.getOrLoadModel(modelName);
         try {

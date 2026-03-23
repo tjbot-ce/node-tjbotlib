@@ -191,6 +191,12 @@ faceDetectionConfidence = 0.5
 # You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
 
+# Confidence thresholds for filtering cloud results client-side after API response
+# Valid range: 0.0 to 1.0
+objectDetectionConfidence = 0.8
+imageClassificationConfidence = 0.8
+faceDetectionConfidence = 0.5
+
 [see.backend.azure-vision]
 # Path to the azure-credentials.env file containing Azure Vision API credentials
 # By default, TJBot will search for the file in this order:
@@ -198,6 +204,11 @@ credentialsPath = ''
 #   2. .tjbot directory (~/.tjbot/azure-credentials.env)
 # You only need to set credentialsPath if your credential file is kept elsewhere.
 credentialsPath = ''
+
+# Confidence thresholds for filtering cloud results client-side after API response
+# Valid range: 0.0 to 1.0
+objectDetectionConfidence = 0.8
+imageClassificationConfidence = 0.8
 
 # =============================================================================
 # Shine

@@ -84,5 +84,15 @@ export declare class TJBotConfig {
      * @private
      */
     private validateVisionLocalModels;
+    /**
+     * Validate vision backend configuration for all backend types.
+     * @private
+     */
+    private validateVisionBackendConfig;
+    /**
+     * Validate confidence thresholds in a backend config object.
+     * @private
+     */
+    private validateVisionThresholds;
 }
 //# sourceMappingURL=tjbot-config.d.ts.map

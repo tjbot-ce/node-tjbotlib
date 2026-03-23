@@ -264,6 +264,57 @@ describe('TJBotConfig - Invalid Config', () => {
             new TJBotConfig(invalidConfig);
         }).toThrow();
     });
+
+    test('accepts google-cloud-vision confidence thresholds in valid range', () => {
+        const config = new TJBotConfig({
+            see: {
+                backend: {
+                    type: 'google-cloud-vision',
+                    'google-cloud-vision': {
+                        objectDetectionConfidence: 0.7,
+                        imageClassificationConfidence: 0.6,
+                        faceDetectionConfidence: 0.5,
+                    },
+                },
+            },
+        });
+
+        expect(config.see.backend?.['google-cloud-vision']?.objectDetectionConfidence).toBe(0.7);
+        expect(config.see.backend?.['google-cloud-vision']?.imageClassificationConfidence).toBe(0.6);
+        expect(config.see.backend?.['google-cloud-vision']?.faceDetectionConfidence).toBe(0.5);
+    });
+
+    test('accepts azure-vision confidence thresholds for supported operations', () => {
+        const config = new TJBotConfig({
+            see: {
+                backend: {
+                    type: 'azure-vision',
+                    'azure-vision': {
+                        objectDetectionConfidence: 0.7,
+                        imageClassificationConfidence: 0.6,
+                    },
+                },
+            },
+        });
+
+        expect(config.see.backend?.['azure-vision']?.objectDetectionConfidence).toBe(0.7);
+        expect(config.see.backend?.['azure-vision']?.imageClassificationConfidence).toBe(0.6);
+    });
+
+    test('rejects out-of-range google-cloud-vision confidence thresholds', () => {
+        expect(() => {
+            new TJBotConfig({
+                see: {
+                    backend: {
+                        type: 'google-cloud-vision',
+                        'google-cloud-vision': {
+                            objectDetectionConfidence: 1.5,
+                        },
+                    },
+                },
+            });
+        }).toThrow();
+    });
 });
 
 describe('TJBotConfig - Config Access', () => {
