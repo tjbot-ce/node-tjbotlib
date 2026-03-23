@@ -24,6 +24,7 @@ const SUPPORTED_GOOGLE_STT_MODEL_REGIONS = {
     chirp_3: ['us', 'eu'],
     chirp_2: ['us-central1', 'europe-west4', 'asia-southeast1'],
 };
+const MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES = 25600;
 function assertSupportedGoogleSTTModelAndRegion(model, region) {
     if (!(model in SUPPORTED_GOOGLE_STT_MODEL_REGIONS)) {
         throw new TJBotError(`Google Cloud STT model "${model}" is not supported. Supported models: ${Object.keys(SUPPORTED_GOOGLE_STT_MODEL_REGIONS).join(', ')}`);
@@ -36,9 +37,21 @@ function assertSupportedGoogleSTTModelAndRegion(model, region) {
 function toGoogleCloudRecognitionError(error, recognizerPath) {
     const googleError = error;
     const permission = googleError.errorInfoMetadata?.permission;
+    const details = googleError.details ?? googleError.message;
     const isPermissionDenied = googleError.code === 7 ||
         googleError.reason === 'IAM_PERMISSION_DENIED' ||
         permission === 'speech.recognizers.recognize';
+    const isAudioChunkTooLarge = googleError.code === 3 && /maximum of 25600 bytes/i.test(details);
+    if (isAudioChunkTooLarge) {
+        return new TJBotError(`Google Cloud STT rejected an audio chunk over ${MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES} bytes. Audio must be streamed in smaller chunks.`, {
+            code: 'stt.google-cloud.chunk-too-large',
+            cause: error,
+            context: {
+                recognizer: recognizerPath,
+                details,
+            },
+        });
+    }
     if (isPermissionDenied) {
         return new TJBotError(`Google Cloud STT permission denied for recognizer ${recognizerPath}. Ensure the credentials have the permission speech.recognizers.recognize on that recognizer resource and that the selected region matches the recognizer location.`, {
             code: 'stt.google-cloud.permission-denied',
@@ -46,7 +59,7 @@ function toGoogleCloudRecognitionError(error, recognizerPath) {
             context: {
                 recognizer: recognizerPath,
                 permission: permission ?? 'speech.recognizers.recognize',
-                details: googleError.details,
+                details,
             },
         });
     }
@@ -54,7 +67,7 @@ function toGoogleCloudRecognitionError(error, recognizerPath) {
         cause: error,
         context: {
             recognizer: recognizerPath,
-            details: googleError.details,
+            details,
         },
     });
 }
@@ -207,9 +220,12 @@ export class GoogleCloudSTTEngine extends STTEngine {
                     audioChunk = Buffer.from(chunk);
                 }
                 try {
-                    recognizeStream.write({
-                        audio: audioChunk,
-                    });
+                    for (let offset = 0; offset < audioChunk.length; offset += MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES) {
+                        const chunkSlice = audioChunk.subarray(offset, offset + MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES);
+                        recognizeStream.write({
+                            audio: chunkSlice,
+                        });
+                    }
                 }
                 catch (err) {
                     const error = err instanceof Error ? err : new Error(String(err));
@@ -247,7 +263,6 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 sourceStream.removeListener('end', handleMicEnd);
                 sourceStream.removeListener('error', handleMicError);
                 recognizeStream.removeListener('data', handleData);
-                recognizeStream.removeListener('error', handleError);
                 recognizeStream.removeListener('close', handleEndWithoutTranscript);
                 recognizeStream.removeListener('end', handleEndWithoutTranscript);
                 recognizeStream.removeListener('status', handleStatus);
@@ -262,7 +277,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 recognizeStream.destroy();
             };
             recognizeStream.on('data', handleData);
-            recognizeStream.once('error', handleError);
+            recognizeStream.on('error', handleError);
             recognizeStream.once('close', handleEndWithoutTranscript);
             recognizeStream.once('end', handleEndWithoutTranscript);
             recognizeStream.on('status', handleStatus);

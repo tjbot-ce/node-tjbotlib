@@ -29,6 +29,8 @@ const SUPPORTED_GOOGLE_STT_MODEL_REGIONS = {
     chirp_2: ['us-central1', 'europe-west4', 'asia-southeast1'],
 } as const;
 
+const MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES = 25600;
+
 type SupportedGoogleSTTModel = keyof typeof SUPPORTED_GOOGLE_STT_MODEL_REGIONS;
 
 type GoogleCloudStreamError = Error & {
@@ -58,10 +60,26 @@ function assertSupportedGoogleSTTModelAndRegion(model: string, region: string): 
 function toGoogleCloudRecognitionError(error: Error, recognizerPath: string): TJBotError {
     const googleError = error as GoogleCloudStreamError;
     const permission = googleError.errorInfoMetadata?.permission;
+    const details = googleError.details ?? googleError.message;
     const isPermissionDenied =
         googleError.code === 7 ||
         googleError.reason === 'IAM_PERMISSION_DENIED' ||
         permission === 'speech.recognizers.recognize';
+    const isAudioChunkTooLarge = googleError.code === 3 && /maximum of 25600 bytes/i.test(details);
+
+    if (isAudioChunkTooLarge) {
+        return new TJBotError(
+            `Google Cloud STT rejected an audio chunk over ${MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES} bytes. Audio must be streamed in smaller chunks.`,
+            {
+                code: 'stt.google-cloud.chunk-too-large',
+                cause: error,
+                context: {
+                    recognizer: recognizerPath,
+                    details,
+                },
+            }
+        );
+    }
 
     if (isPermissionDenied) {
         return new TJBotError(
@@ -72,7 +90,7 @@ function toGoogleCloudRecognitionError(error: Error, recognizerPath: string): TJ
                 context: {
                     recognizer: recognizerPath,
                     permission: permission ?? 'speech.recognizers.recognize',
-                    details: googleError.details,
+                    details,
                 },
             }
         );
@@ -82,7 +100,7 @@ function toGoogleCloudRecognitionError(error: Error, recognizerPath: string): TJ
         cause: error,
         context: {
             recognizer: recognizerPath,
-            details: googleError.details,
+            details,
         },
     });
 }
@@ -271,9 +289,12 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 }
 
                 try {
-                    recognizeStream.write({
-                        audio: audioChunk,
-                    });
+                    for (let offset = 0; offset < audioChunk.length; offset += MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES) {
+                        const chunkSlice = audioChunk.subarray(offset, offset + MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES);
+                        recognizeStream.write({
+                            audio: chunkSlice,
+                        });
+                    }
                 } catch (err) {
                     const error = err instanceof Error ? err : new Error(String(err));
                     settleReject(toGoogleCloudRecognitionError(error, recognizerPath));
@@ -320,7 +341,6 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 sourceStream.removeListener('end', handleMicEnd);
                 sourceStream.removeListener('error', handleMicError);
                 recognizeStream.removeListener('data', handleData);
-                recognizeStream.removeListener('error', handleError);
                 recognizeStream.removeListener('close', handleEndWithoutTranscript);
                 recognizeStream.removeListener('end', handleEndWithoutTranscript);
                 recognizeStream.removeListener('status', handleStatus);
@@ -335,7 +355,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
             };
 
             recognizeStream.on('data', handleData);
-            recognizeStream.once('error', handleError);
+            recognizeStream.on('error', handleError);
             recognizeStream.once('close', handleEndWithoutTranscript);
             recognizeStream.once('end', handleEndWithoutTranscript);
             recognizeStream.on('status', handleStatus);
