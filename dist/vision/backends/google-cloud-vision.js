@@ -65,7 +65,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
         const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
-        winston.verbose(`${EMO} Detecting objects in image with Google Cloud Vision API`);
+        winston.verbose(`${EMO} Running object detection using Google Cloud Vision API`);
         const imageBuffer = this.readImageBuffer(image);
         try {
             const request = {

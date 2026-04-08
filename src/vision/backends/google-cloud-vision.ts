@@ -92,7 +92,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         }
 
         const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
-        winston.verbose(`${EMO} Detecting objects in image with Google Cloud Vision API`);
+        winston.verbose(`${EMO} Running object detection using Google Cloud Vision API`);
 
         const imageBuffer = this.readImageBuffer(image);
 

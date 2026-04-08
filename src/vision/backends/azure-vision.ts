@@ -86,7 +86,7 @@ export class AzureVisionEngine extends VisionEngine {
         }
 
         const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
-        winston.verbose(`${EMO} Detecting objects in image with Azure Computer Vision API`);
+        winston.verbose(`${EMO} Running object detection using Azure Computer Vision API`);
 
         const imageBuffer = this.readImageBuffer(image);
 
