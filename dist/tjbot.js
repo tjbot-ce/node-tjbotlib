@@ -380,7 +380,9 @@ class TJBot {
             });
         }
         // Offline / single-shot: return the transcript
-        return await this.rpiDriver.listenForTranscript();
+        const message = await this.rpiDriver.listenForTranscript();
+        winston.info(`${LogEmoji.STT} Heard: "${message}"`);
+        return message;
     }
     /** ------------------------------------------------------------------------ */
     /** SEE                                                                      */

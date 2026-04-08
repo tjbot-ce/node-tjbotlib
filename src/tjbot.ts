@@ -462,6 +462,7 @@ class TJBot {
      * @public
      */
     listen(): Promise<string>;
+
     /**
      * Listen for a spoken utterance (streaming mode - uses callbacks).
      * @param onPartialResult Callback for partial transcription results
@@ -505,7 +506,9 @@ class TJBot {
         }
 
         // Offline / single-shot: return the transcript
-        return await this.rpiDriver.listenForTranscript();
+        const message = await this.rpiDriver.listenForTranscript();
+        winston.info(`${LogEmoji.STT} Heard: "${message}"`);
+        return message;
     }
 
     /** ------------------------------------------------------------------------ */
