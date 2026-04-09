@@ -88,3 +88,41 @@ export function inferSTTMode(listenConfig: ListenConfig): STTModelType {
 
     throw new TJBotError(`Unknown STT backend type: ${backend}`);
 }
+
+const TIMEOUT_LIKE_STREAM_END_PATTERNS: RegExp[] = [
+    /max duration.*5 minutes.*stream/i,
+    /maximum stream duration/i,
+    /stream.*time(?:d)? out/i,
+    /request.*time(?:d)? out/i,
+    /session stopped/i,
+    /inactivity timeout/i,
+];
+
+export interface StreamEndTranscriptResolutionOptions {
+    finalTranscript?: string;
+    partialTranscript?: string;
+    allowPartialOnTimeoutLikeEnd?: boolean;
+    timeoutLikeEnd: boolean;
+}
+
+export function isTimeoutLikeStreamEndReason(reason: string | undefined | null): boolean {
+    if (!reason) {
+        return false;
+    }
+
+    return TIMEOUT_LIKE_STREAM_END_PATTERNS.some((pattern) => pattern.test(reason));
+}
+
+export function resolveTranscriptForStreamEnd(options: StreamEndTranscriptResolutionOptions): string | undefined {
+    const finalTranscript = options.finalTranscript?.trim();
+    if (finalTranscript) {
+        return finalTranscript;
+    }
+
+    const partialTranscript = options.partialTranscript?.trim();
+    if (options.timeoutLikeEnd && (options.allowPartialOnTimeoutLikeEnd ?? true) && partialTranscript) {
+        return partialTranscript;
+    }
+
+    return undefined;
+}

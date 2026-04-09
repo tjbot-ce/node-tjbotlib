@@ -20,6 +20,7 @@ import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { STTEngine } from '../stt-engine.js';
+import { isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
 const EMO = LogEmoji.STT;
 /**
  * IBM Watson Speech-to-Text Engine
@@ -75,6 +76,8 @@ export class IBMWatsonSTTEngine extends STTEngine {
         this.ensureStream(micStream).pipe(recognizeStream);
         return new Promise((resolve, reject) => {
             let settled = false;
+            let latestPartialTranscript = '';
+            let latestFinalTranscript = '';
             const settleResolve = (transcript) => {
                 if (settled) {
                     return;
@@ -105,10 +108,12 @@ export class IBMWatsonSTTEngine extends STTEngine {
                     return;
                 }
                 if (interimResults && !result.final) {
+                    latestPartialTranscript = transcript;
                     options.onPartialResult?.(transcript);
                     return;
                 }
                 if (result.final) {
+                    latestFinalTranscript = transcript;
                     winston.debug(`${EMO} IBM Watson STT recognized: ${transcript}`);
                     if (interimResults) {
                         options.onFinalResult?.(transcript);
@@ -118,9 +123,38 @@ export class IBMWatsonSTTEngine extends STTEngine {
             };
             const handleError = (err) => {
                 winston.error(`${EMO} IBM Watson STT stream error:`, err);
+                const timeoutLikeEnd = isTimeoutLikeStreamEndReason(err.message);
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd,
+                });
+                if (fallbackTranscript) {
+                    winston.debug(`${EMO} IBM Watson STT finalized using partial transcript after stream timeout`);
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
                 settleReject(new TJBotError('IBM Watson STT recognition failed', { cause: err }));
             };
             const handleEndWithoutTranscript = () => {
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: true,
+                });
+                if (fallbackTranscript) {
+                    winston.debug(`${EMO} IBM Watson STT finalized using partial transcript after stream end`);
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
                 settleReject(new TJBotError('IBM Watson STT: No speech could be recognized', {
                     code: 'stt.no-speech',
                 }));

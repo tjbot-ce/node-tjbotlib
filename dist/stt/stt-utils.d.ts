@@ -24,4 +24,12 @@ export type STTModelFlavor = 'streaming-zipformer' | 'streaming-paraformer' | 'o
 export declare function inferLocalModelFlavor(modelName?: string, modelUrl?: string): STTModelFlavor;
 export declare function toModelType(flavor: STTModelFlavor): STTModelType;
 export declare function inferSTTMode(listenConfig: ListenConfig): STTModelType;
+export interface StreamEndTranscriptResolutionOptions {
+    finalTranscript?: string;
+    partialTranscript?: string;
+    allowPartialOnTimeoutLikeEnd?: boolean;
+    timeoutLikeEnd: boolean;
+}
+export declare function isTimeoutLikeStreamEndReason(reason: string | undefined | null): boolean;
+export declare function resolveTranscriptForStreamEnd(options: StreamEndTranscriptResolutionOptions): string | undefined;
 //# sourceMappingURL=stt-utils.d.ts.map

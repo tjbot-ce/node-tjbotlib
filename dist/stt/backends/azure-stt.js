@@ -19,6 +19,7 @@ import { loadAzureCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { STTEngine } from '../stt-engine.js';
+import { isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
 const EMO = LogEmoji.STT;
 /**
  * Azure Cognitive Services Speech-to-Text Engine
@@ -109,6 +110,8 @@ export class AzureSTTEngine extends STTEngine {
         }
         return new Promise((resolve, reject) => {
             let settled = false;
+            let latestPartialTranscript = '';
+            let latestFinalTranscript = '';
             const cleanup = () => {
                 recognizer.recognizing = () => {
                     // no-op after cleanup
@@ -153,6 +156,7 @@ export class AzureSTTEngine extends STTEngine {
             recognizer.recognizing = (_sender, event) => {
                 const text = event.result?.text?.trim();
                 if (text) {
+                    latestPartialTranscript = text;
                     options.onPartialResult?.(text);
                 }
             };
@@ -160,6 +164,7 @@ export class AzureSTTEngine extends STTEngine {
                 if (event.result.reason === sdk.ResultReason.RecognizedSpeech) {
                     const text = event.result.text?.trim();
                     if (text) {
+                        latestFinalTranscript = text;
                         winston.debug(`${EMO} Azure STT recognized: ${text}`);
                         options.onFinalResult?.(text);
                         settleResolve(text);
@@ -173,10 +178,44 @@ export class AzureSTTEngine extends STTEngine {
                 }
             };
             recognizer.canceled = (_sender, event) => {
+                const cancelReason = `${event.reason} - ${event.errorDetails || ''}`;
+                const timeoutLikeEnd = isTimeoutLikeStreamEndReason(cancelReason);
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd,
+                });
+                if (fallbackTranscript) {
+                    winston.debug(`${EMO} Azure STT finalized using partial transcript after cancel event`);
+                    options.onFinalResult?.(fallbackTranscript);
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+                if (timeoutLikeEnd) {
+                    settleReject(new TJBotError('Azure STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    }));
+                    return;
+                }
                 settleReject(new TJBotError(`Azure STT canceled: ${event.reason} - ${event.errorDetails}`));
             };
             recognizer.sessionStopped = () => {
-                settleReject(new TJBotError('Azure STT session stopped before a final transcript was recognized'));
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: true,
+                });
+                if (fallbackTranscript) {
+                    winston.debug(`${EMO} Azure STT finalized using partial transcript after session stop`);
+                    options.onFinalResult?.(fallbackTranscript);
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+                settleReject(new TJBotError('Azure STT: No speech could be recognized', {
+                    code: 'stt.no-speech',
+                }));
             };
             recognizer.startContinuousRecognitionAsync(() => {
                 winston.silly(`${EMO} Azure STT continuous recognition started`);

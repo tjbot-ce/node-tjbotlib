@@ -15,6 +15,7 @@
  */
 import { protos as speechProtos, v2 as speechV2 } from '@google-cloud/speech';
 import winston from 'winston';
+import { isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
 import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
@@ -166,6 +167,9 @@ export class GoogleCloudSTTEngine extends STTEngine {
         return new Promise((resolve, reject) => {
             const recognizeStream = client._streamingRecognize();
             let settled = false;
+            let timeoutLikeStreamEnd = false;
+            let latestPartialTranscript = '';
+            let latestFinalTranscript = '';
             const settleResolve = (transcript) => {
                 if (settled) {
                     return;
@@ -193,10 +197,12 @@ export class GoogleCloudSTTEngine extends STTEngine {
                         return;
                     }
                     if (interimResults && !result.isFinal) {
+                        latestPartialTranscript = transcript;
                         options.onPartialResult?.(transcript);
                         return;
                     }
                     if (result.isFinal) {
+                        latestFinalTranscript = transcript;
                         winston.debug(`${EMO} Google Cloud STT recognized: ${transcript}`);
                         if (interimResults) {
                             options.onFinalResult?.(transcript);
@@ -243,15 +249,59 @@ export class GoogleCloudSTTEngine extends STTEngine {
             };
             const handleError = (err) => {
                 winston.error(`${EMO} Google Cloud STT stream error:`, err);
+                timeoutLikeStreamEnd = timeoutLikeStreamEnd || isTimeoutLikeStreamEndReason(err.message);
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: timeoutLikeStreamEnd,
+                });
+                if (fallbackTranscript) {
+                    winston.debug(`${EMO} Google Cloud STT finalized using partial transcript after stream timeout`);
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
                 settleReject(toGoogleCloudRecognitionError(err, recognizerPath));
             };
             const handleEndWithoutTranscript = () => {
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: timeoutLikeStreamEnd,
+                });
+                if (fallbackTranscript) {
+                    winston.debug(`${EMO} Google Cloud STT finalized using partial transcript after stream end`);
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
                 settleReject(new TJBotError('Google Cloud STT: No speech could be recognized', {
                     code: 'stt.no-speech',
                 }));
             };
             const handleStatus = (status) => {
                 if (status.code === 0 || status.code === undefined) {
+                    return;
+                }
+                timeoutLikeStreamEnd = timeoutLikeStreamEnd || isTimeoutLikeStreamEndReason(status.details);
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: timeoutLikeStreamEnd,
+                });
+                if (fallbackTranscript) {
+                    winston.debug(`${EMO} Google Cloud STT finalized using partial transcript from gRPC status`);
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
                     return;
                 }
                 settleReject(new TJBotError(`Google Cloud STT recognition failed: ${status.details || 'unknown error'}`, {
