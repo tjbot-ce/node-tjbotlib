@@ -196,8 +196,11 @@ export class GoogleCloudSTTEngine extends STTEngine {
                     if (!transcript) {
                         return;
                     }
-                    if (interimResults && !result.isFinal) {
+                    if (!result.isFinal) {
+                        // Always retain latest non-final transcript so timeout endings can still return best effort text.
                         latestPartialTranscript = transcript;
+                    }
+                    if (interimResults && !result.isFinal) {
                         options.onPartialResult?.(transcript);
                         return;
                     }
@@ -248,8 +251,14 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 settleReject(new TJBotError('Google Cloud STT microphone stream failed', { cause: err }));
             };
             const handleError = (err) => {
-                winston.error(`${EMO} Google Cloud STT stream error:`, err);
-                timeoutLikeStreamEnd = timeoutLikeStreamEnd || isTimeoutLikeStreamEndReason(err.message);
+                const timeoutLikeReason = isTimeoutLikeStreamEndReason(err.message);
+                timeoutLikeStreamEnd = timeoutLikeStreamEnd || timeoutLikeReason;
+                if (timeoutLikeReason) {
+                    winston.warn(`${EMO} Google Cloud STT stream reached timeout-like ending: ${err.message}`);
+                }
+                else {
+                    winston.error(`${EMO} Google Cloud STT stream error:`, err);
+                }
                 const fallbackTranscript = resolveTranscriptForStreamEnd({
                     finalTranscript: latestFinalTranscript,
                     partialTranscript: latestPartialTranscript,
@@ -262,6 +271,12 @@ export class GoogleCloudSTTEngine extends STTEngine {
                         options.onFinalResult?.(fallbackTranscript);
                     }
                     settleResolve(fallbackTranscript);
+                    return;
+                }
+                if (timeoutLikeStreamEnd) {
+                    settleReject(new TJBotError('Google Cloud STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    }));
                     return;
                 }
                 settleReject(toGoogleCloudRecognitionError(err, recognizerPath));
@@ -302,6 +317,12 @@ export class GoogleCloudSTTEngine extends STTEngine {
                         options.onFinalResult?.(fallbackTranscript);
                     }
                     settleResolve(fallbackTranscript);
+                    return;
+                }
+                if (timeoutLikeStreamEnd) {
+                    settleReject(new TJBotError('Google Cloud STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    }));
                     return;
                 }
                 settleReject(new TJBotError(`Google Cloud STT recognition failed: ${status.details || 'unknown error'}`, {
