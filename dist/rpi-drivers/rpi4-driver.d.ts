@@ -28,6 +28,7 @@ declare class RPi4Driver extends RPiBaseHardwareDriver {
     setupServo(config: WaveConfig): void;
     renderLEDCommonAnode(rgbColor: [number, number, number]): void;
     renderLEDNeopixel(hexColor: string): Promise<void>;
+    cleanup(): Promise<void>;
     renderServoPosition(position: ServoPosition): void;
 }
 export default RPi4Driver;

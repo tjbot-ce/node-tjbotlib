@@ -82,7 +82,7 @@
     "lint:fix": "eslint . --fix",
     "markdownlint": "markdownlint \"**/*.md\" --ignore node_modules",
     "markdownlint:fix": "markdownlint \"**/*.md\" --ignore node_modules --fix",
-    "postbuild": "copyfiles -u 1 src/**/*.{toml,yaml} dist/",
+    "postbuild": "copyfiles -u 1 \"src/**/*.{toml,yaml,js}\" dist/",
     "postinstall": "bash scripts/setup-sherpa.sh && chmod +x node_modules/prettier/bin/prettier.cjs || true",
     "prebuild": "rm -rf dist/*",
     "pretest": "npm run build",

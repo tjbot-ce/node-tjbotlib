@@ -65,17 +65,23 @@ class RPi4Driver extends RPiBaseHardwareDriver {
             if (this.useGRBFormat) {
                 const grbStr = `0x${c[3]}${c[4]}${c[1]}${c[2]}${c[5]}${c[6]}`;
                 const grb = parseInt(grbStr, 16);
-                this.neopixelLed.render(grb);
+                await this.neopixelLed.render(grb);
             }
             else {
                 const rgbStr = `0x${c[1]}${c[2]}${c[3]}${c[4]}${c[5]}${c[6]}`;
                 const rgb = parseInt(rgbStr, 16);
-                this.neopixelLed.render(rgb);
+                await this.neopixelLed.render(rgb);
             }
         }
         else {
             winston.warn(`${LogEmoji.LED} attempted to render on an uninitialized Neopixel LED`);
         }
+    }
+    async cleanup() {
+        if (this.neopixelLed) {
+            await this.neopixelLed.cleanup();
+        }
+        await super.cleanup();
     }
     renderServoPosition(position) {
         if (this.servo) {

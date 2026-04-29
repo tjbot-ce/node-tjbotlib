@@ -28,6 +28,7 @@ declare class RPi3Driver extends RPiBaseHardwareDriver {
     setupServo(config: WaveConfig): void;
     renderLEDCommonAnode(rgbColor: [number, number, number]): void;
     renderLEDNeopixel(hexColor: string): Promise<void>;
+    cleanup(): Promise<void>;
     renderServoPosition(position: ServoPosition): void;
     listenForTranscript(): Promise<string>;
     speak(message: string): Promise<void>;

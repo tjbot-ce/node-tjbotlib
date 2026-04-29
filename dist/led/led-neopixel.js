@@ -14,62 +14,164 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { spawn } from 'child_process';
-import { LogEmoji } from '../utils/logging.js';
+import { spawn, spawnSync } from 'child_process';
+import { createInterface } from 'readline';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import winston from 'winston';
+import { TJBotError } from '../utils/errors.js';
+import { LogEmoji } from '../utils/logging.js';
 const EMO = LogEmoji.LED;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+/** Absolute path to the root helper script (plain JS so it runs under raw node). */
+const HELPER_PATH = join(__dirname, 'led-neopixel-ws281x.js');
 /**
- * LED controller for NeoPixel (WS281x) LEDs
- * This uses the native pigpio library for ws281x support
+ * LED controller for NeoPixel (WS281x) LEDs on Raspberry Pi 3/4.
+ *
+ * rpi-ws281x-native requires root privileges. Rather than launching every
+ * TJBot recipe that uses the LED as root, this class spawns a small, long-lived
+ * helper process (in led-neopixel-ws281x.js) using sudo and communicates with it
+ * over a newline-delimited JSON IPC channel on stdin/stdout.
+ *
+ * Sudo authentication is performed once at construction time (either
+ * passwordless or via an interactive prompt). Subsequent render() calls are
+ * cheap IPC messages with no additional privilege escalation.
  */
 export class LEDNeopixel {
-    neopixel;
+    helper;
+    _ready;
+    _pendingById = new Map();
+    _nextId = 1;
+    _helperDead = null;
     constructor(pin) {
-        // Check if running as root (required for rpi-ws281x-native)
-        if (process.getuid && process.getuid() !== 0) {
-            console.log('Use of the Neopixel LED requires root privileges. Re-executing recipe with sudo...');
-            console.log(`→ sudo -E ${process.execPath} ${process.argv.slice(1).join(' ')}`);
-            // Re-execute the script with sudo, preserving the environment
-            const child = spawn('sudo', ['-E', process.execPath, ...process.argv.slice(1)], {
-                stdio: 'inherit',
-            });
-            child.on('exit', (code) => {
-                process.exit(code ?? 0);
-            });
-            // Prevent further execution in the non-root process
-            throw new Error('Re-executing with sudo');
+        const isRoot = process.getuid?.() === 0;
+        let spawnCmd;
+        let spawnArgs;
+        if (isRoot) {
+            // Already root — run the helper directly, no sudo needed.
+            spawnCmd = process.execPath;
+            spawnArgs = [HELPER_PATH];
         }
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const ws281x = require('rpi-ws281x-native');
-        this.neopixel = ws281x;
-        this.neopixel.init(1, {
-            pin,
+        else {
+            // Test whether passwordless sudo is available.
+            const probe = spawnSync('sudo', ['-n', 'true'], { stdio: 'pipe' });
+            if (probe.status !== 0) {
+                // Password is required. Print a clear rationale before prompting.
+                console.log('\nThe NeoPixel LED on Raspberry Pi 3/4 requires elevated hardware access.\n' +
+                    'TJBot will now request sudo authentication to launch a dedicated LED\n' +
+                    'helper process. This is a one-time authentication per session.\n');
+                const auth = spawnSync('sudo', ['-v'], { stdio: 'inherit' });
+                if (auth.status !== 0) {
+                    throw new TJBotError('sudo authentication failed. The NeoPixel LED requires root privileges on Raspberry Pi 3/4. ' +
+                        'Enable passwordless sudo for this command or run `sudo -v` before starting TJBot.');
+                }
+            }
+            // Credentials are now cached; use -n so the helper spawn never blocks.
+            spawnCmd = 'sudo';
+            spawnArgs = ['-n', process.execPath, HELPER_PATH];
+        }
+        winston.verbose(`${EMO} Spawning NeoPixel helper: ${spawnCmd} ${spawnArgs.join(' ')}`);
+        this.helper = spawn(spawnCmd, spawnArgs, {
+            stdio: ['pipe', 'pipe', 'inherit'],
         });
-        // reset the LED before the program exits
-        process.on('SIGINT', () => {
-            this.neopixel.reset();
-            process.nextTick(() => {
-                process.exit(0);
-            });
+        if (!this.helper.stdout) {
+            throw new TJBotError('NeoPixel helper process stdout is not available.');
+        }
+        // Line-based JSON reader on helper stdout.
+        const rl = createInterface({ input: this.helper.stdout });
+        rl.on('line', (line) => this._handleLine(line));
+        this.helper.on('exit', (code, signal) => {
+            this._helperDead = new TJBotError(`NeoPixel helper exited unexpectedly (code=${code}, signal=${signal})`);
+            for (const [, pending] of this._pendingById) {
+                clearTimeout(pending.timer);
+                pending.reject(this._helperDead);
+            }
+            this._pendingById.clear();
+            winston.error(`${EMO} NeoPixel helper exited (code=${code}, signal=${signal})`);
         });
-        winston.verbose(`${EMO} Initialized LEDNeopixel on pin ${pin}`);
+        // Send the init command; store the promise so render() can await readiness.
+        this._ready = this._send({ cmd: 'init', pin, numLeds: 1 }, 10_000);
+        this._ready.then(() => {
+            winston.verbose(`${EMO} NeoPixel helper ready on pin ${pin}`);
+        });
+        // Tear down the helper when the parent process exits (covers normal exit,
+        // SIGINT, and SIGTERM). The helper's own stdin-close handler calls
+        // ws281x.reset() so the LED is turned off cleanly.
+        process.on('exit', () => this._killHelper());
     }
     /**
-     * Render the NeoPixel to a specific color
+     * Render the NeoPixel to a specific color.
      * @param color Color as a 32-bit integer in RGB format (0xRRGGBB)
      */
-    render(color) {
+    async render(color) {
         winston.verbose(`${EMO} Rendering LED with color: ${color}`);
-        const colors = new Uint32Array(1);
-        colors[0] = color;
-        this.neopixel.render(colors);
+        await this._ready;
+        await this._send({ cmd: 'render', color }, 2_000);
     }
     /**
-     * Clean up resources
+     * Send a reset command and terminate the helper process.
      */
-    cleanup() {
+    async cleanup() {
         winston.debug(`${EMO} LEDNeopixel cleanup`);
-        this.neopixel.reset();
+        if (this._helperDead)
+            return;
+        try {
+            await this._send({ cmd: 'shutdown' }, 2_000);
+        }
+        finally {
+            this._killHelper();
+        }
+    }
+    // ── Private helpers ───────────────────────────────────────────────────────
+    _handleLine(line) {
+        let msg;
+        try {
+            msg = JSON.parse(line);
+        }
+        catch {
+            winston.warn(`${EMO} NeoPixel helper sent unparseable response: ${line}`);
+            return;
+        }
+        const pending = this._pendingById.get(msg.id);
+        if (!pending) {
+            winston.warn(`${EMO} NeoPixel helper sent response for unknown id: ${msg.id}`);
+            return;
+        }
+        this._pendingById.delete(msg.id);
+        clearTimeout(pending.timer);
+        if (msg.ok) {
+            pending.resolve();
+        }
+        else {
+            pending.reject(new TJBotError(`NeoPixel helper error: ${msg.error ?? 'unknown'}`));
+        }
+    }
+    _send(payload, timeoutMs) {
+        if (this._helperDead) {
+            return Promise.reject(this._helperDead);
+        }
+        return new Promise((resolve, reject) => {
+            const id = this._nextId++;
+            const timer = setTimeout(() => {
+                this._pendingById.delete(id);
+                reject(new TJBotError(`NeoPixel helper timed out waiting for response to '${payload.cmd}' (${timeoutMs}ms)`));
+            }, timeoutMs);
+            timer.unref();
+            this._pendingById.set(id, { resolve, reject, timer });
+            this.helper.stdin?.write(JSON.stringify({ ...payload, id }) + '\n');
+        });
+    }
+    _killHelper() {
+        if (this.helper && !this.helper.killed) {
+            try {
+                this.helper.stdin?.end();
+            }
+            catch {
+                /* best effort */
+            }
+            this.helper.kill('SIGTERM');
+        }
     }
 }
 //# sourceMappingURL=led-neopixel.js.map
