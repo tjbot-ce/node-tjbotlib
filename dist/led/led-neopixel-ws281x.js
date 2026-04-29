@@ -34,10 +34,11 @@
  * stderr is for human-readable diagnostics only and does not affect the protocol.
  */
 
-'use strict';
+import { createRequire } from 'module';
 
-// rpi-ws281x-native is a native CJS module; require() is appropriate here.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// rpi-ws281x-native is a native CJS addon; load it via createRequire so this
+// file can remain an ES module (.js with "type":"module" in package.json).
+const require = createRequire(import.meta.url);
 const ws281x = require('rpi-ws281x-native');
 
 let initialized = false;
