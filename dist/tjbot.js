@@ -341,6 +341,7 @@ class TJBot {
             catch (err) {
                 winston.warn(`${LogEmoji.GENERAL} automatic cleanup failed during ${reason}: ${String(err)}`);
             }
+            process.exit(0);
             return;
         }
         process.exitCode = exitCode;
