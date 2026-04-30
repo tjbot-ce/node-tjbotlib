@@ -44,7 +44,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     }
 
     setupLEDNeopixel(config: ShineConfig['neopixel']): void {
-        const pin: number = config?.gpioPin ?? 21;
+        const pin: number = config?.gpioPin ?? 18;
         this.neopixelLed = new LEDNeopixel(pin);
         this.useGRBFormat = config?.useGRBFormat ?? false;
         this.initializedHardware.add(Hardware.LED);
@@ -66,14 +66,19 @@ class RPi3Driver extends RPiBaseHardwareDriver {
 
     async renderLEDNeopixel(hexColor: string): Promise<void> {
         if (this.neopixelLed) {
-            const c: string = hexColor;
+            const c: string = hexColor.startsWith('#') ? hexColor.slice(1) : hexColor;
+
+            if (c.length !== 6) {
+                winston.warn(`${LogEmoji.LED} Invalid NeoPixel color '${hexColor}'`);
+                return;
+            }
 
             if (this.useGRBFormat) {
-                const grbStr: string = `0x${c[3]}${c[4]}${c[1]}${c[2]}${c[5]}${c[6]}`;
+                const grbStr: string = `0x${c[2]}${c[3]}${c[0]}${c[1]}${c[4]}${c[5]}`;
                 const grb: number = parseInt(grbStr, 16);
                 await this.neopixelLed.render(grb);
             } else {
-                const rgbStr: string = `0x${c[1]}${c[2]}${c[3]}${c[4]}${c[5]}${c[6]}`;
+                const rgbStr: string = `0x${c}`;
                 const rgb: number = parseInt(rgbStr, 16);
                 await this.neopixelLed.render(rgb);
             }
