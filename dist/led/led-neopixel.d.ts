@@ -28,6 +28,7 @@
  */
 export declare class LEDNeopixel {
     private helper;
+    private reader?;
     private _ready;
     private _pendingById;
     private _nextId;
@@ -44,6 +45,7 @@ export declare class LEDNeopixel {
     cleanup(): Promise<void>;
     private _handleLine;
     private _send;
+    private _setHelperHandleRefState;
     private _killHelper;
 }
 //# sourceMappingURL=led-neopixel.d.ts.map

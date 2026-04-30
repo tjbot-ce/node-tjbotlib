@@ -40,6 +40,7 @@ const HELPER_PATH = join(__dirname, 'led-neopixel-ws281x.js');
  */
 export class LEDNeopixel {
     helper;
+    reader;
     _ready;
     _pendingById = new Map();
     _nextId = 1;
@@ -79,8 +80,8 @@ export class LEDNeopixel {
             throw new TJBotError('NeoPixel helper process stdout is not available.');
         }
         // Line-based JSON reader on helper stdout.
-        const rl = createInterface({ input: this.helper.stdout });
-        rl.on('line', (line) => this._handleLine(line));
+        this.reader = createInterface({ input: this.helper.stdout });
+        this.reader.on('line', (line) => this._handleLine(line));
         this.helper.on('exit', (code, signal) => {
             this._helperDead = new TJBotError(`NeoPixel helper exited unexpectedly (code=${code}, signal=${signal})`);
             for (const [, pending] of this._pendingById) {
@@ -92,8 +93,13 @@ export class LEDNeopixel {
         });
         // Send the init command; store the promise so render() can await readiness.
         this._ready = this._send({ cmd: 'init', pin, numLeds: 1 }, 10_000);
-        this._ready.then(() => {
+        this._ready
+            .then(() => {
             winston.verbose(`${EMO} NeoPixel helper ready on pin ${pin}`);
+            this._setHelperHandleRefState(false);
+        })
+            .catch(() => {
+            this._setHelperHandleRefState(false);
         });
         // Tear down the helper when the parent process exits (covers normal exit,
         // SIGINT, and SIGTERM). The helper's own stdin-close handler calls
@@ -140,6 +146,9 @@ export class LEDNeopixel {
         }
         this._pendingById.delete(msg.id);
         clearTimeout(pending.timer);
+        if (this._pendingById.size === 0) {
+            this._setHelperHandleRefState(false);
+        }
         if (msg.ok) {
             pending.resolve();
         }
@@ -153,8 +162,12 @@ export class LEDNeopixel {
         }
         return new Promise((resolve, reject) => {
             const id = this._nextId++;
+            this._setHelperHandleRefState(true);
             const timer = setTimeout(() => {
                 this._pendingById.delete(id);
+                if (this._pendingById.size === 0) {
+                    this._setHelperHandleRefState(false);
+                }
                 reject(new TJBotError(`NeoPixel helper timed out waiting for response to '${payload.cmd}' (${timeoutMs}ms)`));
             }, timeoutMs);
             timer.unref();
@@ -162,9 +175,32 @@ export class LEDNeopixel {
             this.helper.stdin?.write(JSON.stringify({ ...payload, id }) + '\n');
         });
     }
+    _setHelperHandleRefState(referenced) {
+        const maybeRefUnref = (handle) => {
+            if (!handle || typeof handle !== 'object')
+                return;
+            const h = handle;
+            if (referenced) {
+                h.ref?.();
+            }
+            else {
+                h.unref?.();
+            }
+        };
+        if (referenced) {
+            this.helper.ref();
+        }
+        else {
+            this.helper.unref();
+        }
+        maybeRefUnref(this.helper.stdin);
+        maybeRefUnref(this.helper.stdout);
+    }
     _killHelper() {
         if (this.helper && !this.helper.killed) {
             try {
+                this.reader?.close();
+                this.reader = undefined;
                 this.helper.stdin?.end();
             }
             catch {

@@ -61,6 +61,14 @@ declare class TJBot {
      */
     private _initialized;
     /**
+     * Promise for in-flight cleanup operation, if any.
+     */
+    private _cleanupPromise;
+    /**
+     * Guard to ensure process lifecycle hooks are installed only once.
+     */
+    private _processHooksInstalled;
+    /**
      * Private constructor.
      * @constructor
      * @private
@@ -110,6 +118,16 @@ declare class TJBot {
      * @async
      */
     private cleanup;
+    /**
+     * Install process lifecycle hooks so TJBot hardware resources are cleaned up
+     * automatically when a recipe exits or is interrupted.
+     */
+    private installProcessCleanupHooks;
+    /**
+     * Best-effort automatic cleanup path used by process lifecycle hooks.
+     * Uses a timeout in fatal/signal scenarios so process termination does not hang.
+     */
+    private runLifecycleCleanup;
     /**
      * Change the level of TJBot's logging.
      * @param {string} level Logging level (see Winston's [list of logging levels](https://github.com/winstonjs/winston?tab=readme-ov-file#using-logging-levels))

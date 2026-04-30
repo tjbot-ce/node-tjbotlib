@@ -72,7 +72,7 @@ function handle(req) {
                 }
                 ws281x.init(numLeds, { pin });
                 initialized = true;
-                process.stderr.write(`[neopixel-helper] initialized on pin ${pin}\n`);
+                process.stderr.write(`[neopixel-ws281x] initialized on pin ${pin}\n`);
                 reply(id, true);
                 break;
             }
@@ -107,7 +107,7 @@ function handle(req) {
                     ws281x.reset();
                 }
                 reply(id, true);
-                process.stderr.write('[neopixel-helper] shutting down\n');
+                process.stderr.write('[neopixel-ws281x] shutting down\n');
                 // Give stdout a chance to flush before exiting.
                 process.stdout.once('drain', () => process.exit(0));
                 // Force exit if drain takes too long (e.g. pipe already closed).
@@ -119,7 +119,7 @@ function handle(req) {
                 reply(id, false, `unknown command: ${cmd}`);
         }
     } catch (err) {
-        process.stderr.write(`[neopixel-helper] error handling ${cmd}: ${err}\n`);
+        process.stderr.write(`[neopixel-ws281x] error handling ${cmd}: ${err}\n`);
         reply(id, false, String(err));
     }
 }
@@ -140,7 +140,7 @@ process.stdin.on('data', (chunk) => {
             const req = JSON.parse(line);
             handle(req);
         } catch (err) {
-            process.stderr.write(`[neopixel-helper] parse error: ${err}\n`);
+            process.stderr.write(`[neopixel-ws281x] parse error: ${err}\n`);
         }
     }
 });

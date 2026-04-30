@@ -70,8 +70,8 @@ async function runTest(): Promise<void> {
         } else {
             // RPi3/4 use GPIO pin
             const gpioPin = await input({
-                message: 'Enter GPIO pin for NeoPixel LED (default: 21):',
-                default: '21',
+                message: 'Enter GPIO pin for NeoPixel LED (default: 18):',
+                default: '18',
                 validate: (value: string) => {
                     const num = parseInt(value);
                     return !isNaN(num) ? true : 'Please enter a valid number';

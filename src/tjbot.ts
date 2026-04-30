@@ -105,6 +105,16 @@ class TJBot {
     private _initialized: boolean = false;
 
     /**
+     * Promise for in-flight cleanup operation, if any.
+     */
+    private _cleanupPromise: Promise<void> | null = null;
+
+    /**
+     * Guard to ensure process lifecycle hooks are installed only once.
+     */
+    private _processHooksInstalled: boolean = false;
+
+    /**
      * Private constructor.
      * @constructor
      * @private
@@ -150,6 +160,8 @@ class TJBot {
      */
     async initialize(overrideConfig?: Partial<TJBotConfigSchema>, recipeConfigPath?: string): Promise<TJBot> {
         winston.info(`${LogEmoji.GENERAL} Initializing TJBot...`);
+
+        this.installProcessCleanupHooks();
 
         // Cleanup previous initialization if any
         if (this._initialized) {
@@ -335,15 +347,96 @@ class TJBot {
      * @async
      */
     private async cleanup(): Promise<void> {
-        try {
-            if (this.rpiDriver) {
-                await this.rpiDriver.cleanup();
+        if (this._cleanupPromise) {
+            return this._cleanupPromise;
+        }
+
+        this._cleanupPromise = (async () => {
+            try {
+                if (this.rpiDriver) {
+                    await this.rpiDriver.cleanup();
+                }
+                this._initialized = false;
+            } catch (error) {
+                throw new TJBotError('Failed to clean up TJBot resources', {
+                    cause: error instanceof Error ? error : new Error(String(error)),
+                });
+            } finally {
+                this._cleanupPromise = null;
             }
-            this._initialized = false;
-        } catch (error) {
-            throw new TJBotError('Failed to clean up TJBot resources', {
-                cause: error instanceof Error ? error : new Error(String(error)),
-            });
+        })();
+
+        return this._cleanupPromise;
+    }
+
+    /**
+     * Install process lifecycle hooks so TJBot hardware resources are cleaned up
+     * automatically when a recipe exits or is interrupted.
+     */
+    private installProcessCleanupHooks(): void {
+        if (this._processHooksInstalled) {
+            return;
+        }
+        this._processHooksInstalled = true;
+
+        process.once('beforeExit', () => {
+            void this.runLifecycleCleanup('beforeExit');
+        });
+
+        process.once('SIGINT', () => {
+            void this.runLifecycleCleanup('SIGINT', 130);
+        });
+
+        process.once('SIGTERM', () => {
+            void this.runLifecycleCleanup('SIGTERM', 143);
+        });
+
+        process.once('SIGHUP', () => {
+            void this.runLifecycleCleanup('SIGHUP', 129);
+        });
+
+        process.once('uncaughtException', (err) => {
+            winston.error(
+                `${LogEmoji.GENERAL} uncaughtException: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`
+            );
+            void this.runLifecycleCleanup('uncaughtException', 1);
+        });
+
+        process.once('unhandledRejection', (reason) => {
+            winston.error(
+                `${LogEmoji.GENERAL} unhandledRejection: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`
+            );
+            void this.runLifecycleCleanup('unhandledRejection', 1);
+        });
+    }
+
+    /**
+     * Best-effort automatic cleanup path used by process lifecycle hooks.
+     * Uses a timeout in fatal/signal scenarios so process termination does not hang.
+     */
+    private async runLifecycleCleanup(reason: string, exitCode?: number): Promise<void> {
+        const CLEANUP_TIMEOUT_MS = 3000;
+
+        if (exitCode === undefined) {
+            try {
+                await this.cleanup();
+            } catch (err) {
+                winston.warn(`${LogEmoji.GENERAL} automatic cleanup failed during ${reason}: ${String(err)}`);
+            }
+            return;
+        }
+
+        process.exitCode = exitCode;
+
+        try {
+            await Promise.race([
+                this.cleanup(),
+                new Promise<void>((resolve) => setTimeout(resolve, CLEANUP_TIMEOUT_MS)),
+            ]);
+        } catch (err) {
+            winston.warn(`${LogEmoji.GENERAL} automatic cleanup failed during ${reason}: ${String(err)}`);
+        } finally {
+            process.exit(exitCode);
         }
     }
 
