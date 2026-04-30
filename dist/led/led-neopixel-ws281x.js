@@ -86,9 +86,6 @@ function handle(req) {
                     stripType: LED_STRIP_TYPE,
                 });
                 initialized = true;
-                process.stderr.write(
-                    `[neopixel-ws281x] initialized gpio=${pin} leds=${numLeds} dma=${LED_DMA} freq=${LED_FREQ_HZ} brightness=${LED_BRIGHTNESS}\n`
-                );
                 reply(id, true);
                 break;
             }
@@ -155,8 +152,8 @@ process.stdin.on('data', (chunk) => {
         try {
             const req = JSON.parse(line);
             handle(req);
-        } catch (err) {
-            process.stderr.write(`[neopixel-ws281x] parse error: ${String(err)}\n`);
+        } catch (_) {
+            // Malformed JSON — no id to reply to, so silently ignore.
         }
     }
 });
