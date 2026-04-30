@@ -27,7 +27,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     servo;
     constructor() {
         super();
-        this.useGRBFormat = false;
+        this.useGRBFormat = true;
     }
     setupLEDCommonAnode(config) {
         const redPin = config?.redPin ?? 19;
@@ -39,7 +39,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     setupLEDNeopixel(config) {
         const pin = config?.gpioPin ?? 18;
         this.neopixelLed = new LEDNeopixel(pin);
-        this.useGRBFormat = config?.useGRBFormat ?? false;
+        this.useGRBFormat = config?.useGRBFormat ?? true;
         this.initializedHardware.add(Hardware.LED);
     }
     setupServo(config) {

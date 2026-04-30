@@ -28,7 +28,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
     constructor() {
         super();
         winston.debug(`${LogEmoji.RPI} initializing RPi4 hardware driver`);
-        this.useGRBFormat = false;
+        this.useGRBFormat = true;
     }
     setupLEDCommonAnode(config) {
         const redPin = config?.redPin ?? 19;
@@ -42,7 +42,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
         const pin = config?.gpioPin ?? 18;
         winston.verbose(`${LogEmoji.LED} initializing NeoPixel LED on pin ${pin}`);
         this.neopixelLed = new LEDNeopixel(pin);
-        this.useGRBFormat = config?.useGRBFormat ?? false;
+        this.useGRBFormat = config?.useGRBFormat ?? true;
         this.initializedHardware.add(Hardware.LED);
     }
     setupServo(config) {

@@ -32,7 +32,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
 
     constructor() {
         super();
-        this.useGRBFormat = false;
+        this.useGRBFormat = true;
     }
 
     setupLEDCommonAnode(config: ShineConfig['commonanode']): void {
@@ -46,7 +46,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     setupLEDNeopixel(config: ShineConfig['neopixel']): void {
         const pin: number = config?.gpioPin ?? 18;
         this.neopixelLed = new LEDNeopixel(pin);
-        this.useGRBFormat = config?.useGRBFormat ?? false;
+        this.useGRBFormat = config?.useGRBFormat ?? true;
         this.initializedHardware.add(Hardware.LED);
     }
 

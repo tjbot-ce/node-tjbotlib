@@ -257,9 +257,9 @@ gpioPin = 21  # GPIO21 / Physical pin 40 (RPi3/4 only)
 # GPIO10 (physical pin 19) is the only GPIO that works with /dev/spidev0.0 on RPi5.
 spiInterface = "/dev/spidev0.0"
 
-# Use GRB format for NeoPixel colors. Change this to 'true' if your LED shines
+# Use GRB format for NeoPixel colors. Change this to 'false' if your LED shines
 # green when it is supposed to shine red.
-useGRBFormat = false
+useGRBFormat = true
 
 [shine.commonanode]
 # Common Anode LEDs are connected with three GPIO pins for red, green, and blue.
