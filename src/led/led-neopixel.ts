@@ -251,6 +251,7 @@ export class LEDNeopixel {
         }
         maybeRefUnref(this.helper.stdin);
         maybeRefUnref(this.helper.stdout);
+        maybeRefUnref(this.helper.stderr);
     }
 
     private _killHelper(): void {
