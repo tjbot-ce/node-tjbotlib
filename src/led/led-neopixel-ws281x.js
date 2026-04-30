@@ -42,6 +42,7 @@ const require = createRequire(import.meta.url);
 const ws281x = require('rpi-ws281x-native');
 
 let initialized = false;
+let channel;
 
 /**
  * Reply with a structured JSON response on stdout.
@@ -70,8 +71,9 @@ function handle(req) {
                     reply(id, false, `invalid pin: ${req.pin}`);
                     return;
                 }
-                ws281x.init(numLeds, { pin });
+                channel = ws281x(numLeds, { gpio: pin });
                 initialized = true;
+                process.stderr.write(`[neopixel-ws281x] initialized gpio=${pin} leds=${numLeds}\n`);
                 reply(id, true);
                 break;
             }
@@ -86,9 +88,8 @@ function handle(req) {
                     reply(id, false, `invalid color: ${req.color}`);
                     return;
                 }
-                const colors = new Uint32Array(1);
-                colors[0] = color;
-                ws281x.render(colors);
+                channel.array[0] = color;
+                ws281x.render();
                 reply(id, true);
                 break;
             }
@@ -104,6 +105,9 @@ function handle(req) {
             case 'shutdown': {
                 if (initialized) {
                     ws281x.reset();
+                    ws281x.finalize();
+                    initialized = false;
+                    channel = undefined;
                 }
                 reply(id, true);
                 // Give stdout a chance to flush before exiting.
@@ -147,6 +151,7 @@ process.stdin.on('end', () => {
     if (initialized) {
         try {
             ws281x.reset();
+            ws281x.finalize();
         } catch (_) {
             /* best effort */
         }
@@ -159,6 +164,7 @@ process.on('SIGTERM', () => {
     if (initialized) {
         try {
             ws281x.reset();
+            ws281x.finalize();
         } catch (_) {
             /* best effort */
         }
