@@ -41,6 +41,12 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const ws281x = require('rpi-ws281x-native');
 
+const LED_DMA = 10;
+const LED_FREQ_HZ = 800000;
+const LED_BRIGHTNESS = 255;
+const LED_INVERT = false;
+const LED_STRIP_TYPE = ws281x.stripType.WS2812;
+
 let initialized = false;
 let channel;
 
@@ -71,9 +77,18 @@ function handle(req) {
                     reply(id, false, `invalid pin: ${req.pin}`);
                     return;
                 }
-                channel = ws281x(numLeds, { gpio: pin });
+                channel = ws281x(numLeds, {
+                    gpio: pin,
+                    dma: LED_DMA,
+                    freq: LED_FREQ_HZ,
+                    invert: LED_INVERT,
+                    brightness: LED_BRIGHTNESS,
+                    stripType: LED_STRIP_TYPE,
+                });
                 initialized = true;
-                process.stderr.write(`[neopixel-ws281x] initialized gpio=${pin} leds=${numLeds}\n`);
+                process.stderr.write(
+                    `[neopixel-ws281x] initialized gpio=${pin} leds=${numLeds} dma=${LED_DMA} freq=${LED_FREQ_HZ} brightness=${LED_BRIGHTNESS}\n`
+                );
                 reply(id, true);
                 break;
             }
