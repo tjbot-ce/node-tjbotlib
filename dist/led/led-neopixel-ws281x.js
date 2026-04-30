@@ -133,8 +133,12 @@ process.stdin.on('data', (chunk) => {
         const line = buffer.slice(0, newline).trim();
         buffer = buffer.slice(newline + 1);
         if (!line) continue;
-        const req = JSON.parse(line);
-        handle(req);
+        try {
+            const req = JSON.parse(line);
+            handle(req);
+        } catch (err) {
+            process.stderr.write(`[neopixel-ws281x] parse error: ${String(err)}\n`);
+        }
     }
 });
 

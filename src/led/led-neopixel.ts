@@ -53,6 +53,7 @@ interface PendingRequest {
 export class LEDNeopixel {
     private helper: ChildProcess;
     private reader?: Interface;
+    private helperStderrTail: string[] = [];
     private _ready: Promise<void>;
     private _pendingById: Map<number, PendingRequest> = new Map();
     private _nextId = 1;
@@ -97,7 +98,7 @@ export class LEDNeopixel {
         winston.verbose(`${EMO} Spawning NeoPixel helper: ${spawnCmd} ${spawnArgs.join(' ')}`);
 
         this.helper = spawn(spawnCmd, spawnArgs, {
-            stdio: ['pipe', 'pipe', 'inherit'],
+            stdio: ['pipe', 'pipe', 'pipe'],
         });
 
         if (!this.helper.stdout) {
@@ -108,8 +109,26 @@ export class LEDNeopixel {
         this.reader = createInterface({ input: this.helper.stdout });
         this.reader.on('line', (line) => this._handleLine(line));
 
+        if (this.helper.stderr) {
+            this.helper.stderr.setEncoding('utf8');
+            this.helper.stderr.on('data', (chunk: string) => {
+                process.stderr.write(chunk);
+                const lines = chunk.split(/\r?\n/).filter((line) => line.trim().length > 0);
+                if (lines.length > 0) {
+                    this.helperStderrTail.push(...lines);
+                    if (this.helperStderrTail.length > 8) {
+                        this.helperStderrTail = this.helperStderrTail.slice(-8);
+                    }
+                }
+            });
+        }
+
         this.helper.on('exit', (code, signal) => {
-            this._helperDead = new TJBotError(`NeoPixel helper exited unexpectedly (code=${code}, signal=${signal})`);
+            const stderrSummary =
+                this.helperStderrTail.length > 0 ? `; stderr: ${this.helperStderrTail.join(' | ')}` : '';
+            this._helperDead = new TJBotError(
+                `NeoPixel helper exited unexpectedly (code=${code}, signal=${signal}${stderrSummary})`
+            );
             for (const [, pending] of this._pendingById) {
                 clearTimeout(pending.timer);
                 pending.reject(this._helperDead);

@@ -29,6 +29,7 @@
 export declare class LEDNeopixel {
     private helper;
     private reader?;
+    private helperStderrTail;
     private _ready;
     private _pendingById;
     private _nextId;
