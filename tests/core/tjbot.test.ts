@@ -32,6 +32,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
         playAudio: vi.fn(),
         capturePhoto: vi.fn(),
         setupCamera: vi.fn(),
+        setupLED: vi.fn(),
         setupLEDNeopixel: vi.fn(),
         setupLEDCommonAnode: vi.fn(),
         setupMicrophone: vi.fn(),
@@ -58,6 +59,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
             setupCamera = mockDriver.setupCamera;
+            setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
             setupLEDCommonAnode = mockDriver.setupLEDCommonAnode;
             setupMicrophone = mockDriver.setupMicrophone;
@@ -79,6 +81,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
             setupCamera = mockDriver.setupCamera;
+            setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
             setupLEDCommonAnode = mockDriver.setupLEDCommonAnode;
             setupMicrophone = mockDriver.setupMicrophone;
@@ -100,6 +103,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
             setupCamera = mockDriver.setupCamera;
+            setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
             setupLEDCommonAnode = mockDriver.setupLEDCommonAnode;
             setupMicrophone = mockDriver.setupMicrophone;

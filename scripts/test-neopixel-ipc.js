@@ -152,7 +152,9 @@ async function run() {
         // Try to clean up.
         try {
             helper.stdin.write(JSON.stringify({ id: 9999, cmd: 'shutdown' }) + '\n');
-        } catch {}
+        } catch (_) {
+            // ignore errors during cleanup
+        }
         setTimeout(() => process.exit(1), 500);
         return;
     }

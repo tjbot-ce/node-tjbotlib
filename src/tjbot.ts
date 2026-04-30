@@ -277,15 +277,15 @@ class TJBot {
                                     : '') +
                                 ']'
                         );
-                        this.rpiDriver.setupLEDNeopixel(shineConfig.neopixel ?? {});
                     }
 
                     if (hasCommonAnode) {
                         winston.info(
                             `${LogEmoji.LED} Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`
                         );
-                        this.rpiDriver.setupLEDCommonAnode(shineConfig.commonanode ?? {});
                     }
+
+                    this.rpiDriver.setupLED(shineConfig);
                     break;
                 }
 
