@@ -14,18 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-interface PigpioPin {
-    pwmWrite(value: number): void;
-    digitalWrite(value: number): void;
-}
 /**
  * LED controller for Common Anode LEDs using GPIO pins with PWM
  */
 export declare class LEDCommonAnode {
-    redPin: PigpioPin;
-    greenPin: PigpioPin;
-    bluePin: PigpioPin;
+    private chipHandle;
+    private redPin;
+    private greenPin;
+    private bluePin;
     constructor(red: number, green: number, blue: number);
+    private writePin;
     /**
      * Render the LED to a specific RGB color.
      * Common Anode LEDs are inverted - 0 is ON, 255 is OFF
@@ -37,5 +35,4 @@ export declare class LEDCommonAnode {
      */
     cleanup(): void;
 }
-export {};
 //# sourceMappingURL=led-common-anode.d.ts.map

@@ -16,6 +16,7 @@
  */
 
 import SPI from 'pi-spi';
+import { existsSync, readFileSync } from 'fs';
 import winston from 'winston';
 import { TJBotError } from '../utils/errors.js';
 import { LogEmoji } from '../utils/logging.js';
@@ -35,8 +36,45 @@ export class LEDNeopixelSPI {
     static readonly LOW: number = 0xc0; // possibles: C0
     static readonly FREQ: number = 6553600; // 800 KHz * 1024 * 8 = exact WS2812B timing (from pi5neo)
 
+    private static isSPIEnabledFromConfig(configPath: string): boolean | null {
+        if (!existsSync(configPath)) {
+            return null;
+        }
+
+        try {
+            const config = readFileSync(configPath, 'utf8');
+            return /^\s*dtparam\s*=\s*spi\s*=\s*on\s*$/m.test(config);
+        } catch {
+            return null;
+        }
+    }
+
+    private static assertSPIEnabled(spiInterface: string): void {
+        const firmwareConfig = '/boot/firmware/config.txt';
+        const legacyConfig = '/boot/config.txt';
+
+        const fwEnabled = LEDNeopixelSPI.isSPIEnabledFromConfig(firmwareConfig);
+        const legacyEnabled = LEDNeopixelSPI.isSPIEnabledFromConfig(legacyConfig);
+
+        // If either known config explicitly enables SPI, accept.
+        if (fwEnabled === true || legacyEnabled === true) {
+            return;
+        }
+
+        // If a matching spidev node exists, SPI is effectively available.
+        if (existsSync(spiInterface)) {
+            return;
+        }
+
+        throw new TJBotError(
+            `SPI appears to be disabled or unavailable (missing ${spiInterface}). ` +
+                'To enable SPI, edit /boot/firmware/config.txt and set dtparam=spi=on, then reboot your Raspberry Pi.'
+        );
+    }
+
     constructor(spiInterface: string, useGRB: boolean = false) {
         const i = spiInterface || '/dev/spidev0.0';
+        LEDNeopixelSPI.assertSPIEnabled(i);
         this.spi = SPI.initialize(i);
         this.spi.clockSpeed(LEDNeopixelSPI.FREQ);
         this.useGRBFormat = useGRB;

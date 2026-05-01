@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { ServoPosition } from './servo-constants.js';
 /**
- * Servo controller using lgpio for Raspberry Pi 5
- * Uses lgpio software PWM on GPIO character devices
+ * Servo controller using lgpio on Raspberry Pi GPIO character devices
  */
 export declare class LGPIOServoController {
     private chipNumber;
@@ -35,6 +35,11 @@ export declare class LGPIOServoController {
      * @param freq PWM frequency in Hz (default 50 for standard servos)
      */
     constructor(chipNumber: number, pin: number, freq?: number, autoStopDelayMs?: number);
+    /**
+     * Set the servo to a specific position.
+     * @param position Servo position in microseconds (500-2500 for standard servos)
+     */
+    setPosition(position: ServoPosition): void;
     private ensureStarted;
     private setServoPulse;
     /**

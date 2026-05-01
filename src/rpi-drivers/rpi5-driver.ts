@@ -78,12 +78,7 @@ class RPi5Driver extends RPiBaseHardwareDriver {
 
     renderServoPosition(position: ServoPosition): void {
         if (this.servo) {
-            // Convert ServoPosition (500-2300 microseconds) to pulse width in milliseconds
-            // ServoPosition uses pigpio servo pulse format: 500-2500 microseconds
-            // LGPIOServoController expects pulse width: 0.5-2.5 milliseconds
-            const pulseMs = position / 1000;
-            winston.verbose(`${LogEmoji.SERVO} setting servo position to ${position} μs (${pulseMs} ms)`);
-            this.servo.setPulseWidth(pulseMs);
+            this.servo.setPosition(position);
         } else {
             winston.warn(`${LogEmoji.SERVO} attempted to render on an uninitialized servo`);
         }

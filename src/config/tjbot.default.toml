@@ -233,28 +233,37 @@ hasCommonAnodeLED = false    # set to true if your TJBot has a Common Anode LED
 # only the parameters relevant to its hardware:
 #   - Raspberry Pi 3 & 4: Uses 'gpioPin' (PWM-based NeoPixel control)
 #   - Raspberry Pi 5:     Uses 'spiInterface' (SPI-based NeoPixel control)
+#
+# Recommended pin set with default TJBot servo pin:
+#   - RPi 3/4: NeoPixel on GPIO21, servo on GPIO18
+#   - RPi 5:   NeoPixel via SPI MOSI (GPIO10), servo on GPIO18
 
 # ====== FOR RASPBERRY PI 3 & 4: GPIO PIN ======
 # Available pins: GPIO10, GPIO12, GPIO18, GPIO21
 #
-# GPIO21 is recommended because:
-#   - Does not share PWM hardware with GPIO18 (servo pin)
-#   - Avoids conflicts with common peripherals
+# GPIO21 is the recommended default when servoPin = 18.
+# This avoids putting both NeoPixel and servo on the same GPIO.
 #
 # GPIO18 also works but requires disabling audio:
 #   1. Edit /boot/config.txt
 #   2. Change: dtparam=audio=on
 #   3. To: dtparam=audio=off
 #   4. Reboot your Pi
+# If you choose gpioPin = 18 for NeoPixel, move servoPin to a different GPIO.
 gpioPin = 21  # GPIO21 / Physical pin 40 (RPi3/4 only)
 
 # ====== FOR RASPBERRY PI 5: SPI INTERFACE ======
 # Raspberry Pi 5 uses the Serial Peripheral Interface (SPI) for NeoPixel control.
-# The spiInterface value corresponds to the SPI device:
-#   /dev/spidev0.0 - Primary SPI bus (default, for GPIO10)
-#   /dev/spidev0.1 - Secondary SPI bus (if available)
+# Enable SPI in /boot/firmware/config.txt using:
+#   dtparam=spi=on
+# Then reboot your Raspberry Pi for the change to take effect.
 #
-# GPIO10 (physical pin 19) is the only GPIO that works with /dev/spidev0.0 on RPi5.
+# NeoPixel data is sent on SPI MOSI (GPIO10 / physical pin 19).
+# GPIO8 is SPI chip-select (CE0), not NeoPixel data, and should not be used as
+# the LED data pin.
+#
+# The SPI interface is exposed via the /dev filesystem, and is
+# commonly located at /dev/spidev0.0.
 spiInterface = "/dev/spidev0.0"
 
 # Use GRB format for NeoPixel colors. Change this to 'false' if your LED shines
@@ -386,6 +395,8 @@ voice = 'en-US-EmmaNeural'
 
 [wave]
 # The GPIO pin number for controlling a servo motor connected to TJBot's arm.
+# Recommended default across RPi 3/4/5 is GPIO18.
+# If NeoPixel on RPi 3/4 is also assigned to GPIO18, change one of them.
 servoPin = 18 # GPIO18 / Physical Pin 12
 
 # ============================================================================

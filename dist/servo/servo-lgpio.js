@@ -26,8 +26,7 @@ const MIN_PULSE_MS = 0.5;
 const MID_PULSE_MS = 1.5;
 const MAX_PULSE_MS = 2.5;
 /**
- * Servo controller using lgpio for Raspberry Pi 5
- * Uses lgpio software PWM on GPIO character devices
+ * Servo controller using lgpio on Raspberry Pi GPIO character devices
  */
 export class LGPIOServoController {
     chipNumber;
@@ -56,6 +55,15 @@ export class LGPIOServoController {
             chip: ${chipNumber}
             pin: ${pin}
             frequency: ${freq} Hz`);
+    }
+    /**
+     * Set the servo to a specific position.
+     * @param position Servo position in microseconds (500-2500 for standard servos)
+     */
+    setPosition(position) {
+        const pulseMs = position / 1000;
+        winston.verbose(`${EMO} setting servo position to ${position} μs (${pulseMs} ms)`);
+        this.setPulseWidth(pulseMs);
     }
     ensureStarted() {
         if (this.running)

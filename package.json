@@ -19,7 +19,6 @@
     "onnxruntime-node": "^1.24.3",
     "pi-camera-connect": "^0.3.4",
     "pi-spi": "^1.2.1",
-    "pigpio": "^3.3.1",
     "rpi-ws281x-native": "^1.0.4",
     "semaphore": "^1.1.0",
     "sharp": "^0.34.5",

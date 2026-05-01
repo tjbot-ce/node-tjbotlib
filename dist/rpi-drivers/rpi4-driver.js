@@ -17,7 +17,7 @@
 import winston from 'winston';
 import { LogEmoji } from '../utils/logging.js';
 import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
-import { PiGPIOServoController } from '../servo/index.js';
+import { LGPIOServoController } from '../servo/index.js';
 import { Hardware } from '../utils/index.js';
 import { RPiBaseHardwareDriver } from './rpi-driver.js';
 class RPi4Driver extends RPiBaseHardwareDriver {
@@ -48,7 +48,7 @@ class RPi4Driver extends RPiBaseHardwareDriver {
     setupServo(config) {
         const pin = config.servoPin ?? 18;
         winston.verbose(`${LogEmoji.SERVO} initializing ${Hardware.SERVO} on PIN ${pin}`);
-        this.servo = new PiGPIOServoController(pin);
+        this.servo = new LGPIOServoController(0, pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
     renderLEDCommonAnode(rgbColor) {

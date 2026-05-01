@@ -19,7 +19,7 @@ import winston from 'winston';
 
 import { ShineConfig, WaveConfig } from '../config/index.js';
 import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
-import { PiGPIOServoController, ServoPosition } from '../servo/index.js';
+import { LGPIOServoController, ServoPosition } from '../servo/index.js';
 import { Hardware } from '../utils/index.js';
 import { LogEmoji } from '../utils/logging.js';
 import { RPiBaseHardwareDriver } from './rpi-driver.js';
@@ -28,7 +28,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed: LEDCommonAnode | undefined;
     private neopixelLed: LEDNeopixel | undefined;
     private useGRBFormat: boolean;
-    private servo: PiGPIOServoController | undefined;
+    private servo: LGPIOServoController | undefined;
 
     constructor() {
         super();
@@ -52,7 +52,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
 
     setupServo(config: WaveConfig): void {
         const pin: number = config.servoPin ?? 18;
-        this.servo = new PiGPIOServoController(pin);
+        this.servo = new LGPIOServoController(0, pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
 

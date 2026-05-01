@@ -26,6 +26,8 @@ export declare class LEDNeopixelSPI {
     static readonly HIGH: number;
     static readonly LOW: number;
     static readonly FREQ: number;
+    private static isSPIEnabledFromConfig;
+    private static assertSPIEnabled;
     constructor(spiInterface: string, useGRB?: boolean);
     static bitMask(byte: number, index: number): boolean;
     static byteToBitstream(byte: number): number[];
