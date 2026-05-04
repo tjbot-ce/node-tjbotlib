@@ -39,7 +39,7 @@ import { execSync } from 'child_process';
 
 const FREQ = 6400000;
 const RESET_BYTES = 100;
-const FRAME_REPEATS = 2;
+const FRAME_REPEATS = 1;
 const PRIME_OFF_FRAMES = 6;
 const HOLD_DURATION_MS = 10000;
 
