@@ -63,7 +63,7 @@ export class VisionController {
         if (this.visionEngine === undefined) {
             throw new Error('Vision engine not initialized. Call initialize() before detecting faces.');
         }
-        winston.verbose(`${EMO} Detecting faces inimage`);
+        winston.verbose(`${EMO} Detecting faces in image`);
         return this.visionEngine.detectFaces(image);
     }
 
