@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { SpeakConfig } from '../config/config-types.js';
+import type { SpeakConfig } from '../config/config-types.js';
 import { SpeakerController } from '../speaker/index.js';
 /**
  * TTS controller manages text-to-speech synthesis and engine lifecycle.

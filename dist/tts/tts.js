@@ -17,9 +17,9 @@
 import fs from 'fs';
 import temp from 'temp';
 import winston from 'winston';
+import { TJBotError } from '../utils/errors.js';
 import { LogEmoji } from '../utils/logging.js';
 import { createTTSEngine } from './tts-engine.js';
-import { TJBotError } from '../utils/errors.js';
 const EMO = LogEmoji.TTS;
 /**
  * TTS controller manages text-to-speech synthesis and engine lifecycle.

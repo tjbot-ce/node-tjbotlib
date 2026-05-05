@@ -1,0 +1,781 @@
+$schema: http://json-schema.org/draft-07/schema#
+title: TJBotConfigSchema
+description: Canonical schema for TJBot runtime configuration.
+type: object
+additionalProperties: true
+properties:
+  log:
+    $ref: '#/definitions/LogConfig'
+  hardware:
+    $ref: '#/definitions/HardwareConfig'
+  listen:
+    $ref: '#/definitions/ListenConfig'
+  see:
+    $ref: '#/definitions/SeeConfig'
+  shine:
+    $ref: '#/definitions/ShineConfig'
+  speak:
+    $ref: '#/definitions/SpeakConfig'
+  wave:
+    $ref: '#/definitions/WaveConfig'
+  models:
+    $ref: '#/definitions/ModelsConfig'
+  recipe:
+    type: object
+    description: Free-form recipe-level configuration merged after TJBot defaults and user config.
+    additionalProperties: true
+    default: {}
+definitions:
+  LogLevel:
+    type: string
+    description: Verbosity level for TJBot logging.
+    enum:
+      - error
+      - warning
+      - warn
+      - info
+      - verbose
+      - debug
+      - silly
+    default: info
+  LogConfig:
+    type: object
+    description: Logging configuration.
+    additionalProperties: true
+    properties:
+      level:
+        $ref: '#/definitions/LogLevel'
+    default:
+      level: info
+  HardwareConfig:
+    type: object
+    description: Hardware capabilities physically attached to the Raspberry Pi.
+    additionalProperties: true
+    properties:
+      speaker:
+        type: boolean
+        description: Set to true when a speaker is connected and should be initialized.
+        default: false
+      microphone:
+        type: boolean
+        description: Set to true when a microphone is connected and should be initialized.
+        default: false
+      led:
+        type: boolean
+        description: Set to true when TJBot should initialize an LED output.
+        default: false
+      servo:
+        type: boolean
+        description: Set to true when TJBot should initialize the arm servo.
+        default: false
+      camera:
+        type: boolean
+        description: Set to true when a camera is attached and vision features should initialize.
+        default: false
+    default:
+      speaker: false
+      microphone: false
+      led: false
+      servo: false
+      camera: false
+  VADConfig:
+    type: object
+    description: Voice activity detection settings for local speech recognition.
+    additionalProperties: true
+    properties:
+      enabled:
+        type: boolean
+        description: Enables the VAD model before local transcription.
+        default: true
+      model:
+        type: string
+        description: Registry key of the VAD model to load.
+        default: silero-vad
+    default:
+      enabled: true
+      model: silero-vad
+  STTBackendType:
+    type: string
+    description: Speech-to-text backend implementation.
+    enum:
+      - none
+      - local
+      - ibm-watson-stt
+      - google-cloud-stt
+      - azure-stt
+    default: local
+  STTBackendLocalConfig:
+    type: object
+    description: Local speech-to-text backend configuration.
+    additionalProperties: true
+    properties:
+      model:
+        type: string
+        description: Registry key of the local speech model.
+        default: whisper-base
+      vad:
+        $ref: '#/definitions/VADConfig'
+    default:
+      model: whisper-base
+      vad:
+        enabled: true
+        model: silero-vad
+  STTBackendIBMWatsonConfig:
+    type: object
+    description: IBM Watson speech-to-text backend configuration.
+    additionalProperties: true
+    properties:
+      model:
+        type: string
+        description: IBM Watson STT model identifier.
+        default: en-US_Multimedia
+      inactivityTimeout:
+        type: number
+        description: Seconds of silence before Watson closes the stream. Use -1 to disable.
+        default: -1
+      backgroundAudioSuppression:
+        type: number
+        description: Background audio suppression factor.
+        minimum: 0
+        maximum: 1
+        default: 0.4
+      interimResults:
+        type: boolean
+        description: Whether partial transcriptions should be emitted.
+        default: false
+      credentialsPath:
+        type: string
+        description: Path to the IBM credentials file.
+        default: ''
+    default:
+      model: en-US_Multimedia
+      inactivityTimeout: -1
+      backgroundAudioSuppression: 0.4
+      interimResults: false
+      credentialsPath: ''
+  STTBackendGoogleCloudConfig:
+    type: object
+    description: Google Cloud speech-to-text backend configuration.
+    additionalProperties: true
+    properties:
+      credentialsPath:
+        type: string
+        description: Path to the Google Cloud credentials file.
+        default: ''
+      model:
+        type: string
+        description: Google Cloud STT model identifier.
+        default: chirp_3
+      languageCode:
+        type: string
+        description: BCP-47 language code for transcription.
+        default: en-US
+      region:
+        type: string
+        description: Google Cloud region to target.
+        default: us
+      enableAutomaticPunctuation:
+        type: boolean
+        description: Enables automatic punctuation in transcripts.
+        default: true
+      profanityFilter:
+        type: boolean
+        description: Masks profane words in transcripts.
+        default: true
+      interimResults:
+        type: boolean
+        description: Whether partial transcriptions should be emitted.
+        default: false
+    default:
+      credentialsPath: ''
+      model: chirp_3
+      languageCode: en-US
+      region: us
+      enableAutomaticPunctuation: true
+      profanityFilter: true
+      interimResults: false
+  STTBackendAzureConfig:
+    type: object
+    description: Azure speech-to-text backend configuration.
+    additionalProperties: true
+    properties:
+      language:
+        type: string
+        description: Azure speech recognition language. Empty uses the service default.
+        default: ''
+      credentialsPath:
+        type: string
+        description: Path to the Azure credentials file.
+        default: ''
+      interimResults:
+        type: boolean
+        description: Whether partial transcriptions should be emitted.
+        default: false
+    default:
+      language: ''
+      credentialsPath: ''
+      interimResults: false
+  STTBackendConfig:
+    type: object
+    description: Speech-to-text backend selection and backend-specific settings.
+    additionalProperties: false
+    properties:
+      type:
+        $ref: '#/definitions/STTBackendType'
+      local:
+        $ref: '#/definitions/STTBackendLocalConfig'
+      ibm-watson-stt:
+        $ref: '#/definitions/STTBackendIBMWatsonConfig'
+      google-cloud-stt:
+        $ref: '#/definitions/STTBackendGoogleCloudConfig'
+      azure-stt:
+        $ref: '#/definitions/STTBackendAzureConfig'
+    required:
+      - type
+    default:
+      type: local
+      local:
+        model: whisper-base
+        vad:
+          enabled: true
+          model: silero-vad
+      ibm-watson-stt:
+        model: en-US_Multimedia
+        inactivityTimeout: -1
+        backgroundAudioSuppression: 0.4
+        interimResults: false
+        credentialsPath: ''
+      google-cloud-stt:
+        credentialsPath: ''
+        model: chirp_3
+        languageCode: en-US
+        region: us
+        enableAutomaticPunctuation: true
+        profanityFilter: true
+        interimResults: false
+      azure-stt:
+        language: ''
+        credentialsPath: ''
+        interimResults: false
+  ListenConfig:
+    type: object
+    description: Audio capture and speech recognition configuration.
+    additionalProperties: true
+    properties:
+      device:
+        type: string
+        description: ALSA capture device name. Empty uses the system default device.
+        default: ''
+      microphoneRate:
+        type: number
+        description: Capture sample rate in hertz.
+        minimum: 1
+        default: 44100
+      microphoneChannels:
+        type: number
+        description: Number of microphone input channels.
+        minimum: 1
+        default: 2
+      model:
+        type: string
+        description: Legacy top-level speech model override.
+      backend:
+        $ref: '#/definitions/STTBackendConfig'
+    default:
+      device: ''
+      microphoneRate: 44100
+      microphoneChannels: 2
+      backend:
+        type: local
+        local:
+          model: whisper-base
+          vad:
+            enabled: true
+            model: silero-vad
+        ibm-watson-stt:
+          model: en-US_Multimedia
+          inactivityTimeout: -1
+          backgroundAudioSuppression: 0.4
+          interimResults: false
+          credentialsPath: ''
+        google-cloud-stt:
+          credentialsPath: ''
+          model: chirp_3
+          languageCode: en-US
+          region: us
+          enableAutomaticPunctuation: true
+          profanityFilter: true
+          interimResults: false
+        azure-stt:
+          language: ''
+          credentialsPath: ''
+          interimResults: false
+  SeeBackendType:
+    type: string
+    description: Vision backend implementation.
+    enum:
+      - none
+      - local
+      - google-cloud-vision
+      - azure-vision
+    default: local
+  SeeBackendLocalConfig:
+    type: object
+    description: Local ONNX-based vision backend configuration.
+    additionalProperties: true
+    properties:
+      objectDetectionModel:
+        type: string
+        description: Registry key of the local object detection model.
+        default: ssd-mobilenet-v2
+      imageClassificationModel:
+        type: string
+        description: Registry key of the local image classification model.
+        default: mobilenetv3
+      faceDetectionModel:
+        type: string
+        description: Registry key of the local face detection model.
+        default: scrfd-2.5g
+      objectDetectionConfidence:
+        type: number
+        description: Minimum confidence for object detection results.
+        minimum: 0
+        maximum: 1
+        default: 0.8
+      imageClassificationConfidence:
+        type: number
+        description: Minimum confidence for image classification results.
+        minimum: 0
+        maximum: 1
+        default: 0.8
+      faceDetectionConfidence:
+        type: number
+        description: Minimum confidence for face detection results.
+        minimum: 0
+        maximum: 1
+        default: 0.5
+    default:
+      objectDetectionModel: ssd-mobilenet-v2
+      imageClassificationModel: mobilenetv3
+      faceDetectionModel: scrfd-2.5g
+      objectDetectionConfidence: 0.8
+      imageClassificationConfidence: 0.8
+      faceDetectionConfidence: 0.5
+  SeeBackendGoogleCloudConfig:
+    type: object
+    description: Google Cloud Vision backend configuration.
+    additionalProperties: true
+    properties:
+      credentialsPath:
+        type: string
+        description: Path to the Google Cloud credentials file.
+        default: ''
+      objectDetectionConfidence:
+        type: number
+        description: Minimum confidence for object localization results.
+        minimum: 0
+        maximum: 1
+        default: 0.8
+      imageClassificationConfidence:
+        type: number
+        description: Minimum confidence for label detection results.
+        minimum: 0
+        maximum: 1
+        default: 0.8
+      faceDetectionConfidence:
+        type: number
+        description: Minimum confidence for face detection results.
+        minimum: 0
+        maximum: 1
+        default: 0.5
+    default:
+      credentialsPath: ''
+      objectDetectionConfidence: 0.8
+      imageClassificationConfidence: 0.8
+      faceDetectionConfidence: 0.5
+  SeeBackendAzureConfig:
+    type: object
+    description: Azure Vision backend configuration.
+    additionalProperties: true
+    properties:
+      credentialsPath:
+        type: string
+        description: Path to the Azure credentials file.
+        default: ''
+      objectDetectionConfidence:
+        type: number
+        description: Minimum confidence for object detection results.
+        minimum: 0
+        maximum: 1
+        default: 0.8
+      imageClassificationConfidence:
+        type: number
+        description: Minimum confidence for image classification results.
+        minimum: 0
+        maximum: 1
+        default: 0.8
+    default:
+      credentialsPath: ''
+      objectDetectionConfidence: 0.8
+      imageClassificationConfidence: 0.8
+  SeeBackendConfig:
+    type: object
+    description: Vision backend selection and backend-specific settings.
+    additionalProperties: false
+    properties:
+      type:
+        $ref: '#/definitions/SeeBackendType'
+      local:
+        $ref: '#/definitions/SeeBackendLocalConfig'
+      google-cloud-vision:
+        $ref: '#/definitions/SeeBackendGoogleCloudConfig'
+      azure-vision:
+        $ref: '#/definitions/SeeBackendAzureConfig'
+    required:
+      - type
+    default:
+      type: local
+      local:
+        objectDetectionModel: ssd-mobilenet-v2
+        imageClassificationModel: mobilenetv3
+        faceDetectionModel: scrfd-2.5g
+        objectDetectionConfidence: 0.8
+        imageClassificationConfidence: 0.8
+        faceDetectionConfidence: 0.5
+      google-cloud-vision:
+        credentialsPath: ''
+        objectDetectionConfidence: 0.8
+        imageClassificationConfidence: 0.8
+        faceDetectionConfidence: 0.5
+      azure-vision:
+        credentialsPath: ''
+        objectDetectionConfidence: 0.8
+        imageClassificationConfidence: 0.8
+  SeeConfig:
+    type: object
+    description: Camera and vision backend configuration.
+    additionalProperties: true
+    properties:
+      cameraResolution:
+        type: array
+        description: Requested capture resolution as [width, height].
+        items:
+          - type: number
+          - type: number
+        minItems: 2
+        maxItems: 2
+        default: [1920, 1080]
+      verticalFlip:
+        type: boolean
+        description: Flips captured frames vertically.
+        default: false
+      horizontalFlip:
+        type: boolean
+        description: Flips captured frames horizontally.
+        default: false
+      captureTimeout:
+        type: number
+        description: Camera capture timeout in milliseconds.
+        minimum: 0
+        default: 500
+      zeroShutterLag:
+        type: boolean
+        description: Enables zero-shutter-lag capture when supported.
+        default: false
+      backend:
+        $ref: '#/definitions/SeeBackendConfig'
+    default:
+      cameraResolution:
+        - 1920
+        - 1080
+      verticalFlip: false
+      horizontalFlip: false
+      captureTimeout: 500
+      zeroShutterLag: false
+      backend:
+        type: local
+        local:
+          objectDetectionModel: ssd-mobilenet-v2
+          imageClassificationModel: mobilenetv3
+          faceDetectionModel: scrfd-2.5g
+          objectDetectionConfidence: 0.8
+          imageClassificationConfidence: 0.8
+          faceDetectionConfidence: 0.5
+        google-cloud-vision:
+          credentialsPath: ''
+          objectDetectionConfidence: 0.8
+          imageClassificationConfidence: 0.8
+          faceDetectionConfidence: 0.5
+        azure-vision:
+          credentialsPath: ''
+          objectDetectionConfidence: 0.8
+          imageClassificationConfidence: 0.8
+  LEDNeopixelConfig:
+    type: object
+    description: WS281x / NeoPixel LED configuration.
+    additionalProperties: true
+    properties:
+      gpioPin:
+        type: number
+        description: GPIO pin number used for the LED data signal.
+        default: 21
+      spiInterface:
+        type: string
+        description: SPI interface path used when driving LEDs over SPI.
+        default: /dev/spidev0.0
+      useGRBFormat:
+        type: boolean
+        description: Whether the LED expects GRB byte ordering.
+        default: true
+    default:
+      gpioPin: 21
+      spiInterface: /dev/spidev0.0
+      useGRBFormat: true
+  LEDCommonAnodeConfig:
+    type: object
+    description: Common-anode RGB LED configuration.
+    additionalProperties: true
+    properties:
+      redPin:
+        type: number
+        description: GPIO pin for the red channel.
+        default: 19
+      greenPin:
+        type: number
+        description: GPIO pin for the green channel.
+        default: 13
+      bluePin:
+        type: number
+        description: GPIO pin for the blue channel.
+        default: 12
+    default:
+      redPin: 19
+      greenPin: 13
+      bluePin: 12
+  ShineConfig:
+    type: object
+    description: LED hardware selection and pin mapping.
+    additionalProperties: true
+    properties:
+      hasNeopixelLED:
+        type: boolean
+        description: Enables NeoPixel / WS281x LED support.
+        default: false
+      hasCommonAnodeLED:
+        type: boolean
+        description: Enables common-anode RGB LED support.
+        default: false
+      neopixel:
+        $ref: '#/definitions/LEDNeopixelConfig'
+      commonanode:
+        $ref: '#/definitions/LEDCommonAnodeConfig'
+    default:
+      hasNeopixelLED: false
+      hasCommonAnodeLED: false
+      neopixel:
+        gpioPin: 21
+        spiInterface: /dev/spidev0.0
+        useGRBFormat: true
+      commonanode:
+        redPin: 19
+        greenPin: 13
+        bluePin: 12
+  TTSBackendType:
+    type: string
+    description: Text-to-speech backend implementation.
+    enum:
+      - none
+      - local
+      - ibm-watson-tts
+      - google-cloud-tts
+      - azure-tts
+    default: local
+  TTSBackendLocalConfig:
+    type: object
+    description: Local text-to-speech backend configuration.
+    additionalProperties: true
+    properties:
+      model:
+        type: string
+        description: Registry key of the local voice model.
+        default: vits-piper-en_US-ryan-medium
+    default:
+      model: vits-piper-en_US-ryan-medium
+  TTSBackendIBMWatsonConfig:
+    type: object
+    description: IBM Watson text-to-speech backend configuration.
+    additionalProperties: true
+    properties:
+      credentialsPath:
+        type: string
+        description: Path to the IBM credentials file.
+        default: ''
+      voice:
+        type: string
+        description: IBM Watson voice identifier.
+        default: en-US_MichaelV3Voice
+    default:
+      credentialsPath: ''
+      voice: en-US_MichaelV3Voice
+  TTSBackendGoogleCloudConfig:
+    type: object
+    description: Google Cloud text-to-speech backend configuration.
+    additionalProperties: true
+    properties:
+      credentialsPath:
+        type: string
+        description: Path to the Google Cloud credentials file.
+        default: ''
+      languageCode:
+        type: string
+        description: BCP-47 language code for synthesis.
+        default: en-US
+      voice:
+        type: string
+        description: Google Cloud voice identifier.
+        default: en-US-Neural2-C
+    default:
+      credentialsPath: ''
+      languageCode: en-US
+      voice: en-US-Neural2-C
+  TTSBackendAzureConfig:
+    type: object
+    description: Azure text-to-speech backend configuration.
+    additionalProperties: true
+    properties:
+      credentialsPath:
+        type: string
+        description: Path to the Azure credentials file.
+        default: ''
+      voice:
+        type: string
+        description: Azure voice identifier.
+        default: en-US-EmmaNeural
+    default:
+      credentialsPath: ''
+      voice: en-US-EmmaNeural
+  TTSBackendConfig:
+    type: object
+    description: Text-to-speech backend selection and backend-specific settings.
+    additionalProperties: false
+    properties:
+      type:
+        $ref: '#/definitions/TTSBackendType'
+      local:
+        $ref: '#/definitions/TTSBackendLocalConfig'
+      ibm-watson-tts:
+        $ref: '#/definitions/TTSBackendIBMWatsonConfig'
+      google-cloud-tts:
+        $ref: '#/definitions/TTSBackendGoogleCloudConfig'
+      azure-tts:
+        $ref: '#/definitions/TTSBackendAzureConfig'
+    required:
+      - type
+    default:
+      type: local
+      local:
+        model: vits-piper-en_US-ryan-medium
+      ibm-watson-tts:
+        credentialsPath: ''
+        voice: en-US_MichaelV3Voice
+      google-cloud-tts:
+        credentialsPath: ''
+        languageCode: en-US
+        voice: en-US-Neural2-C
+      azure-tts:
+        credentialsPath: ''
+        voice: en-US-EmmaNeural
+  SpeakConfig:
+    type: object
+    description: Audio playback and text-to-speech configuration.
+    additionalProperties: true
+    properties:
+      device:
+        type: string
+        description: ALSA playback device name. Empty uses the system default device.
+        default: ''
+      backend:
+        $ref: '#/definitions/TTSBackendConfig'
+    default:
+      device: ''
+      backend:
+        type: local
+        local:
+          model: vits-piper-en_US-ryan-medium
+        ibm-watson-tts:
+          credentialsPath: ''
+          voice: en-US_MichaelV3Voice
+        google-cloud-tts:
+          credentialsPath: ''
+          languageCode: en-US
+          voice: en-US-Neural2-C
+        azure-tts:
+          credentialsPath: ''
+          voice: en-US-EmmaNeural
+  WaveConfig:
+    type: object
+    description: Servo configuration for TJBot arm movement.
+    additionalProperties: true
+    properties:
+      servoPin:
+        type: number
+        description: GPIO pin number connected to the servo PWM input.
+        default: 18
+    default:
+      servoPin: 18
+  ModelEntryType:
+    type: string
+    description: Kind of model entry being registered.
+    enum:
+      - stt
+      - tts
+      - vad
+      - vision.object-recognition
+      - vision.classification
+      - vision.face-detection
+      - vision.image-description
+  ModelEntry:
+    type: object
+    description: Custom model registry entry.
+    additionalProperties: false
+    properties:
+      type:
+        $ref: '#/definitions/ModelEntryType'
+      key:
+        type: string
+        description: Unique key used to reference the model in config.
+      label:
+        type: string
+        description: Human-readable model name.
+      url:
+        type: string
+        description: URL or file URI where the model archive can be retrieved.
+      folder:
+        type: string
+        description: Folder name to use after extracting the model.
+      kind:
+        type: string
+        description: Model subtype used by the vision runtime.
+      inputShape:
+        type: array
+        description: Optional tensor input shape for ONNX vision models.
+        items:
+          type: number
+      labelUrl:
+        type: string
+        description: URL or file URI for a companion labels file.
+      required:
+        type: array
+        description: Files that must exist after the model is installed.
+        items:
+          type: string
+    required:
+      - type
+      - key
+      - label
+      - url
+  ModelsConfig:
+    type: array
+    description: Additional model registry entries supplied by the user.
+    items:
+      $ref: '#/definitions/ModelEntry'

@@ -18,11 +18,11 @@
 import fs from 'fs';
 import temp from 'temp';
 import winston from 'winston';
-import { SpeakConfig } from '../config/config-types.js';
+import type { SpeakConfig } from '../config/config-types.js';
 import { SpeakerController } from '../speaker/index.js';
+import { TJBotError } from '../utils/errors.js';
 import { LogEmoji } from '../utils/logging.js';
 import { TTSEngine, createTTSEngine } from './tts-engine.js';
-import { TJBotError } from '../utils/errors.js';
 
 const EMO = LogEmoji.TTS;
 

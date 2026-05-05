@@ -23,7 +23,7 @@ export default [
             'no-underscore-dangle': 'off',
             'quotes': ['error', 'single', { 'avoidEscape': true }],
             'semi': ['error', 'always'],
-            
+
             // TypeScript-specific
             '@typescript-eslint/no-unused-vars': ['error', {
                 'argsIgnorePattern': '^_',
@@ -33,7 +33,7 @@ export default [
             '@typescript-eslint/explicit-function-return-type': 'off',
             '@typescript-eslint/no-explicit-any': 'warn',
             '@typescript-eslint/no-non-null-assertion': 'warn',
-            
+
             // Best practices
             'no-console': 'off',  // Allow console for node apps
             'eqeqeq': ['error', 'always'],
@@ -44,6 +44,6 @@ export default [
     },
     {
         // Ignore build artifacts and dependencies
-        ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.config.js']
+        ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.config.js', '**/*.generated.ts']
     }
 ];

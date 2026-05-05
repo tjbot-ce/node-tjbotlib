@@ -124,3 +124,6 @@ out
 # ignore the model cache in scripts/
 .model_cache/
 __pycache__/
+
+# ignore the generated config types file
+src/config/config-types.generated.ts

@@ -16,28 +16,55 @@
  */
 
 export type {
+    HardwareConfig,
     LEDCommonAnodeConfig,
     LEDNeopixelConfig,
     ListenConfig,
     LogConfig,
+    ModelEntry,
+    ModelsConfig,
     NoneBackendConfig,
+    SeeBackendAzureConfig,
+    SeeBackendConfig,
+    SeeBackendGoogleCloudConfig,
+    SeeBackendLocalConfig,
+    SeeBackendType,
     SeeConfig,
     ShineConfig,
     SpeakConfig,
     STTBackendConfig,
+    STTBackendAzureConfig,
+    STTBackendGoogleCloudConfig,
     STTBackendIBMWatsonConfig,
     STTBackendLocalConfig,
     STTBackendType,
     STTEngineConfig,
     TJBotConfigSchema,
     TTSBackendConfig,
+    TTSBackendAzureConfig,
+    TTSBackendGoogleCloudConfig,
     TTSBackendIBMWatsonConfig,
     TTSBackendLocalConfig,
     TTSBackendType,
     TTSEngineConfig,
+    VADConfig,
+    VisionEngineConfig,
     WaveConfig,
 } from './config-types.js';
 
-export { getSTTBackendConfig, getTTSBackendConfig, getSeeBackendConfig } from './config-types.js';
+export {
+    getConfigSchema,
+    getSTTBackendConfig,
+    getTTSBackendConfig,
+    getSeeBackendConfig,
+    isSTTBackendType,
+    isTTSBackendType,
+    isSeeBackendType,
+    seeBackendTypeSchema,
+    sttBackendTypeSchema,
+    tjbotConfigSchema,
+    ttsBackendTypeSchema,
+    validateTJBotConfig,
+} from './config-types.js';
 
 export { TJBotConfig } from './tjbot-config.js';

@@ -5,6 +5,8 @@
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "@inquirer/prompts": "^8.3.2",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "axios": "^1.14.0",
     "cli-progress": "^3.12.0",
     "color-model": "^0.2.2",
@@ -26,8 +28,7 @@
     "sherpa-onnx-node": "^1.12.35",
     "sleep": "^6.3.0",
     "temp": "^0.9.4",
-    "winston": "^3.19.0",
-    "zod": "^4.3.6"
+    "winston": "^3.19.0"
   },
   "optionalDependencies": {
     "@azure/cognitiveservices-computervision": "^8.2.0",
@@ -51,6 +52,7 @@
     "eslint": "^10.2.0",
     "globals": "^17.4.0",
     "jsdoc": "^4.0.5",
+    "json-schema-to-typescript": "^15.0.4",
     "markdownlint-cli": "^0.48.0",
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
@@ -76,6 +78,7 @@
     "build": "tsc",
     "format": "prettier --write \"src/**/*.{js,ts}\" \"tests/**/*.{js,ts}\"",
     "format:check": "prettier --check \"src/**/*.{js,ts}\" \"tests/**/*.{js,ts}\"",
+    "generate:config-types": "node scripts/generate-config-types.mjs",
     "generate-docs": "test -d ../tjbot-ce.github.io && jsdoc --configure .jsdoc.json --verbose || echo 'Skipping docs generation: ../tjbot-ce.github.io not found'",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -83,8 +86,10 @@
     "markdownlint:fix": "markdownlint \"**/*.md\" --ignore node_modules --fix",
     "postbuild": "copyfiles -u 1 \"src/**/*.{toml,yaml,js}\" dist/",
     "postinstall": "bash scripts/setup-sherpa.sh && chmod +x node_modules/prettier/bin/prettier.cjs || true",
-    "prebuild": "rm -rf dist/*",
+    "prebuild": "rm -rf dist/* && node scripts/sync-config-schema.mjs && npm run generate:config-types",
+    "prepack": "npm run build",
     "pretest": "npm run build",
+    "sync:config-schema": "node scripts/sync-config-schema.mjs",
     "test": "vitest run tests/core",
     "test:coverage": "vitest --coverage",
     "test-camera": "tsx tests/live/camera.test.ts",

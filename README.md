@@ -252,8 +252,14 @@ To set up a local development environment, you will first need to check out `nod
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/tjbot-ce/node-tjbotlib.git
+   git clone --recurse-submodules https://github.com/tjbot-ce/node-tjbotlib.git
    cd node-tjbotlib
+   ```
+
+   If you already cloned the repo without submodules, run:
+
+   ```bash
+   git submodule update --init --recursive
    ```
 
 2. **Install dependencies**

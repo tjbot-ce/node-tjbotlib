@@ -19,6 +19,7 @@ import * as ort from 'onnxruntime-node';
 import path from 'path';
 import sharp from 'sharp';
 import winston from 'winston';
+import type { SeeBackendLocalConfig } from '../../config/config-types.js';
 import { ModelRegistry, TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import type { VisionModelMetadata } from '../../utils/model-registry.js';
@@ -30,7 +31,6 @@ import {
     ObjectDetectionResult,
     VisionEngine,
 } from '../vision-engine.js';
-import { SeeBackendLocalConfig } from '../../config/config-types.js';
 
 const EMO = LogEmoji.VISION;
 

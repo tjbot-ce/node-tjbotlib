@@ -14,273 +14,109 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { z } from 'zod';
-/**
- * Logging configuration
- */
-const logConfigSchema = z
-    .object({
-    level: z.string().optional(),
-})
-    .loose();
-/**
- * STT Backend configuration with discriminated union based on type field
- */
-export const sttBackendTypeSchema = z.enum(['none', 'local', 'ibm-watson-stt', 'google-cloud-stt', 'azure-stt']);
-export const vadConfigSchema = z
-    .object({
-    enabled: z.boolean().optional(),
-    /** Optional model name from registry (e.g., silero-vad) */
-    model: z.string().optional(),
-})
-    .loose();
-export const sttBackendLocalConfigSchema = z
-    .object({
-    model: z.string().optional(),
-    vad: vadConfigSchema.optional(),
-})
-    .loose();
-export const sttBackendIBMWatsonConfigSchema = z
-    .object({
-    model: z.string().optional(),
-    inactivityTimeout: z.number().optional(),
-    backgroundAudioSuppression: z.number().optional(),
-    interimResults: z.boolean().optional(),
-    credentialsPath: z.string().optional(),
-})
-    .loose();
-export const sttBackendGoogleCloudConfigSchema = z
-    .object({
-    credentialsPath: z.string().optional(),
-    model: z.string().optional(),
-    languageCode: z.string().optional(),
-    region: z.string().optional(),
-    enableAutomaticPunctuation: z.boolean().optional(),
-    profanityFilter: z.boolean().optional(),
-    interimResults: z.boolean().optional(),
-})
-    .loose();
-export const sttBackendAzureConfigSchema = z
-    .object({
-    language: z.string().optional(),
-    credentialsPath: z.string().optional(),
-    interimResults: z.boolean().optional(),
-})
-    .loose();
-/** Empty config for 'none' backend */
-export const noneBackendConfigSchema = z.object({}).strict();
-export const sttBackendConfigSchema = z
-    .object({
-    type: sttBackendTypeSchema,
-    local: sttBackendLocalConfigSchema.optional(),
-    'ibm-watson-stt': sttBackendIBMWatsonConfigSchema.optional(),
-    'google-cloud-stt': sttBackendGoogleCloudConfigSchema.optional(),
-    'azure-stt': sttBackendAzureConfigSchema.optional(),
-})
-    .strict()
-    .refine((config) => {
-    // If type is 'none', no additional config needed
-    if (config.type === 'none') {
-        return true;
+import fs from 'fs';
+import { createRequire } from 'module';
+import yaml from 'js-yaml';
+export const STT_BACKEND_TYPES = Object.freeze([
+    'none',
+    'local',
+    'ibm-watson-stt',
+    'google-cloud-stt',
+    'azure-stt',
+]);
+export const TTS_BACKEND_TYPES = Object.freeze([
+    'none',
+    'local',
+    'ibm-watson-tts',
+    'google-cloud-tts',
+    'azure-tts',
+]);
+export const SEE_BACKEND_TYPES = Object.freeze([
+    'none',
+    'local',
+    'google-cloud-vision',
+    'azure-vision',
+]);
+function loadConfigSchema() {
+    const schemaUrl = new URL('./schema/tjbot-config.schema.yaml', import.meta.url);
+    const schemaSource = fs.readFileSync(schemaUrl, 'utf8');
+    const loadedSchema = yaml.load(schemaSource);
+    if (!loadedSchema || typeof loadedSchema !== 'object' || Array.isArray(loadedSchema)) {
+        throw new Error('TJBot config schema is invalid or empty');
     }
-    // For other types, we don't enforce anything here
-    return true;
+    return loadedSchema;
+}
+const configSchema = loadConfigSchema();
+const require = createRequire(import.meta.url);
+const Ajv = require('ajv').default;
+const addFormats = require('ajv-formats').default;
+const ajv = new Ajv({
+    allErrors: true,
+    allowUnionTypes: true,
+    strict: false,
 });
-/**
- * Speech-to-text (Listen) configuration
- */
-export const listenConfigSchema = z
-    .object({
-    device: z.string().optional(),
-    microphoneRate: z.number().optional(),
-    microphoneChannels: z.number().optional(),
-    model: z.string().optional(),
-    /** Optional URL for the STT model download */
-    backend: sttBackendConfigSchema.optional(),
-})
-    .loose();
-/**
- * SEE (CV) Backend configuration with discriminated union based on type field
- */
-export const seeBackendTypeSchema = z.enum(['none', 'local', 'google-cloud-vision', 'azure-vision']);
-export const seeBackendLocalConfigSchema = z
-    .object({
-    objectDetectionModel: z.string().optional(),
-    imageClassificationModel: z.string().optional(),
-    faceDetectionModel: z.string().optional(),
-    objectDetectionConfidence: z.number().optional(),
-    imageClassificationConfidence: z.number().optional(),
-    faceDetectionConfidence: z.number().optional(),
-})
-    .loose();
-export const seeBackendGoogleCloudConfigSchema = z
-    .object({
-    credentialsPath: z.string().optional(),
-    objectDetectionConfidence: z.number().optional(),
-    imageClassificationConfidence: z.number().optional(),
-    faceDetectionConfidence: z.number().optional(),
-})
-    .loose();
-export const seeBackendAzureConfigSchema = z
-    .object({
-    credentialsPath: z.string().optional(),
-    objectDetectionConfidence: z.number().optional(),
-    imageClassificationConfidence: z.number().optional(),
-})
-    .loose();
-export const seeBackendConfigSchema = z
-    .object({
-    type: seeBackendTypeSchema,
-    local: seeBackendLocalConfigSchema.optional(),
-    'google-cloud-vision': seeBackendGoogleCloudConfigSchema.optional(),
-    'azure-vision': seeBackendAzureConfigSchema.optional(),
-})
-    .strict();
-/**
- * Camera (See) configuration
- */
-export const seeConfigSchema = z
-    .object({
-    cameraResolution: z.tuple([z.number(), z.number()]).optional(),
-    verticalFlip: z.boolean().optional(),
-    horizontalFlip: z.boolean().optional(),
-    captureTimeout: z.number().optional(),
-    zeroShutterLag: z.boolean().optional(),
-    backend: seeBackendConfigSchema.optional(),
-})
-    .loose();
-/**
- * LED configuration
- */
-export const ledNeopixelConfigSchema = z
-    .object({
-    gpioPin: z.number().optional(),
-    spiInterface: z.string().optional(),
-    useGRBFormat: z.boolean().optional(),
-})
-    .loose();
-export const ledCommonAnodeConfigSchema = z
-    .object({
-    redPin: z.number().optional(),
-    greenPin: z.number().optional(),
-    bluePin: z.number().optional(),
-})
-    .loose();
-export const shineConfigSchema = z
-    .object({
-    hasNeopixelLED: z.boolean().optional(),
-    hasCommonAnodeLED: z.boolean().optional(),
-    neopixel: ledNeopixelConfigSchema.optional(),
-    commonanode: ledCommonAnodeConfigSchema.optional(),
-})
-    .loose();
-/**
- * TTS Backend configuration with discriminated union based on type field
- */
-export const ttsBackendTypeSchema = z.enum(['none', 'local', 'ibm-watson-tts', 'google-cloud-tts', 'azure-tts']);
-export const ttsBackendLocalConfigSchema = z
-    .object({
-    model: z.string().optional(),
-})
-    .loose();
-export const ttsBackendIBMWatsonConfigSchema = z
-    .object({
-    credentialsPath: z.string().optional(),
-    voice: z.string().optional(),
-})
-    .loose();
-export const ttsBackendGoogleCloudConfigSchema = z
-    .object({
-    credentialsPath: z.string().optional(),
-    languageCode: z.string().optional(),
-    voice: z.string().optional(),
-})
-    .loose();
-export const ttsBackendAzureConfigSchema = z
-    .object({
-    credentialsPath: z.string().optional(),
-    voice: z.string().optional(),
-})
-    .loose();
-export const ttsBackendConfigSchema = z
-    .object({
-    type: ttsBackendTypeSchema,
-    local: ttsBackendLocalConfigSchema.optional(),
-    'ibm-watson-tts': ttsBackendIBMWatsonConfigSchema.optional(),
-    'google-cloud-tts': ttsBackendGoogleCloudConfigSchema.optional(),
-    'azure-tts': ttsBackendAzureConfigSchema.optional(),
-})
-    .strict()
-    .refine((config) => {
-    // If type is 'none', no additional config needed
-    if (config.type === 'none') {
-        return true;
-    }
-    // For other types, we don't enforce anything here
-    return true;
-});
-/**
- * Text-to-speech (Speak) configuration
- */
-export const speakConfigSchema = z
-    .object({
-    device: z.string().optional(),
-    backend: ttsBackendConfigSchema.optional(),
-})
-    .loose();
-/**
- * Servo/Arm (Wave) configuration
- */
-export const waveConfigSchema = z
-    .object({
-    servoPin: z.number().optional(),
-})
-    .loose();
-/**
- * Hardware configuration
- */
-export const hardwareConfigSchema = z
-    .object({
-    speaker: z.boolean().optional(),
-    microphone: z.boolean().optional(),
-    led: z.boolean().optional(),
-    servo: z.boolean().optional(),
-    camera: z.boolean().optional(),
-})
-    .loose();
-/**
- * User-defined model configuration
- * Allows users to register custom models via TOML [models] section
- */
-export const modelEntrySchema = z
-    .object({
-    type: z.enum([
-        'stt',
-        'tts',
-        'vad',
-        'vision.object-recognition',
-        'vision.classification',
-        'vision.face-detection',
-        'vision.image-description',
-    ]),
-    key: z.string(),
-    label: z.string(),
-    url: z.string(),
-    folder: z.string().optional(),
-    kind: z.string().optional(),
-    inputShape: z.array(z.number()).optional(),
-    labelUrl: z.string().optional(),
-    required: z.array(z.string()).optional(),
-})
-    .strict();
-export const modelsConfigSchema = z.array(modelEntrySchema).optional();
-/**
- * Type guard functions for safe backend config narrowing
- */
-/**
- * Extract backend-specific config from STTBackendConfig based on type.
- * Returns the appropriate config object for the backend type, or empty object if no match.
- */
+addFormats(ajv);
+const compiledTJBotConfigValidator = ajv.compile(configSchema);
+function formatValidationErrors(errors) {
+    return ajv.errorsText(errors, { separator: '; ' });
+}
+function createEnumParser(values, label) {
+    return {
+        parse(value) {
+            const result = this.safeParse(value);
+            if (!result.success) {
+                throw result.error;
+            }
+            return result.data;
+        },
+        safeParse(value) {
+            if (typeof value === 'string' && values.includes(value)) {
+                return { success: true, data: value };
+            }
+            return {
+                success: false,
+                error: new Error(`Invalid ${label}. Expected one of: ${values.join(', ')}`),
+            };
+        },
+    };
+}
+function createValidatorParser(validate, label) {
+    return {
+        parse(value) {
+            const result = this.safeParse(value);
+            if (!result.success) {
+                throw result.error;
+            }
+            return result.data;
+        },
+        safeParse(value) {
+            if (validate(value)) {
+                return { success: true, data: value };
+            }
+            return {
+                success: false,
+                error: new Error(`Invalid ${label}: ${formatValidationErrors(validate.errors)}`),
+            };
+        },
+    };
+}
+export function getConfigSchema() {
+    return configSchema;
+}
+export function isSTTBackendType(value) {
+    return typeof value === 'string' && STT_BACKEND_TYPES.includes(value);
+}
+export function isTTSBackendType(value) {
+    return typeof value === 'string' && TTS_BACKEND_TYPES.includes(value);
+}
+export function isSeeBackendType(value) {
+    return typeof value === 'string' && SEE_BACKEND_TYPES.includes(value);
+}
+export const sttBackendTypeSchema = createEnumParser(STT_BACKEND_TYPES, 'STT backend type');
+export const ttsBackendTypeSchema = createEnumParser(TTS_BACKEND_TYPES, 'TTS backend type');
+export const seeBackendTypeSchema = createEnumParser(SEE_BACKEND_TYPES, 'vision backend type');
+export const tjbotConfigSchema = createValidatorParser(compiledTJBotConfigValidator, 'TJBot configuration');
+export const validateTJBotConfig = compiledTJBotConfigValidator;
 export function getSTTBackendConfig(backendConfig, backendType) {
     if (!backendConfig) {
         return {};
@@ -300,10 +136,6 @@ export function getSTTBackendConfig(backendConfig, backendType) {
             return {};
     }
 }
-/**
- * Extract backend-specific config from TTSBackendConfig based on type.
- * Returns the appropriate config object for the backend type, or empty object if no match.
- */
 export function getTTSBackendConfig(backendConfig, backendType) {
     if (!backendConfig) {
         return {};
@@ -323,10 +155,6 @@ export function getTTSBackendConfig(backendConfig, backendType) {
             return {};
     }
 }
-/**
- * Extract backend-specific config from SeeBackendConfig based on type.
- * Returns the appropriate config object for the backend type, or empty object if no match.
- */
 export function getSeeBackendConfig(backendConfig, backendType) {
     if (!backendConfig) {
         return {};
@@ -344,21 +172,4 @@ export function getSeeBackendConfig(backendConfig, backendType) {
             return {};
     }
 }
-/**
- * Complete TJBot configuration
- */
-export const tjbotConfigSchema = z
-    .object({
-    log: logConfigSchema.optional(),
-    hardware: hardwareConfigSchema.optional(),
-    listen: listenConfigSchema.optional(),
-    see: seeConfigSchema.optional(),
-    shine: shineConfigSchema.optional(),
-    speak: speakConfigSchema.optional(),
-    wave: waveConfigSchema.optional(),
-    models: modelsConfigSchema,
-    // Use explicit key schema to satisfy TS signature for z.record
-    recipe: z.record(z.string(), z.any()).optional(),
-})
-    .loose();
 //# sourceMappingURL=config-types.js.map
