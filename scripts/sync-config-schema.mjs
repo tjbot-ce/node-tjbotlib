@@ -22,26 +22,44 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
-const sourcePath = path.join(repoRoot, 'vendor', 'tjbot-config', 'tjbot-config.schema.yaml');
-const targetDir = path.join(repoRoot, 'src', 'config', 'schema');
-const targetPath = path.join(targetDir, 'tjbot-config.schema.yaml');
 
-await mkdir(targetDir, { recursive: true });
+const syncMappings = [
+    {
+        name: 'config schema',
+        sourcePath: path.join(repoRoot, 'vendor', 'tjbot-config', 'tjbot-config.schema.yaml'),
+        targetPath: path.join(repoRoot, 'src', 'config', 'schema', 'tjbot-config.schema.yaml'),
+    },
+    {
+        name: 'model registry',
+        sourcePath: path.join(repoRoot, 'vendor', 'tjbot-config', 'model-registry.yaml'),
+        targetPath: path.join(repoRoot, 'src', 'config', 'model-registry.yaml'),
+    },
+    {
+        name: 'default config',
+        sourcePath: path.join(repoRoot, 'vendor', 'tjbot-config', 'tjbot.default.toml'),
+        targetPath: path.join(repoRoot, 'src', 'config', 'tjbot.default.toml'),
+    },
+];
 
-try {
-    await copyFile(sourcePath, targetPath);
-} catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+for (const mapping of syncMappings) {
+    const targetDir = path.dirname(mapping.targetPath);
+    await mkdir(targetDir, { recursive: true });
 
-    if (message.includes('no such file or directory')) {
-        console.warn(
-            `Config schema source not found at ${sourcePath}. Using the existing bundled snapshot at ${targetPath}. Initialize or update the vendor/tjbot-config submodule to refresh it.`
-        );
-    } else {
-        throw new Error(
-            `Unable to sync config schema from ${sourcePath}. Ensure vendor/tjbot-config is present or initialize the git submodule once the external repo exists. ${message}`, { cause: error }
-        );
+    try {
+        await copyFile(mapping.sourcePath, mapping.targetPath);
+        console.log(`Synced ${mapping.name} to ${mapping.targetPath}`);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+
+        if (message.includes('no such file or directory')) {
+            console.warn(
+                `${mapping.name} source not found at ${mapping.sourcePath}. Using existing bundled snapshot at ${mapping.targetPath}. Initialize or update the vendor/tjbot-config submodule to refresh it.`
+            );
+        } else {
+            throw new Error(
+                `Unable to sync ${mapping.name} from ${mapping.sourcePath}. Ensure vendor/tjbot-config is present and contains the shared config assets. ${message}`,
+                { cause: error }
+            );
+        }
     }
 }
-
-console.log(`Synced config schema to ${targetPath}`);

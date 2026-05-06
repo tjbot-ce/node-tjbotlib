@@ -151,12 +151,12 @@ tj.shine(favorite_color);
 
 ## Configuration Reference
 
-TJBot uses [TOML](https://toml.io/en/) for its configuration. Please refer to the annotated [tjbot.default.toml](src/config/tjbot.default.toml) file for a complete reference of all configuration settings.
+TJBot uses [TOML](https://toml.io/en/) for its configuration. The canonical default configuration lives in [vendor/tjbot-config/tjbot.default.toml](vendor/tjbot-config/tjbot.default.toml) and is synced into [src/config/tjbot.default.toml](src/config/tjbot.default.toml) during builds.
 
 ### Custom Models & Model Registry
 
 TJBot ships with a built-in model registry in
-[src/config/model-registry.yaml](src/config/model-registry.yaml) for speech (STT/TTS/VAD) and vision tasks. You can register additional ML models in your `~/.tjbot/tjbot.toml` file. Search for the section titled "On-Device ML Models".
+[vendor/tjbot-config/model-registry.yaml](vendor/tjbot-config/model-registry.yaml). The registry is synced into [src/config/model-registry.yaml](src/config/model-registry.yaml) during builds for local development and packaging. You can register additional ML models in your `~/.tjbot/tjbot.toml` file. Search for the section titled "On-Device ML Models".
 
 Example: register a custom vision classification model and use it locally:
 
@@ -262,7 +262,7 @@ To set up a local development environment, you will first need to check out `nod
    git submodule update --init --recursive
    ```
 
-   This initializes the configuration schema submodule at `vendor/tjbot-config`.
+   This initializes the shared TJBot configuration assets submodule at `vendor/tjbot-config`.
 
 2. **Install dependencies**
 
