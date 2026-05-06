@@ -262,6 +262,8 @@ To set up a local development environment, you will first need to check out `nod
    git submodule update --init --recursive
    ```
 
+   This initializes the configuration schema submodule at `vendor/tjbot-config`.
+
 2. **Install dependencies**
 
    ```bash

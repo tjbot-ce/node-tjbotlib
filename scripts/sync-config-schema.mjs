@@ -22,7 +22,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
-const sourcePath = path.join(repoRoot, 'spec', 'tjbot-config.schema.yaml');
+const sourcePath = path.join(repoRoot, 'vendor', 'tjbot-config', 'tjbot-config.schema.yaml');
 const targetDir = path.join(repoRoot, 'src', 'config', 'schema');
 const targetPath = path.join(targetDir, 'tjbot-config.schema.yaml');
 
@@ -35,11 +35,11 @@ try {
 
     if (message.includes('no such file or directory')) {
         console.warn(
-            `Config schema source not found at ${sourcePath}. Using the existing bundled snapshot at ${targetPath}. Initialize or update the spec submodule to refresh it.`
+            `Config schema source not found at ${sourcePath}. Using the existing bundled snapshot at ${targetPath}. Initialize or update the vendor/tjbot-config submodule to refresh it.`
         );
     } else {
         throw new Error(
-            `Unable to sync config schema from ${sourcePath}. Ensure the spec is present or initialize the git submodule once the external repo exists. ${message}`, { cause: error }
+            `Unable to sync config schema from ${sourcePath}. Ensure vendor/tjbot-config is present or initialize the git submodule once the external repo exists. ${message}`, { cause: error }
         );
     }
 }
