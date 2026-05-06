@@ -276,9 +276,6 @@ definitions:
         description: Number of microphone input channels.
         minimum: 1
         default: 2
-      model:
-        type: string
-        description: Legacy top-level speech model override.
       backend:
         $ref: '#/definitions/STTBackendConfig'
     default:

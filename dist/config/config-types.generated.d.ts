@@ -91,10 +91,6 @@ export interface ListenConfig {
      * Number of microphone input channels.
      */
     microphoneChannels?: number;
-    /**
-     * Legacy top-level speech model override.
-     */
-    model?: string;
     backend?: STTBackendConfig;
     [k: string]: unknown;
 }

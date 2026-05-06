@@ -442,7 +442,7 @@ class TJBot {
         this.assertCapability(Capability.LISTEN);
         const listenConfig = this.config.listen ?? {};
         const mode = inferSTTMode(listenConfig);
-        const modelName = listenConfig.backend?.local?.model ?? listenConfig.model ?? '<unknown>';
+        const modelName = listenConfig.backend?.local?.model ?? '<unknown>';
         if (mode === 'streaming' && !onPartialResult) {
             throw new TJBotError(`STT model "${modelName}" is streaming. Call listen(onPartialResult, onFinalResult) so TJBot can deliver partial/final transcripts.`);
         }

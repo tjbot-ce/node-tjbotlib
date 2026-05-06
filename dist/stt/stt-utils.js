@@ -65,9 +65,7 @@ export function inferSTTMode(listenConfig) {
         return 'offline';
     }
     if (backend === 'local') {
-        const modelName = listenConfig.backend?.local?.model ??
-            listenConfig.model ??
-            '';
+        const modelName = listenConfig.backend?.local?.model ?? '';
         const modelUrl = listenConfig.backend?.local?.modelUrl ?? '';
         const flavor = inferLocalModelFlavor(modelName, modelUrl);
         return toModelType(flavor);

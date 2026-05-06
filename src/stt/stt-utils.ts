@@ -77,10 +77,7 @@ export function inferSTTMode(listenConfig: ListenConfig): STTModelType {
     }
 
     if (backend === 'local') {
-        const modelName =
-            ((listenConfig.backend?.local as Record<string, unknown>)?.model as string) ??
-            (listenConfig.model as string) ??
-            '';
+        const modelName = ((listenConfig.backend?.local as Record<string, unknown>)?.model as string) ?? '';
         const modelUrl = ((listenConfig.backend?.local as Record<string, unknown>)?.modelUrl as string) ?? '';
         const flavor = inferLocalModelFlavor(modelName, modelUrl);
         return toModelType(flavor);

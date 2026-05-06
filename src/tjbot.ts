@@ -578,8 +578,7 @@ class TJBot {
         const listenConfig = this.config.listen ?? {};
         const mode = inferSTTMode(listenConfig);
 
-        const modelName =
-            (listenConfig.backend?.local as Record<string, unknown>)?.model ?? listenConfig.model ?? '<unknown>';
+        const modelName = (listenConfig.backend?.local as Record<string, unknown>)?.model ?? '<unknown>';
 
         if (mode === 'streaming' && !onPartialResult) {
             throw new TJBotError(
