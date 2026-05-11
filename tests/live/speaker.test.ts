@@ -17,11 +17,28 @@
  * limitations under the License.
  */
 
-import { confirm } from '@inquirer/prompts';
+import { confirm, select } from '@inquirer/prompts';
 import { unlinkSync, writeFileSync } from 'fs';
 import { AudioPlayer } from '../../src/speaker/audio-player.js';
 import { initWinston } from '../../src/utils/logging.js';
-import { formatSection, formatTitle, isCommandAvailable } from './utils.js';
+import { formatSection, formatTitle, isCommandAvailable, listAlsaDevices } from './utils.js';
+
+async function promptDeviceChoice(): Promise<string | undefined> {
+    const devices = listAlsaDevices('aplay');
+    if (devices.length === 0) {
+        console.log('ℹ️  No ALSA devices found; using system default');
+        return undefined;
+    }
+    if (devices.length === 1) {
+        console.log(`ℹ️  Using single ALSA device: ${devices[0].name}`);
+        return devices[0].value;
+    }
+    return select({
+        message: 'Select audio output device:',
+        choices: devices,
+        default: devices[0].value,
+    });
+}
 
 const LOG_LEVEL = 'info';
 
@@ -45,6 +62,8 @@ async function runTest(): Promise<void> {
     console.log('✓ All dependencies available\n');
 
     console.log(formatSection('Testing TJBot speaker'));
+
+    const device = await promptDeviceChoice();
 
     // Create audio player directly to test playback
     const audioPlayer = new AudioPlayer();
@@ -93,7 +112,7 @@ async function runTest(): Promise<void> {
         await new Promise<void>((resolve, reject) => {
             audioPlayer.once('complete', () => resolve());
             audioPlayer.once('error', reject);
-            audioPlayer.play(testAudioPath);
+            audioPlayer.play(testAudioPath, device);
         });
 
         const result1 = await confirm({ message: 'Did you hear audio playback?' });

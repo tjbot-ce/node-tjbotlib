@@ -72,3 +72,34 @@ export function formatTitle(text: string): string {
 export function formatSection(text: string): string {
     return `\n--- ${text} ---`;
 }
+
+/**
+ * Interface representing an ALSA audio device for selection in tests
+ */
+export interface AlsaDevice {
+    name: string;
+    value: string;
+}
+
+/**
+ * List ALSA audio devices using aplay (output) or arecord (input)
+ * @param mode - 'aplay' for output devices, 'arecord' for input devices
+ * @returns Array of ALSA devices with display name and device identifier
+ */
+export function listAlsaDevices(mode: 'aplay' | 'arecord'): AlsaDevice[] {
+    try {
+        const output = execSync(`${mode} -l`, { encoding: 'utf8' });
+        const devices: AlsaDevice[] = [];
+        for (const line of output.split('\n')) {
+            const match = line.match(/card (\d+):.*?\[(.+?)\].*device (\d+):.*?\[(.+?)\]/);
+            if (match) {
+                const value = `plughw:${match[1]},${match[3]}`;
+                const name = `Card ${match[1]}: ${match[2]} (Device ${match[3]}: ${match[4]}) [${value}]`;
+                devices.push({ name, value });
+            }
+        }
+        return devices;
+    } catch (_err) {
+        return [];
+    }
+}

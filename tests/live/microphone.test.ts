@@ -18,39 +18,15 @@
  */
 
 import { select } from '@inquirer/prompts';
-import { execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { MicrophoneController } from '../../src/microphone/index.js';
 import { initWinston } from '../../src/utils/logging.js';
-import { formatSection, formatTitle, isCommandAvailable, sleep } from './utils.js';
-
-interface AlsaDevice {
-    name: string;
-    value: string;
-}
-
-function listAlsaDevices(): AlsaDevice[] {
-    try {
-        const output = execSync('arecord -l', { encoding: 'utf8' });
-        const devices: AlsaDevice[] = [];
-        for (const line of output.split('\n')) {
-            const match = line.match(/card (\d+):.*?\[(.+?)\].*device (\d+):.*?\[(.+?)\]/);
-            if (match) {
-                const value = `plughw:${match[1]},${match[3]}`;
-                const name = `Card ${match[1]}: ${match[2]} (Device ${match[3]}: ${match[4]})`;
-                devices.push({ name, value });
-            }
-        }
-        return devices;
-    } catch (_err) {
-        return [];
-    }
-}
+import { formatSection, formatTitle, isCommandAvailable, listAlsaDevices, sleep } from './utils.js';
 
 async function promptDeviceChoice(): Promise<string | undefined> {
-    const devices = listAlsaDevices();
+    const devices = listAlsaDevices('arecord');
     if (devices.length === 0) {
         console.log('ℹ️  No ALSA devices found; using system default');
         return undefined;
