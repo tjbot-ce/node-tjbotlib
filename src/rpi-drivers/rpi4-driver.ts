@@ -47,10 +47,11 @@ class RPi4Driver extends RPiBaseHardwareDriver {
         this.initializedHardware.add(Hardware.LED);
     }
 
-    setupLEDNeopixel(config: ShineConfig['neopixel']): void {
+    async setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void> {
         const pin: number = config?.gpioPin ?? 18;
         winston.verbose(`${LogEmoji.LED} initializing NeoPixel LED on pin ${pin}`);
         this.neopixelLed = new LEDNeopixel(pin);
+        await this.neopixelLed.initialize();
         this.useGRBFormat = config?.useGRBFormat ?? true;
         this.initializedHardware.add(Hardware.LED);
     }

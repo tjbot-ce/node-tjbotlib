@@ -195,7 +195,7 @@ class TJBot {
             return;
         }
         winston.info(`${LogEmoji.HARDWARE} Initializing hardware...`);
-        hardwareToInit.forEach((device) => {
+        for (const device of hardwareToInit) {
             switch (device) {
                 case Hardware.CAMERA: {
                     const config = this.config.see;
@@ -222,7 +222,7 @@ class TJBot {
                     if (hasCommonAnode) {
                         winston.info(`${LogEmoji.LED} Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`);
                     }
-                    this.rpiDriver.setupLED(shineConfig);
+                    await this.rpiDriver.setupLED(shineConfig);
                     break;
                 }
                 case Hardware.MICROPHONE: {
@@ -246,7 +246,7 @@ class TJBot {
                 default:
                     break;
             }
-        }, this);
+        }
     }
     /**
      * Eagerly initialize local AI models (STT, TTS, Vision) if configured

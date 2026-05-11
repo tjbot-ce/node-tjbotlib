@@ -107,7 +107,8 @@ export class LEDNeopixel {
             winston.error(`${EMO} NeoPixel helper exited (code=${code}, signal=${signal})`);
         });
         // Send the init command; store the promise so render() can await readiness.
-        this._ready = this._send({ cmd: 'init', pin, numLeds: 1 }, 10_000);
+        // Timeout is generous to allow main process to finish startup (e.g., loading AI models).
+        this._ready = this._send({ cmd: 'init', pin, numLeds: 1 }, 30_000);
         this._ready
             .then(() => {
             winston.verbose(`${EMO} NeoPixel helper ready on pin ${pin}`);
@@ -120,6 +121,13 @@ export class LEDNeopixel {
         // SIGINT, and SIGTERM). The helper's own stdin-close handler calls
         // ws281x.reset() so the LED is turned off cleanly.
         process.on('exit', () => this._killHelper());
+    }
+    /**
+     * Wait for the NeoPixel helper to be fully initialized and ready.
+     * Call this before loading long-running tasks if the LED needs to be available early.
+     */
+    async initialize() {
+        await this._ready;
     }
     /**
      * Render the NeoPixel to a specific color.

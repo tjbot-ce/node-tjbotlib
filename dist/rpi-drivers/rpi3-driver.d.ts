@@ -26,7 +26,7 @@ declare class RPi3Driver extends RPiBaseHardwareDriver {
     private userHasBeenWarned;
     constructor();
     setupLEDCommonAnode(config: ShineConfig['commonanode']): void;
-    setupLEDNeopixel(config: ShineConfig['neopixel']): void;
+    setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void>;
     setupServo(config: WaveConfig): void;
     renderLEDCommonAnode(rgbColor: [number, number, number]): void;
     renderLEDNeopixel(hexColor: string): Promise<void>;

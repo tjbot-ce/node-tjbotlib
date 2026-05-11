@@ -45,7 +45,7 @@ class RPi5Driver extends RPiBaseHardwareDriver {
         this.initializedHardware.add(Hardware.LED);
     }
 
-    setupLEDNeopixel(config: ShineConfig['neopixel']): void {
+    async setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void> {
         const spiInterface: string = config?.spiInterface ?? '/dev/spidev0.0';
         const useGRBFormat: boolean = config?.useGRBFormat ?? false;
         winston.verbose(`${LogEmoji.LED} initializing NeoPixel LED on SPI ${spiInterface}`);

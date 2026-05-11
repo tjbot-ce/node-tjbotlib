@@ -30,9 +30,9 @@ export declare abstract class RPiHardwareDriver {
     abstract hasHardware(hardware: Hardware): boolean;
     abstract hasCapability(capability: Capability): boolean;
     abstract setupCamera(config: SeeConfig): void;
-    abstract setupLED(config: ShineConfig): void;
+    abstract setupLED(config: ShineConfig): Promise<void>;
     abstract setupLEDCommonAnode(config: ShineConfig['commonanode']): void;
-    abstract setupLEDNeopixel(config: ShineConfig['neopixel']): void;
+    abstract setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void>;
     abstract setupMicrophone(config: ListenConfig): void;
     abstract setupServo(config: WaveConfig): void;
     abstract setupSpeaker(config: SpeakConfig): void;
@@ -83,7 +83,7 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     hasHardware(hardware: Hardware): boolean;
     hasCapability(capability: Capability): boolean;
     setupCamera(config: SeeConfig): void;
-    setupLED(config: ShineConfig): void;
+    setupLED(config: ShineConfig): Promise<void>;
     setupMicrophone(config: ListenConfig): void;
     setupSpeaker(config: SpeakConfig): void;
     cleanup(): Promise<void>;

@@ -247,7 +247,7 @@ class TJBot {
 
         winston.info(`${LogEmoji.HARDWARE} Initializing hardware...`);
 
-        hardwareToInit.forEach((device) => {
+        for (const device of hardwareToInit) {
             switch (device) {
                 case Hardware.CAMERA: {
                     const config = this.config.see;
@@ -285,7 +285,7 @@ class TJBot {
                         );
                     }
 
-                    this.rpiDriver.setupLED(shineConfig);
+                    await this.rpiDriver.setupLED(shineConfig);
                     break;
                 }
 
@@ -312,7 +312,7 @@ class TJBot {
                 default:
                     break;
             }
-        }, this);
+        }
     }
 
     /**

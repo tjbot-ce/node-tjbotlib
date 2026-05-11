@@ -80,13 +80,13 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         this.cameraController.initialize([width, height], verticalFlip, horizontalFlip, captureTimeout, zeroShutterLag);
         this.initializedHardware.add(Hardware.CAMERA);
     }
-    setupLED(config) {
+    async setupLED(config) {
         this.shineConfig = config;
         if (config.hasCommonAnodeLED) {
             this.setupLEDCommonAnode(config.commonanode ?? {});
         }
         if (config.hasNeopixelLED) {
-            this.setupLEDNeopixel(config.neopixel ?? {});
+            await this.setupLEDNeopixel(config.neopixel ?? {});
         }
     }
     setupMicrophone(config) {

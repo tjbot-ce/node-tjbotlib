@@ -36,6 +36,11 @@ export declare class LEDNeopixel {
     private _helperDead;
     constructor(pin: number);
     /**
+     * Wait for the NeoPixel helper to be fully initialized and ready.
+     * Call this before loading long-running tasks if the LED needs to be available early.
+     */
+    initialize(): Promise<void>;
+    /**
      * Render the NeoPixel to a specific color.
      * @param color Color as a 32-bit integer in RGB format (0xRRGGBB)
      */

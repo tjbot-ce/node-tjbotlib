@@ -40,9 +40,9 @@ export abstract class RPiHardwareDriver {
 
     // hardware setup & cleanup
     abstract setupCamera(config: SeeConfig): void;
-    abstract setupLED(config: ShineConfig): void;
+    abstract setupLED(config: ShineConfig): Promise<void>;
     abstract setupLEDCommonAnode(config: ShineConfig['commonanode']): void;
-    abstract setupLEDNeopixel(config: ShineConfig['neopixel']): void;
+    abstract setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void>;
     abstract setupMicrophone(config: ListenConfig): void;
     abstract setupServo(config: WaveConfig): void;
     abstract setupSpeaker(config: SpeakConfig): void;
@@ -154,14 +154,14 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
         this.initializedHardware.add(Hardware.CAMERA);
     }
 
-    setupLED(config: ShineConfig): void {
+    async setupLED(config: ShineConfig): Promise<void> {
         this.shineConfig = config;
 
         if (config.hasCommonAnodeLED) {
             this.setupLEDCommonAnode(config.commonanode ?? {});
         }
         if (config.hasNeopixelLED) {
-            this.setupLEDNeopixel(config.neopixel ?? {});
+            await this.setupLEDNeopixel(config.neopixel ?? {});
         }
     }
 
