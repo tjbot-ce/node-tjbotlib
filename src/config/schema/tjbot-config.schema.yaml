@@ -40,7 +40,7 @@ definitions:
     default: info
   LogConfig:
     type: object
-    description: Logging configuration.
+    description: Console logging configuration.
     additionalProperties: true
     properties:
       level:
@@ -49,7 +49,7 @@ definitions:
       level: info
   HardwareConfig:
     type: object
-    description: Hardware capabilities physically attached to the Raspberry Pi.
+    description: Hardware physically attached to the Raspberry Pi.
     additionalProperties: true
     properties:
       speaker:
@@ -259,7 +259,7 @@ definitions:
         interimResults: false
   ListenConfig:
     type: object
-    description: Audio capture and speech recognition configuration.
+    description: Settings for audio capture and speech recognition.
     additionalProperties: true
     properties:
       device:
@@ -450,7 +450,7 @@ definitions:
         imageClassificationConfidence: 0.8
   SeeConfig:
     type: object
-    description: Camera and vision backend configuration.
+    description: Settings for the camera and computer vision.
     additionalProperties: true
     properties:
       cameraResolution:
@@ -551,7 +551,7 @@ definitions:
       bluePin: 12
   ShineConfig:
     type: object
-    description: LED hardware selection and pin mapping.
+    description: Settings for LED hardware.
     additionalProperties: true
     properties:
       hasNeopixelLED:
@@ -684,7 +684,7 @@ definitions:
         voice: en-US-EmmaNeural
   SpeakConfig:
     type: object
-    description: Audio playback and text-to-speech configuration.
+    description: Settings for audio playback and text-to-speech.
     additionalProperties: true
     properties:
       device:
@@ -711,7 +711,7 @@ definitions:
           voice: en-US-EmmaNeural
   WaveConfig:
     type: object
-    description: Servo configuration for TJBot arm movement.
+    description: Settings for servo hardware.
     additionalProperties: true
     properties:
       servoPin:
@@ -773,6 +773,6 @@ definitions:
       - url
   ModelsConfig:
     type: array
-    description: Additional model registry entries supplied by the user.
+    description: Settings for custom, on-device ML models.
     items:
       $ref: '#/definitions/ModelEntry'

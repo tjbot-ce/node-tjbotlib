@@ -19,7 +19,7 @@ export type TTSBackendType = ("none" | "local" | "ibm-watson-tts" | "google-clou
  */
 export type ModelEntryType = ("stt" | "tts" | "vad" | "vision.object-recognition" | "vision.classification" | "vision.face-detection" | "vision.image-description");
 /**
- * Additional model registry entries supplied by the user.
+ * Settings for custom, on-device ML models.
  */
 export type ModelsConfig = ModelEntry[];
 /**
@@ -43,14 +43,14 @@ export interface TJBotConfigSchema {
     [k: string]: unknown;
 }
 /**
- * Logging configuration.
+ * Console logging configuration.
  */
 export interface LogConfig {
     level?: LogLevel;
     [k: string]: unknown;
 }
 /**
- * Hardware capabilities physically attached to the Raspberry Pi.
+ * Hardware physically attached to the Raspberry Pi.
  */
 export interface HardwareConfig {
     /**
@@ -76,7 +76,7 @@ export interface HardwareConfig {
     [k: string]: unknown;
 }
 /**
- * Audio capture and speech recognition configuration.
+ * Settings for audio capture and speech recognition.
  */
 export interface ListenConfig {
     /**
@@ -208,7 +208,7 @@ export interface STTBackendAzureConfig {
     [k: string]: unknown;
 }
 /**
- * Camera and vision backend configuration.
+ * Settings for the camera and computer vision.
  */
 export interface SeeConfig {
     /**
@@ -317,7 +317,7 @@ export interface SeeBackendAzureConfig {
     [k: string]: unknown;
 }
 /**
- * LED hardware selection and pin mapping.
+ * Settings for LED hardware.
  */
 export interface ShineConfig {
     /**
@@ -369,7 +369,7 @@ export interface LEDCommonAnodeConfig {
     [k: string]: unknown;
 }
 /**
- * Audio playback and text-to-speech configuration.
+ * Settings for audio playback and text-to-speech.
  */
 export interface SpeakConfig {
     /**
@@ -446,7 +446,7 @@ export interface TTSBackendAzureConfig {
     [k: string]: unknown;
 }
 /**
- * Servo configuration for TJBot arm movement.
+ * Settings for servo hardware.
  */
 export interface WaveConfig {
     /**
