@@ -17,13 +17,13 @@
 import { ShineConfig, WaveConfig } from '../config/index.js';
 import { ServoPosition } from '../servo/index.js';
 import { RPiBaseHardwareDriver } from './rpi-driver.js';
+import { FaceDetectionMetadata, ImageClassificationResult, ImageDescriptionResult, ObjectDetectionResult } from '../vision/index.js';
 declare class RPi3Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed;
     private neopixelLed;
     private useGRBFormat;
     private servo;
-    private userHasBeenWarnedSTT;
-    private userHasBeenWarnedTTS;
+    private userHasBeenWarned;
     constructor();
     setupLEDCommonAnode(config: ShineConfig['commonanode']): void;
     setupLEDNeopixel(config: ShineConfig['neopixel']): void;
@@ -32,8 +32,16 @@ declare class RPi3Driver extends RPiBaseHardwareDriver {
     renderLEDNeopixel(hexColor: string): Promise<void>;
     cleanup(): Promise<void>;
     renderServoPosition(position: ServoPosition): void;
+    private warnIfUsingLocalAI;
     listenForTranscript(): Promise<string>;
     speak(message: string): Promise<void>;
+    detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
 }
 export default RPi3Driver;
 //# sourceMappingURL=rpi3-driver.d.ts.map

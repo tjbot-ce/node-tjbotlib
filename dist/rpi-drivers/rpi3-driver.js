@@ -25,8 +25,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     neopixelLed;
     useGRBFormat;
     servo;
-    userHasBeenWarnedSTT = false;
-    userHasBeenWarnedTTS = false;
+    userHasBeenWarned = {};
     constructor() {
         super();
         this.useGRBFormat = true;
@@ -93,23 +92,52 @@ class RPi3Driver extends RPiBaseHardwareDriver {
             winston.warn(`${LogEmoji.SERVO} Attempted to render on an uninitialized servo`);
         }
     }
-    async listenForTranscript() {
-        // Warn about performance on RPi3 when using local STT
-        const backend = this.listenConfig.backend?.type ?? 'local';
-        if (backend === 'local' && !this.userHasBeenWarnedSTT) {
-            winston.warn(`${LogEmoji.STT} Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
-            this.userHasBeenWarnedSTT = true;
+    warnIfUsingLocalAI(aiType) {
+        if (this.userHasBeenWarned[aiType]) {
+            return;
         }
+        switch (aiType) {
+            case 'stt':
+                if (this.listenConfig.backend?.type === 'local') {
+                    winston.warn(`${LogEmoji.STT} Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
+                }
+                break;
+            case 'tts':
+                if (this.speakConfig.backend?.type === 'local') {
+                    winston.warn(`${LogEmoji.TTS} Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
+                }
+                break;
+            case 'vision':
+                if (this.seeConfig.backend?.type === 'local') {
+                    winston.warn(`${LogEmoji.VISION} Using local Vision on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
+                }
+                break;
+        }
+        this.userHasBeenWarned[aiType] = true;
+    }
+    async listenForTranscript() {
+        this.warnIfUsingLocalAI('stt');
         return super.listenForTranscript();
     }
     async speak(message) {
-        // Warn about performance on RPi3 when using local TTS
-        const backend = this.speakConfig.backend?.type ?? 'local';
-        if (backend === 'local' && !this.userHasBeenWarnedTTS) {
-            winston.warn(`${LogEmoji.TTS} Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
-            this.userHasBeenWarnedTTS = true;
-        }
+        this.warnIfUsingLocalAI('tts');
         return super.speak(message);
+    }
+    async detectObjects(image) {
+        this.warnIfUsingLocalAI('vision');
+        return super.detectObjects(image);
+    }
+    async classifyImage(image) {
+        this.warnIfUsingLocalAI('vision');
+        return super.classifyImage(image);
+    }
+    async describeImage(image) {
+        this.warnIfUsingLocalAI('vision');
+        return super.describeImage(image);
+    }
+    async detectFaces(image) {
+        this.warnIfUsingLocalAI('vision');
+        return super.detectFaces(image);
     }
 }
 export default RPi3Driver;

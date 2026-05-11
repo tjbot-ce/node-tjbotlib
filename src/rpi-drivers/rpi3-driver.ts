@@ -23,14 +23,19 @@ import { LGPIOServoController, ServoPosition } from '../servo/index.js';
 import { Hardware } from '../utils/index.js';
 import { LogEmoji } from '../utils/logging.js';
 import { RPiBaseHardwareDriver } from './rpi-driver.js';
+import {
+    FaceDetectionMetadata,
+    ImageClassificationResult,
+    ImageDescriptionResult,
+    ObjectDetectionResult,
+} from '../vision/index.js';
 
 class RPi3Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed: LEDCommonAnode | undefined;
     private neopixelLed: LEDNeopixel | undefined;
     private useGRBFormat: boolean;
     private servo: LGPIOServoController | undefined;
-    private userHasBeenWarnedSTT: boolean = false;
-    private userHasBeenWarnedTTS: boolean = false;
+    private userHasBeenWarned: { [key: string]: boolean } = {};
 
     constructor() {
         super();
@@ -104,28 +109,66 @@ class RPi3Driver extends RPiBaseHardwareDriver {
         }
     }
 
-    async listenForTranscript(): Promise<string> {
-        // Warn about performance on RPi3 when using local STT
-        const backend = this.listenConfig.backend?.type ?? 'local';
-        if (backend === 'local' && !this.userHasBeenWarnedSTT) {
-            winston.warn(
-                `${LogEmoji.STT} Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`
-            );
-            this.userHasBeenWarnedSTT = true;
+    private warnIfUsingLocalAI(aiType: 'stt' | 'tts' | 'vision'): void {
+        if (this.userHasBeenWarned[aiType]) {
+            return;
         }
+
+        switch (aiType) {
+            case 'stt':
+                if (this.listenConfig.backend?.type === 'local') {
+                    winston.warn(
+                        `${LogEmoji.STT} Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`
+                    );
+                }
+                break;
+            case 'tts':
+                if (this.speakConfig.backend?.type === 'local') {
+                    winston.warn(
+                        `${LogEmoji.TTS} Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`
+                    );
+                }
+                break;
+            case 'vision':
+                if (this.seeConfig.backend?.type === 'local') {
+                    winston.warn(
+                        `${LogEmoji.VISION} Using local Vision on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`
+                    );
+                }
+                break;
+        }
+
+        this.userHasBeenWarned[aiType] = true;
+    }
+
+    async listenForTranscript(): Promise<string> {
+        this.warnIfUsingLocalAI('stt');
         return super.listenForTranscript();
     }
 
     async speak(message: string): Promise<void> {
-        // Warn about performance on RPi3 when using local TTS
-        const backend = this.speakConfig.backend?.type ?? 'local';
-        if (backend === 'local' && !this.userHasBeenWarnedTTS) {
-            winston.warn(
-                `${LogEmoji.TTS} Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`
-            );
-            this.userHasBeenWarnedTTS = true;
-        }
+        this.warnIfUsingLocalAI('tts');
         return super.speak(message);
+    }
+
+    async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
+        this.warnIfUsingLocalAI('vision');
+        return super.detectObjects(image);
+    }
+
+    async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
+        this.warnIfUsingLocalAI('vision');
+        return super.classifyImage(image);
+    }
+
+    async describeImage(image: Buffer | string): Promise<ImageDescriptionResult> {
+        this.warnIfUsingLocalAI('vision');
+        return super.describeImage(image);
+    }
+
+    async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
+        this.warnIfUsingLocalAI('vision');
+        return super.detectFaces(image);
     }
 }
 
