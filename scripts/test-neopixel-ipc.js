@@ -24,7 +24,7 @@
  *
  * Usage:
  *   node scripts/test-neopixel-ipc.js [gpio_pin]
- *   (default pin: 18)
+ *   (default pin: 21)
  *
  * Run as a normal user — the script will use 'sudo -n' to spawn the helper.
  * Make sure passwordless sudo is configured (or run 'sudo -v' first).
@@ -39,7 +39,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const HELPER_PATH = join(__dirname, '..', 'src', 'led', 'led-neopixel-ws281x.js');
-const pin = parseInt(process.argv[2] ?? '18', 10);
+const pin = parseInt(process.argv[2] ?? '21', 10);
 const DELAY_MS = 800;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

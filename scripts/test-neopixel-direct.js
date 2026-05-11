@@ -27,7 +27,7 @@
  *   sudo -E node scripts/test-neopixel-direct.js [gpioPin]
  *
  * Example:
- *   sudo -E node scripts/test-neopixel-direct.js 18
+ *   sudo -E node scripts/test-neopixel-direct.js 21
  */
 
 import { createRequire } from 'module';
@@ -35,7 +35,7 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const ws281x = require('rpi-ws281x-native');
 
-const gpioPin = Number.parseInt(process.argv[2] ?? '18', 10);
+const gpioPin = Number.parseInt(process.argv[2] ?? '21', 10);
 const numLeds = 1;
 const freq = 800000;
 const dma = 10;
