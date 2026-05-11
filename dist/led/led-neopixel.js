@@ -107,8 +107,7 @@ export class LEDNeopixel {
             winston.error(`${EMO} NeoPixel helper exited (code=${code}, signal=${signal})`);
         });
         // Send the init command; store the promise so render() can await readiness.
-        // Timeout is generous to allow main process to finish startup (e.g., loading AI models).
-        this._ready = this._send({ cmd: 'init', pin, numLeds: 1 }, 30_000);
+        this._ready = this._send({ cmd: 'init', pin, numLeds: 1 }, 10_000);
         this._ready
             .then(() => {
             winston.verbose(`${EMO} NeoPixel helper ready on pin ${pin}`);
