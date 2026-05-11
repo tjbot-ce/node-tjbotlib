@@ -29,6 +29,8 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     private neopixelLed: LEDNeopixel | undefined;
     private useGRBFormat: boolean;
     private servo: LGPIOServoController | undefined;
+    private userHasBeenWarnedSTT: boolean = false;
+    private userHasBeenWarnedTTS: boolean = false;
 
     constructor() {
         super();
@@ -105,10 +107,11 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     async listenForTranscript(): Promise<string> {
         // Warn about performance on RPi3 when using local STT
         const backend = this.listenConfig.backend?.type ?? 'local';
-        if (backend === 'local') {
+        if (backend === 'local' && !this.userHasBeenWarnedSTT) {
             winston.warn(
                 `${LogEmoji.STT} Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`
             );
+            this.userHasBeenWarnedSTT = true;
         }
         return super.listenForTranscript();
     }
@@ -116,10 +119,11 @@ class RPi3Driver extends RPiBaseHardwareDriver {
     async speak(message: string): Promise<void> {
         // Warn about performance on RPi3 when using local TTS
         const backend = this.speakConfig.backend?.type ?? 'local';
-        if (backend === 'local') {
+        if (backend === 'local' && !this.userHasBeenWarnedTTS) {
             winston.warn(
                 `${LogEmoji.TTS} Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`
             );
+            this.userHasBeenWarnedTTS = true;
         }
         return super.speak(message);
     }
