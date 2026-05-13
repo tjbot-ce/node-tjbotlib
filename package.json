@@ -1,7 +1,7 @@
 {
   "name": "tjbot",
   "version": "3.0.0",
-  "description": "Node.js library for writing TJBot recipes",
+  "description": "TJBot: Community Edition - Node.js library for writing TJBot recipes",
   "dependencies": {
     "@iarna/toml": "^2.2.5",
     "@inquirer/prompts": "^8.3.2",
@@ -109,7 +109,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ibmtjbot/tjbotlib.git"
+    "url": "git+https://github.com/tjbot-ce/node-tjbotlib.git"
   },
   "keywords": [
     "tjbot"
@@ -117,7 +117,7 @@
   "author": "TJBot",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/ibmtjbot/tjbotlib/issues"
+    "url": "https://github.com/tjbot-ce/node-tjbotlib/issues"
   },
-  "homepage": "https://github.com/ibmtjbot/tjbotlib#readme"
+  "homepage": "https://tjbot-ce.github.io/"
 }
