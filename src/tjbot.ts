@@ -116,7 +116,6 @@ class TJBot {
 
     /**
      * Private constructor.
-     * @constructor
      * @private
      */
     private constructor() {
@@ -155,7 +154,6 @@ class TJBot {
      * @param {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
      * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
      * @throws {TJBotError} if configuration file cannot be loaded, is invalid, or cleanup fails
-     * @async
      * @public
      */
     async initialize(overrideConfig?: Partial<TJBotConfigSchema>, recipeConfigPath?: string): Promise<TJBot> {
@@ -213,7 +211,6 @@ class TJBot {
     /**
      * Initialize hardware devices
      * @private
-     * @async
      */
     private async initializeHardware(): Promise<void> {
         const hwConfig = this.config.hardware;
@@ -318,7 +315,6 @@ class TJBot {
     /**
      * Eagerly initialize local AI models (STT, TTS, Vision) if configured
      * @private
-     * @async
      */
     private async initializeAIModels(): Promise<void> {
         // Initialize STT engine if microphone is configured
@@ -344,7 +340,6 @@ class TJBot {
      * Clean up all resources. Called automatically before re-initialization.
      * @throws {TJBotError} if cleanup fails
      * @private
-     * @async
      */
     private async cleanup(): Promise<void> {
         if (this._cleanupPromise) {
@@ -552,7 +547,6 @@ class TJBot {
      * Listen for a spoken utterance (offline mode - returns transcript).
      * @returns {Promise<string>} The transcribed text
      * @throws {TJBotError} if the microphone hardware is not initialized
-     * @async
      * @public
      */
     listen(): Promise<string>;
@@ -563,7 +557,6 @@ class TJBot {
      * @param onFinalResult Callback for final transcription result
      * @returns {Promise<void>} Promise that resolves when transcription completes
      * @throws {TJBotError} if the microphone hardware is not initialized
-     * @async
      * @public
      */
     listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void): Promise<void>;
@@ -612,7 +605,6 @@ class TJBot {
      * Capture an image and return it as a buffer.
      * @return {Promise<Buffer>} The captured image as a buffer.
      * @throws {TJBotError} if the camera hardware is not initialized
-     * @async
      * @public
      */
     async see(): Promise<Buffer> {
@@ -627,7 +619,6 @@ class TJBot {
      * specified, photo will be saved in a temp location.
      * @return {string} Path at which the photo was saved.
      * @throws {TJBotError} if the camera hardware is not initialized
-     * @async
      * @public
      */
     async look(filePath?: string): Promise<string> {
@@ -803,7 +794,6 @@ class TJBot {
      * Speak a message.
      * @param {string} message The message to speak.
      * @throws {TJBotError} if the speaker hardware is not initialized
-     * @async
      * @public
      */
     async speak(message: string): Promise<void> {
@@ -818,7 +808,6 @@ class TJBot {
     /**
      * Play a sound at the specified path.
      * @param {string} soundFile The path to the sound file to be played.
-     * @async
      * @public
      */
     async play(soundFile: string): Promise<void> {

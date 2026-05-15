@@ -21,5 +21,12 @@ export { TJBotError } from './errors.js';
 export { initWinston } from './logging.js';
 export type { TJBotLogLevel } from './logging.js';
 export { ModelRegistry } from './model-registry.js';
-export type { STTModelMetadata, TTSModelMetadata, VADModelMetadata, VisionModelMetadata } from './model-registry.js';
+export type {
+    BaseModelMetadata,
+    ModelType,
+    STTModelMetadata,
+    TTSModelMetadata,
+    VADModelMetadata,
+    VisionModelMetadata,
+} from './model-registry.js';
 export { isCommandAvailable, sleep } from './utils.js';

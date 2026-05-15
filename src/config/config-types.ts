@@ -24,8 +24,10 @@ import type {
     LEDCommonAnodeConfig,
     LEDNeopixelConfig,
     ListenConfig,
+    LogLevel,
     LogConfig,
     ModelEntry,
+    ModelEntryType,
     ModelsConfig,
     SeeBackendAzureConfig,
     SeeBackendConfig,
@@ -57,7 +59,9 @@ export type {
     LEDCommonAnodeConfig,
     LEDNeopixelConfig,
     ListenConfig,
+    LogLevel,
     LogConfig,
+    ModelEntryType,
     ModelEntry,
     ModelsConfig,
     SeeBackendAzureConfig,
@@ -107,16 +111,6 @@ export type VisionEngineConfig =
     | SeeBackendGoogleCloudConfig
     | SeeBackendAzureConfig;
 
-type SchemaDocument = Record<string, unknown>;
-type ParseSuccess<T> = { success: true; data: T };
-type ParseFailure = { success: false; error: Error };
-type ParseResult<T> = ParseSuccess<T> | ParseFailure;
-
-interface ParserAdapter<T> {
-    parse(value: unknown): T;
-    safeParse(value: unknown): ParseResult<T>;
-}
-
 export const STT_BACKEND_TYPES = Object.freeze([
     'none',
     'local',
@@ -140,7 +134,7 @@ export const SEE_BACKEND_TYPES = Object.freeze([
     'azure-vision',
 ] as const satisfies readonly SeeBackendType[]);
 
-function loadConfigSchema(): SchemaDocument {
+function loadConfigSchema(): Record<string, unknown> {
     const schemaUrl = new URL('./schema/tjbot-config.schema.yaml', import.meta.url);
     const schemaSource = fs.readFileSync(schemaUrl, 'utf8');
     const loadedSchema = yaml.load(schemaSource);
@@ -149,7 +143,7 @@ function loadConfigSchema(): SchemaDocument {
         throw new Error('TJBot config schema is invalid or empty');
     }
 
-    return loadedSchema as SchemaDocument;
+    return loadedSchema as Record<string, unknown>;
 }
 
 const configSchema = loadConfigSchema();
@@ -170,7 +164,13 @@ function formatValidationErrors(errors: ErrorObject[] | null | undefined): strin
     return ajv.errorsText(errors, { separator: '; ' });
 }
 
-function createEnumParser<T extends readonly string[]>(values: T, label: string): ParserAdapter<T[number]> {
+function createEnumParser<T extends readonly string[]>(
+    values: T,
+    label: string
+): {
+    parse(value: unknown): T[number];
+    safeParse(value: unknown): { success: true; data: T[number] } | { success: false; error: Error };
+} {
     return {
         parse(value: unknown): T[number] {
             const result = this.safeParse(value);
@@ -180,7 +180,7 @@ function createEnumParser<T extends readonly string[]>(values: T, label: string)
 
             return result.data;
         },
-        safeParse(value: unknown): ParseResult<T[number]> {
+        safeParse(value: unknown): { success: true; data: T[number] } | { success: false; error: Error } {
             if (typeof value === 'string' && values.includes(value)) {
                 return { success: true, data: value };
             }
@@ -193,7 +193,13 @@ function createEnumParser<T extends readonly string[]>(values: T, label: string)
     };
 }
 
-function createValidatorParser<T>(validate: ValidateFunction<T>, label: string): ParserAdapter<T> {
+function createValidatorParser<T>(
+    validate: ValidateFunction<T>,
+    label: string
+): {
+    parse(value: unknown): T;
+    safeParse(value: unknown): { success: true; data: T } | { success: false; error: Error };
+} {
     return {
         parse(value: unknown): T {
             const result = this.safeParse(value);
@@ -203,7 +209,7 @@ function createValidatorParser<T>(validate: ValidateFunction<T>, label: string):
 
             return result.data;
         },
-        safeParse(value: unknown): ParseResult<T> {
+        safeParse(value: unknown): { success: true; data: T } | { success: false; error: Error } {
             if (validate(value)) {
                 return { success: true, data: value as T };
             }
@@ -216,7 +222,7 @@ function createValidatorParser<T>(validate: ValidateFunction<T>, label: string):
     };
 }
 
-export function getConfigSchema(): Readonly<SchemaDocument> {
+export function getConfigSchema(): Readonly<Record<string, unknown>> {
     return configSchema;
 }
 

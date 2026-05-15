@@ -36,7 +36,12 @@ const generatedTypes = await compileFromFile(schemaPath, {
     },
 });
 
+const sanitizedTypes = generatedTypes
+    .replace(/^ \* @minItems \d+\s*$/gm, '')
+    .replace(/^ \* @maxItems \d+\s*$/gm, '')
+    .replace(/\n{3,}/g, '\n\n');
+
 await mkdir(path.dirname(outputPath), { recursive: true });
-await writeFile(outputPath, generatedTypes, 'utf8');
+await writeFile(outputPath, sanitizedTypes, 'utf8');
 
 console.log(`Generated config types at ${outputPath}`);

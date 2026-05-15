@@ -21,6 +21,7 @@ export type {
     LEDNeopixelConfig,
     ListenConfig,
     LogConfig,
+    ModelEntryType,
     ModelEntry,
     ModelsConfig,
     NoneBackendConfig,
@@ -53,6 +54,7 @@ export type {
 } from './config-types.js';
 
 export {
+    LogLevel,
     getConfigSchema,
     getSTTBackendConfig,
     getTTSBackendConfig,

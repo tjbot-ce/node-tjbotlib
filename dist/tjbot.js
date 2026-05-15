@@ -83,7 +83,6 @@ class TJBot {
     _processHooksInstalled = false;
     /**
      * Private constructor.
-     * @constructor
      * @private
      */
     constructor() {
@@ -119,7 +118,6 @@ class TJBot {
      * @param {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
      * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
      * @throws {TJBotError} if configuration file cannot be loaded, is invalid, or cleanup fails
-     * @async
      * @public
      */
     async initialize(overrideConfig, recipeConfigPath) {
@@ -166,7 +164,6 @@ class TJBot {
     /**
      * Initialize hardware devices
      * @private
-     * @async
      */
     async initializeHardware() {
         const hwConfig = this.config.hardware;
@@ -251,7 +248,6 @@ class TJBot {
     /**
      * Eagerly initialize local AI models (STT, TTS, Vision) if configured
      * @private
-     * @async
      */
     async initializeAIModels() {
         // Initialize STT engine if microphone is configured
@@ -274,7 +270,6 @@ class TJBot {
      * Clean up all resources. Called automatically before re-initialization.
      * @throws {TJBotError} if cleanup fails
      * @private
-     * @async
      */
     async cleanup() {
         if (this._cleanupPromise) {
@@ -468,7 +463,6 @@ class TJBot {
      * Capture an image and return it as a buffer.
      * @return {Promise<Buffer>} The captured image as a buffer.
      * @throws {TJBotError} if the camera hardware is not initialized
-     * @async
      * @public
      */
     async see() {
@@ -482,7 +476,6 @@ class TJBot {
      * specified, photo will be saved in a temp location.
      * @return {string} Path at which the photo was saved.
      * @throws {TJBotError} if the camera hardware is not initialized
-     * @async
      * @public
      */
     async look(filePath) {
@@ -632,7 +625,6 @@ class TJBot {
      * Speak a message.
      * @param {string} message The message to speak.
      * @throws {TJBotError} if the speaker hardware is not initialized
-     * @async
      * @public
      */
     async speak(message) {
@@ -644,7 +636,6 @@ class TJBot {
     /**
      * Play a sound at the specified path.
      * @param {string} soundFile The path to the sound file to be played.
-     * @async
      * @public
      */
     async play(soundFile) {

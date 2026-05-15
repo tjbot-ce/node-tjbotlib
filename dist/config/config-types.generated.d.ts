@@ -214,8 +214,7 @@ export interface SeeConfig {
     /**
      * Requested capture resolution as [width, height].
      *
-     * @minItems 2
-     * @maxItems 2
+    
      */
     cameraResolution?: [number, number];
     /**
