@@ -328,4 +328,4 @@ If you would like to contribute to TJBot, please see the [contributor's guide](h
 
 ## License
 
-This project is licensed under Apache 2.0. Full license text is available in [LICENSE](../../LICENSE).
+This project is licensed under Apache 2.0. Full license text is available in [LICENSE](LICENSE).
