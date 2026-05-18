@@ -51,10 +51,10 @@ export type {
     VADConfig,
     VisionEngineConfig,
     WaveConfig,
+    LogLevel,
 } from './config-types.js';
 
 export {
-    LogLevel,
     getConfigSchema,
     getSTTBackendConfig,
     getTTSBackendConfig,
