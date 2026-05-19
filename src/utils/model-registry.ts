@@ -129,7 +129,7 @@ export class ModelRegistry {
             if (!yamlPath) {
                 const __filename = fileURLToPath(import.meta.url);
                 const __dirname = path.dirname(__filename);
-                yamlPath = path.join(__dirname, '..', 'config', 'model-registry.yaml');
+                yamlPath = path.join(__dirname, '..', 'config', 'vendor', 'model-registry.yaml');
             }
 
             winston.verbose(`${EMO} Loading model metadata from: ${yamlPath}`);

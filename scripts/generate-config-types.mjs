@@ -23,7 +23,7 @@ import { compileFromFile } from 'json-schema-to-typescript';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, '..');
-const schemaPath = path.join(repoRoot, 'src', 'config', 'schema', 'tjbot-config.schema.yaml');
+const schemaPath = path.join(repoRoot, 'src', 'config', 'vendor', 'tjbot-config.schema.yaml');
 const outputPath = path.join(repoRoot, 'src', 'config', 'config-types.generated.ts');
 
 const generatedTypes = await compileFromFile(schemaPath, {

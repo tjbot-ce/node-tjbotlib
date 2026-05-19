@@ -38,7 +38,7 @@ export class TJBotConfig {
     speak;
     wave;
     recipe;
-    defaultConfigPath = './tjbot.default.toml';
+    defaultConfigPath = './vendor/tjbot.default.toml';
     /**
      * Creates a TJBotConfig instance.
      * Loads configuration in the following order:

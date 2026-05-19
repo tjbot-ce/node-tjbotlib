@@ -135,7 +135,7 @@ export const SEE_BACKEND_TYPES = Object.freeze([
 ] as const satisfies readonly SeeBackendType[]);
 
 function loadConfigSchema(): Record<string, unknown> {
-    const schemaUrl = new URL('./schema/tjbot-config.schema.yaml', import.meta.url);
+    const schemaUrl = new URL('./vendor/tjbot-config.schema.yaml', import.meta.url);
     const schemaSource = fs.readFileSync(schemaUrl, 'utf8');
     const loadedSchema = yaml.load(schemaSource);
 

@@ -27,17 +27,17 @@ const syncMappings = [
     {
         name: 'config schema',
         sourcePath: path.join(repoRoot, 'vendor', 'tjbot-config', 'tjbot-config.schema.yaml'),
-        targetPath: path.join(repoRoot, 'src', 'config', 'schema', 'tjbot-config.schema.yaml'),
+        targetPath: path.join(repoRoot, 'src', 'config', 'vendor', 'tjbot-config.schema.yaml'),
     },
     {
         name: 'model registry',
         sourcePath: path.join(repoRoot, 'vendor', 'tjbot-config', 'model-registry.yaml'),
-        targetPath: path.join(repoRoot, 'src', 'config', 'model-registry.yaml'),
+        targetPath: path.join(repoRoot, 'src', 'config', 'vendor', 'model-registry.yaml'),
     },
     {
         name: 'default config',
         sourcePath: path.join(repoRoot, 'vendor', 'tjbot-config', 'tjbot.default.toml'),
-        targetPath: path.join(repoRoot, 'src', 'config', 'tjbot.default.toml'),
+        targetPath: path.join(repoRoot, 'src', 'config', 'vendor', 'tjbot.default.toml'),
     },
 ];
 

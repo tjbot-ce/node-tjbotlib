@@ -52,7 +52,7 @@ export class TJBotConfig {
     readonly wave: WaveConfig;
     readonly recipe: Record<string, unknown>;
 
-    private defaultConfigPath: string = './tjbot.default.toml';
+    private defaultConfigPath: string = './vendor/tjbot.default.toml';
 
     /**
      * Creates a TJBotConfig instance.
