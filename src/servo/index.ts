@@ -16,4 +16,4 @@
  */
 
 export { LGPIOServoController } from './servo-lgpio.js';
-export { ServoPosition } from './servo-constants.js';
+export { MAX_PULSE_MS, MID_PULSE_MS, MIN_PULSE_MS, ServoPosition } from './servo-constants.js';

@@ -25,3 +25,10 @@ export enum ServoPosition {
     ARM_UP = 1400,
     ARM_DOWN = 2300,
 }
+
+/**
+ * Servo pulse widths in milliseconds.
+ */
+export const MIN_PULSE_MS = 0.5;
+export const MID_PULSE_MS = 1.5;
+export const MAX_PULSE_MS = 2.5;

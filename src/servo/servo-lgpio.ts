@@ -19,7 +19,7 @@ import winston from 'winston';
 import { createRequire } from 'module';
 import { LogEmoji } from '../utils/logging.js';
 import { TJBotError } from '../utils/errors.js';
-import { ServoPosition } from './servo-constants.js';
+import { MAX_PULSE_MS, MID_PULSE_MS, MIN_PULSE_MS, ServoPosition } from './servo-constants.js';
 
 const EMO = LogEmoji.SERVO;
 
@@ -40,10 +40,6 @@ const lgpio = require('lgpio') as {
     gpioFree: (handle: number, pin: number) => void;
     gpiochipClose: (handle: number) => void;
 };
-
-const MIN_PULSE_MS = 0.5;
-const MID_PULSE_MS = 1.5;
-const MAX_PULSE_MS = 2.5;
 
 /**
  * Servo controller using lgpio on Raspberry Pi GPIO character devices

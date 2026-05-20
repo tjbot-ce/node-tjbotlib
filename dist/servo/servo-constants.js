@@ -25,4 +25,10 @@ export var ServoPosition;
     ServoPosition[ServoPosition["ARM_UP"] = 1400] = "ARM_UP";
     ServoPosition[ServoPosition["ARM_DOWN"] = 2300] = "ARM_DOWN";
 })(ServoPosition || (ServoPosition = {}));
+/**
+ * Servo pulse widths in milliseconds.
+ */
+export const MIN_PULSE_MS = 0.5;
+export const MID_PULSE_MS = 1.5;
+export const MAX_PULSE_MS = 2.5;
 //# sourceMappingURL=servo-constants.js.map
