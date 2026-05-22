@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#
+
 # Copyright 2026-present TJBot Contributors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
 import argparse
 import os
@@ -22,7 +21,6 @@ import tarfile
 import tempfile
 import urllib.request
 import zipfile
-from pathlib import Path
 from typing import Dict, List, Set
 
 import yaml
@@ -233,11 +231,11 @@ class ModelAnalyzer:
     def extract_archive(self, archive_path: str, extract_dir: str) -> None:
         """Extract tar.bz2 or zip files."""
         if archive_path.endswith(".tar.bz2") or archive_path.endswith(".tar.gz"):
-            print(f"  Extracting tar archive...")
+            print("  Extracting tar archive...")
             with tarfile.open(archive_path, "r:*") as tar:
                 tar.extractall(path=extract_dir)
         elif archive_path.endswith(".zip"):
-            print(f"  Extracting zip archive...")
+            print("  Extracting zip archive...")
             with zipfile.ZipFile(archive_path, "r") as zip_ref:
                 zip_ref.extractall(path=extract_dir)
         else:
@@ -263,9 +261,6 @@ class ModelAnalyzer:
         This uses heuristics to identify critical files.
         """
         required = []
-
-        # Convert to lowercase for comparison
-        files_lower = {f.lower(): f for f in files}
 
         if model_type == "stt":
             # For STT models, look for ONNX files and token files
@@ -359,7 +354,7 @@ class ModelAnalyzer:
         try:
             # Check if it's a single file (like .onnx) or an archive
             if archive_path.endswith(".onnx"):
-                print(f"  Model is a single ONNX file")
+                print("  Model is a single ONNX file")
                 # For single files, just copy it
                 import shutil
 
@@ -389,7 +384,7 @@ class ModelAnalyzer:
         files = self.get_files_in_folder(model_root)
 
         if not files:
-            print(f"  WARNING: No files found in extracted model")
+            print("  WARNING: No files found in extracted model")
             return []
 
         print(f"  Found {len(files)} files in model")
@@ -534,12 +529,12 @@ def main():
             print(f"[{i}/{len(models_data.get('models', []))}] Processing: {model_key} ({model_type})")
 
             if not url:
-                print(f"  WARNING: No URL provided, skipping")
+                print("  WARNING: No URL provided, skipping")
                 continue
 
             try:
                 # Get file size from URL
-                print(f"  Checking file size...")
+                print("  Checking file size...")
                 file_size = analyzer.get_file_size(url)
                 size_str = analyzer.format_size(file_size)
                 print(f"  File size: {size_str}")
@@ -571,7 +566,7 @@ def main():
                 print(f"  ERROR: {e}\n")
 
     # Save the updated models.yaml
-    print(f"\nGenerating output YAML...\n")
+    print("\nGenerating output YAML...\n")
     output_yaml = save_models_yaml(models_data, output_path)
 
     if output_path:

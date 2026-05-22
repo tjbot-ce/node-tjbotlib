@@ -39,7 +39,7 @@ let colorsLoaded = false;
  */
 function loadColors() {
     try {
-        const colorsPath = join(DIRNAME, 'colors.yaml');
+        const colorsPath = join(DIRNAME, '../config/vendor/colors.yaml');
         const colorsYaml = readFileSync(colorsPath, 'utf8');
         const colors = yaml.load(colorsYaml);
         for (const [name, hex] of Object.entries(colors)) {
@@ -130,6 +130,14 @@ export function normalizeColor(color) {
     }
     else {
         rgb = normColor;
+    }
+    // Expand CSS-style short hex (#abc → #aabbcc)
+    if (rgb !== undefined && rgb.replace(/^#/, '').length === 3) {
+        rgb = rgb
+            .replace(/^#/, '')
+            .split('')
+            .map((ch) => ch + ch)
+            .join('');
     }
     // did we get something back?
     if (rgb === undefined) {

@@ -19,16 +19,17 @@ import { describe, test, expect } from 'vitest';
 import { TJBotConfig } from '../../src/config/tjbot-config.js';
 import {
     tjbotConfigSchema,
+    type TJBotConfigSchema,
     sttBackendTypeSchema,
     ttsBackendTypeSchema,
     seeBackendTypeSchema,
 } from '../../src/config/config-types.js';
 
 // ============================================================================
-// Zod Schema Tests (only those exported from config-types)
+// Schema Validation Tests (only those exported from config-types)
 // ============================================================================
 
-describe('Zod Schema Validation - Backend Types', () => {
+describe('Schema Validation - Backend Types', () => {
     test('sttBackendTypeSchema accepts none', () => {
         const result = sttBackendTypeSchema.safeParse('none');
         expect(result.success).toBe(true);
@@ -75,7 +76,7 @@ describe('Zod Schema Validation - Backend Types', () => {
     });
 });
 
-describe('Zod Schema Validation - Complete TJBot Config', () => {
+describe('Schema Validation - Complete TJBot Config', () => {
     test('accepts minimal config', () => {
         const result = tjbotConfigSchema.safeParse({});
         expect(result.success).toBe(true);
@@ -219,7 +220,7 @@ describe('TJBotConfig - User Config Loading', () => {
                 gpioChip: 1,
                 servoPin: 17,
             },
-        };
+        } satisfies Partial<TJBotConfigSchema>;
 
         const config = new TJBotConfig(customConfig);
 
@@ -234,7 +235,7 @@ describe('TJBotConfig - User Config Loading', () => {
             log: {
                 level: 'debug',
             },
-        };
+        } satisfies Partial<TJBotConfigSchema>;
 
         const config = new TJBotConfig(customConfig);
 

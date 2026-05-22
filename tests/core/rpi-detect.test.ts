@@ -79,6 +79,14 @@ Model		: Raspberry Pi 3 Model B Rev 1.2
         expect(model).toContain('Raspberry Pi 3');
     });
 
+    test('detect_rpi3', () => {
+        const pi3CpuInfo = 'Model\t\t: Raspberry Pi 3 Model B Rev 1.2';
+        readFileSyncStub.mockReturnValue(pi3CpuInfo);
+        expect(RPiDetect.isPi3()).toBe(true);
+        expect(RPiDetect.isPi4()).toBe(false);
+        expect(RPiDetect.isPi5()).toBe(false);
+    });
+
     test('detects Raspberry Pi 4 model correctly', () => {
         const pi4CpuInfo = `processor	: 0
 BogoMIPS	: 108.00
@@ -127,6 +135,14 @@ Model		: Raspberry Pi 4 Model B Rev 1.4
         expect(model).toContain('Raspberry Pi 4');
     });
 
+    test('detect_rpi4', () => {
+        const pi4CpuInfo = 'Model\t\t: Raspberry Pi 4 Model B Rev 1.4';
+        readFileSyncStub.mockReturnValue(pi4CpuInfo);
+        expect(RPiDetect.isPi3()).toBe(false);
+        expect(RPiDetect.isPi4()).toBe(true);
+        expect(RPiDetect.isPi5()).toBe(false);
+    });
+
     test('detects Raspberry Pi 5 model correctly', () => {
         const pi5CpuInfo = `processor	: 0
 BogoMIPS	: 108.00
@@ -173,6 +189,20 @@ Model		: Raspberry Pi 5 Model B Rev 1.0
 
         const model = RPiDetect.model();
         expect(model).toContain('Raspberry Pi 5');
+    });
+
+    test('detect_rpi5', () => {
+        const pi5CpuInfo = 'Model\t\t: Raspberry Pi 5 Model B Rev 1.0';
+        readFileSyncStub.mockReturnValue(pi5CpuInfo);
+        expect(RPiDetect.isPi3()).toBe(false);
+        expect(RPiDetect.isPi4()).toBe(false);
+        expect(RPiDetect.isPi5()).toBe(true);
+    });
+
+    test('model_string', () => {
+        const pi4CpuInfo = 'Model\t\t: Raspberry Pi 4 Model B Rev 1.4';
+        readFileSyncStub.mockReturnValue(pi4CpuInfo);
+        expect(RPiDetect.model()).toContain('Raspberry Pi 4');
     });
 
     test('returns a non-empty model string', () => {

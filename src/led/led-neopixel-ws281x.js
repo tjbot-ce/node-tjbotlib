@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * Copyright 2026-present TJBot Contributors. All Rights Reserved.
  *

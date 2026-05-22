@@ -79,6 +79,49 @@ afterEach(() => {
 });
 
 describe('Credentials Loading', () => {
+    test('resolve_credentials_path_prefers_provided_path', () => {
+        const filePath = createTempFile('azure-credentials.env', 'AZURE_VISION_KEY=test_key\n');
+        try {
+            const credentials = loadAzureCredentials(filePath);
+            expect(credentials.visionKey).toBe('test_key');
+        } finally {
+            cleanupTempFile(filePath);
+        }
+    });
+
+    test('resolve_credentials_path_not_found_raises', () => {
+        expect(() => loadAzureCredentials('/tmp/does-not-exist-credentials.env')).toThrow();
+    });
+
+    test('load_google_cloud_credentials_sets_env', () => {
+        const envSnapshot = captureEnvSnapshot();
+        const filePath = createTempFile('google-credentials.json', '{"type":"service_account"}');
+        try {
+            const out = loadGoogleCloudCredentials(filePath);
+            expect(out.credentialsPath).toBe(filePath);
+            expect(process.env.GOOGLE_APPLICATION_CREDENTIALS).toBe(filePath);
+        } finally {
+            restoreEnvSnapshot(envSnapshot);
+            cleanupTempFile(filePath);
+        }
+    });
+
+    test('load_azure_credentials_parses_env', () => {
+        const envSnapshot = captureEnvSnapshot();
+        const filePath = createTempFile(
+            'azure-credentials.env',
+            'AZURE_VISION_KEY=test_key\nAZURE_VISION_ENDPOINT=https://example.cognitiveservices.azure.com/\n'
+        );
+        try {
+            const creds = loadAzureCredentials(filePath);
+            expect(creds.visionKey).toBe('test_key');
+            expect(creds.visionEndpoint).toBe('https://example.cognitiveservices.azure.com/');
+        } finally {
+            restoreEnvSnapshot(envSnapshot);
+            cleanupTempFile(filePath);
+        }
+    });
+
     test('loads Azure credentials from /tmp and exports vars to environment', () => {
         const envSnapshot = captureEnvSnapshot();
         const filePath = createTempFile(

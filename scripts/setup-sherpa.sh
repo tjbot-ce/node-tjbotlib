@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#
+
 # Copyright 2026-present TJBot Contributors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

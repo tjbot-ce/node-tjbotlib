@@ -56,12 +56,12 @@ describe('Utils - normalizeColor', () => {
         expect(result).toBe('#FF0000');
     });
 
-    test('throws error for 3-digit hex (expects 6-digit)', () => {
-        expect(() => normalizeColor('F00')).toThrow(TJBotError);
+    test('expands 3-digit hex to 6-digit (#abc → #aabbcc)', () => {
+        expect(normalizeColor('F00')).toBe('#FF0000');
     });
 
-    test('throws error for 3-digit hex with # prefix', () => {
-        expect(() => normalizeColor('#ABC')).toThrow(TJBotError);
+    test('expands 3-digit hex with # prefix (#ABC → #AABBCC)', () => {
+        expect(normalizeColor('#ABC')).toBe('#AABBCC');
     });
 
     test('normalizes lowercase hex without forcing uppercase', () => {
@@ -188,6 +188,10 @@ describe('Utils - isCommandAvailable', () => {
 });
 
 describe('Utils - sleep', () => {
+    test('sleep', () => {
+        expect(() => sleep(0.001)).not.toThrow();
+    });
+
     test('sleep completes without error', () => {
         expect(() => sleep(0.001)).not.toThrow();
     });
@@ -235,6 +239,21 @@ describe('Utils - getShineColors (curated LED colors)', () => {
         expect(colors).toContain('lightpink');
         expect(colors).toContain('darkblue');
         expect(colors).toContain('skyblue');
+    });
+});
+
+describe('Utils - Python parity names', () => {
+    test('convert_hex_to_rgb', () => {
+        expect(convertHexToRgbColor('#ffffff')).toEqual([255, 255, 255]);
+    });
+
+    test('normalize_color', () => {
+        expect(normalizeColor('red')).toBe('#FF0000');
+    });
+
+    test('is_command_available', () => {
+        expect(isCommandAvailable('ls')).toBe(true);
+        expect(isCommandAvailable('nonexistentcommand12345')).toBe(false);
     });
 });
 

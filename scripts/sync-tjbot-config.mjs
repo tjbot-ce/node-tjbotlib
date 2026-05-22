@@ -39,6 +39,11 @@ const syncMappings = [
         sourcePath: path.join(repoRoot, 'vendor', 'tjbot-config', 'tjbot.default.toml'),
         targetPath: path.join(repoRoot, 'src', 'config', 'vendor', 'tjbot.default.toml'),
     },
+    {
+        name: 'color list',
+        sourcePath: path.join(repoRoot, 'vendor', 'tjbot-config', 'colors.yaml'),
+        targetPath: path.join(repoRoot, 'src', 'config', 'vendor', 'colors.yaml'),
+    }
 ];
 
 for (const mapping of syncMappings) {

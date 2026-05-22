@@ -19,6 +19,29 @@ import { describe, test, expect } from 'vitest';
 import { TJBotError } from '../../src/utils/index.js';
 
 describe('TJBotError', () => {
+    test('tjbot_error_basic', () => {
+        const err = new TJBotError('Something went wrong');
+        expect(err.message).toBe('Something went wrong');
+        expect(err.code).toBeUndefined();
+    });
+
+    test('tjbot_error_with_code', () => {
+        const err = new TJBotError('Missing hardware', { code: 'HARDWARE_NOT_FOUND' });
+        expect(err.code).toBe('HARDWARE_NOT_FOUND');
+    });
+
+    test('tjbot_error_with_context', () => {
+        const context = { hw: 'led', pin: 12 };
+        const err = new TJBotError('GPIO error', { context });
+        expect(err.context).toEqual(context);
+    });
+
+    test('tjbot_error_with_cause', () => {
+        const original = new Error('Bad value');
+        const err = new TJBotError('Wrapper error', { cause: original });
+        expect(err.cause).toBe(original);
+    });
+
     test('creates error with message only', () => {
         const message = 'Test error message';
         const error = new TJBotError(message);

@@ -43,7 +43,6 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
         initializeTTSEngine: vi.fn(async () => {}),
         initializeVisionEngine: vi.fn(async () => {}),
     };
-
     return {
         RPiDetect: {
             model: () => 'Raspberry Pi 5 Model B Rev 1.0',
@@ -400,6 +399,23 @@ describe('TJBot - Shine Method', () => {
     test('shine throws on invalid color', async () => {
         await expect(tj.shine('notacolor_xyz123')).rejects.toBeInstanceOf(TJBotError);
     });
+
+    test('shine_hex_short_form_expands', async () => {
+        await expect(tj.shine('#abc')).resolves.toBeUndefined();
+    });
+
+    test('shine_hex_without_hash_is_normalized', async () => {
+        await expect(tj.shine('00ff00')).resolves.toBeUndefined();
+    });
+
+    test('shine_invalid_hex_raises', async () => {
+        await expect(tj.shine('#gggggg')).rejects.toBeInstanceOf(TJBotError);
+    });
+
+    test('shine_unsupported_led_type_raises', async () => {
+        vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
+        await expect(tj.shine('red')).rejects.toBeInstanceOf(TJBotError);
+    });
 });
 
 describe('TJBot - Pulse Method', () => {
@@ -527,6 +543,11 @@ describe('TJBot - Wave Method', () => {
             expect(error).toBeInstanceOf(TJBotError);
         }
     });
+
+    test('wave_unsupported_servo_driver_raises', async () => {
+        vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
+        expect(() => tj.wave()).toThrow(TJBotError);
+    });
 });
 
 describe('TJBot - Listen and Speak Methods', () => {
@@ -569,6 +590,11 @@ describe('TJBot - Listen and Speak Methods', () => {
         // play() doesn't check capability, so it should not throw
         await tj.play('/path/to/sound.wav');
         expect(true).toBe(true);
+    });
+
+    test('observe_invalid_input_type_raises', async () => {
+        // @ts-expect-error parity with Python invalid-input test
+        await expect(tj.listen(123)).rejects.toBeInstanceOf(TJBotError);
     });
 });
 

@@ -56,6 +56,14 @@ describe('Constants - Capability Enum', () => {
 });
 
 describe('Constants - Hardware Enum', () => {
+    test('hardware_enums', () => {
+        expect(Hardware.CAMERA).toBe('camera');
+        expect(Hardware.LED).toBe('led');
+        expect(Hardware.MICROPHONE).toBe('microphone');
+        expect(Hardware.SERVO).toBe('servo');
+        expect(Hardware.SPEAKER).toBe('speaker');
+    });
+
     test('Hardware enum values are strings', () => {
         Object.values(Hardware).forEach((value) => {
             expect(typeof value).toBe('string');

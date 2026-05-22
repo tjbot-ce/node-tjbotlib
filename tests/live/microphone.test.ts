@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * Copyright 2025 IBM Corp. All Rights Reserved.
  * Copyright 2026-present TJBot Contributors. All Rights Reserved.
