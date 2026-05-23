@@ -32,6 +32,10 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
         playAudio: vi.fn(),
         capturePhoto: vi.fn(),
         capturePhotoBuffer: vi.fn(),
+        detectObjects: vi.fn(),
+        classifyImage: vi.fn(),
+        detectFaces: vi.fn(),
+        describeImage: vi.fn(),
         setupCamera: vi.fn(),
         setupLED: vi.fn(),
         setupLEDNeopixel: vi.fn(),
@@ -60,6 +64,10 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
             capturePhotoBuffer = mockDriver.capturePhotoBuffer;
+            detectObjects = mockDriver.detectObjects;
+            classifyImage = mockDriver.classifyImage;
+            detectFaces = mockDriver.detectFaces;
+            describeImage = mockDriver.describeImage;
             setupCamera = mockDriver.setupCamera;
             setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
@@ -83,6 +91,10 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
             capturePhotoBuffer = mockDriver.capturePhotoBuffer;
+            detectObjects = mockDriver.detectObjects;
+            classifyImage = mockDriver.classifyImage;
+            detectFaces = mockDriver.detectFaces;
+            describeImage = mockDriver.describeImage;
             setupCamera = mockDriver.setupCamera;
             setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
@@ -106,6 +118,10 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
             capturePhotoBuffer = mockDriver.capturePhotoBuffer;
+            detectObjects = mockDriver.detectObjects;
+            classifyImage = mockDriver.classifyImage;
+            detectFaces = mockDriver.detectFaces;
+            describeImage = mockDriver.describeImage;
             setupCamera = mockDriver.setupCamera;
             setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
@@ -298,8 +314,6 @@ describe('TJBot - Color Methods', () => {
             expect(typeof color).toBe('string');
         }
     });
-
-
 });
 
 describe('TJBot - Capability Assertions', () => {
@@ -623,6 +637,7 @@ describe('TJBot - Listen and Speak Methods', () => {
                     type: 'ibm-watson-stt' as const,
                     'ibm-watson-stt': {
                         model: 'en-US_Multimedia',
+                        interimResults: true,
                     },
                 },
             },
@@ -671,7 +686,7 @@ describe('TJBot - See Method', () => {
     test('see with default path', async () => {
         const expectedBuffer = Buffer.from('photo-data-stream');
         const captureSpy = vi.spyOn(tj.rpiDriver, 'capturePhotoBuffer').mockResolvedValue(expectedBuffer);
-        
+
         const buffer = await tj.see();
         expect(captureSpy).toHaveBeenCalled();
         expect(buffer).toBe(expectedBuffer);
@@ -695,7 +710,9 @@ describe('TJBot - Vision Methods', () => {
     });
 
     test('detectObjects calls rpiDriver.detectObjects', async () => {
-        const spy = vi.spyOn(tj.rpiDriver, 'detectObjects').mockResolvedValue([{ class: 'person', confidence: 0.9, bbox: [0, 0, 100, 100] }]);
+        const spy = vi
+            .spyOn(tj.rpiDriver, 'detectObjects')
+            .mockResolvedValue([{ class: 'person', confidence: 0.9, bbox: [0, 0, 100, 100] }]);
         const result = await tj.detectObjects('image-data');
         expect(spy).toHaveBeenCalledWith('image-data');
         expect(result).toHaveLength(1);
@@ -718,7 +735,9 @@ describe('TJBot - Vision Methods', () => {
     });
 
     test('describeImage calls rpiDriver.describeImage', async () => {
-        const spy = vi.spyOn(tj.rpiDriver, 'describeImage').mockResolvedValue({ description: 'a sunny day', confidence: 0.8 });
+        const spy = vi
+            .spyOn(tj.rpiDriver, 'describeImage')
+            .mockResolvedValue({ description: 'a sunny day', confidence: 0.8 });
         const result = await tj.describeImage('image-data');
         expect(spy).toHaveBeenCalledWith('image-data');
         expect(result.description).toBe('a sunny day');
