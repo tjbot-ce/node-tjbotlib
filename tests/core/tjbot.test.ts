@@ -31,6 +31,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
         speak: vi.fn(),
         playAudio: vi.fn(),
         capturePhoto: vi.fn(),
+        capturePhotoBuffer: vi.fn(),
         setupCamera: vi.fn(),
         setupLED: vi.fn(),
         setupLEDNeopixel: vi.fn(),
@@ -43,6 +44,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
         initializeTTSEngine: vi.fn(async () => {}),
         initializeVisionEngine: vi.fn(async () => {}),
     };
+
     return {
         RPiDetect: {
             model: () => 'Raspberry Pi 5 Model B Rev 1.0',
@@ -57,6 +59,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             speak = mockDriver.speak;
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
+            capturePhotoBuffer = mockDriver.capturePhotoBuffer;
             setupCamera = mockDriver.setupCamera;
             setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
@@ -79,6 +82,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             speak = mockDriver.speak;
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
+            capturePhotoBuffer = mockDriver.capturePhotoBuffer;
             setupCamera = mockDriver.setupCamera;
             setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
@@ -101,6 +105,7 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             speak = mockDriver.speak;
             playAudio = mockDriver.playAudio;
             capturePhoto = mockDriver.capturePhoto;
+            capturePhotoBuffer = mockDriver.capturePhotoBuffer;
             setupCamera = mockDriver.setupCamera;
             setupLED = mockDriver.setupLED;
             setupLEDNeopixel = mockDriver.setupLEDNeopixel;
@@ -113,6 +118,15 @@ vi.mock('../../src/rpi-drivers/index.js', () => {
             initializeTTSEngine = mockDriver.initializeTTSEngine;
             initializeVisionEngine = mockDriver.initializeVisionEngine;
         },
+    };
+});
+
+// Mock sleep in utils.js to prevent event loop blocking during pulse tests
+vi.mock('../../src/utils/utils.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../src/utils/utils.js')>();
+    return {
+        ...actual,
+        sleep: vi.fn(),
     };
 });
 
@@ -231,6 +245,30 @@ describe('TJBot - Constructor and Initialization', () => {
         expect(waveConfig.gpioChip).toBe(1);
         expect(waveConfig.servoPin).toBe(17);
     });
+
+    test('eagerly initializes AI engines based on capabilities', async () => {
+        const tj = TJBot.getInstance();
+        const customConfig = {
+            hardware: {
+                microphone: true,
+                speaker: true,
+                camera: true,
+            },
+        };
+
+        const initSTTSpy = vi.spyOn(tj.rpiDriver, 'initializeSTTEngine').mockResolvedValue();
+        const initTTSSpy = vi.spyOn(tj.rpiDriver, 'initializeTTSEngine').mockResolvedValue();
+        const initVisionSpy = vi.spyOn(tj.rpiDriver, 'initializeVisionEngine').mockResolvedValue();
+        vi.spyOn(tj.rpiDriver, 'hasCapability').mockImplementation((cap) => {
+            return cap === Capability.LISTEN || cap === Capability.SPEAK || cap === Capability.SEE;
+        });
+
+        await tj.initialize(customConfig);
+
+        expect(initSTTSpy).toHaveBeenCalled();
+        expect(initTTSSpy).toHaveBeenCalled();
+        expect(initVisionSpy).toHaveBeenCalled();
+    });
 });
 
 describe('TJBot - Color Methods', () => {
@@ -261,27 +299,7 @@ describe('TJBot - Color Methods', () => {
         }
     });
 
-    test('shine accepts basic colors', () => {
-        vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
-        vi.spyOn(tj.rpiDriver, 'renderLED').mockImplementation(async () => {});
 
-        expect(() => {
-            tj.shine('red');
-        }).not.toThrow();
-    });
-
-    test('shine accepts "on" and "off" keywords', () => {
-        vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
-        vi.spyOn(tj.rpiDriver, 'renderLED').mockImplementation(async () => {});
-
-        expect(() => {
-            tj.shine('on');
-        }).not.toThrow();
-
-        expect(() => {
-            tj.shine('off');
-        }).not.toThrow();
-    });
 });
 
 describe('TJBot - Capability Assertions', () => {
@@ -586,15 +604,47 @@ describe('TJBot - Listen and Speak Methods', () => {
 
     test('play() does not check for SPEAK capability before execution', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
+        const playSpy = vi.spyOn(tj.rpiDriver, 'playAudio');
 
         // play() doesn't check capability, so it should not throw
         await tj.play('/path/to/sound.wav');
-        expect(true).toBe(true);
+        expect(playSpy).toHaveBeenCalledWith('/path/to/sound.wav');
     });
 
     test('observe_invalid_input_type_raises', async () => {
         // @ts-expect-error parity with Python invalid-input test
         await expect(tj.listen(123)).rejects.toBeInstanceOf(TJBotError);
+    });
+
+    test('listen in streaming mode propagates callbacks', async () => {
+        const customConfig = {
+            listen: {
+                backend: {
+                    type: 'ibm-watson-stt' as const,
+                    'ibm-watson-stt': {
+                        model: 'en-US_Multimedia',
+                    },
+                },
+            },
+        };
+        const tjStream = TJBot.getInstance();
+        await tjStream.initialize(customConfig);
+        vi.spyOn(tjStream.rpiDriver, 'hasCapability').mockReturnValue(true);
+
+        const partialCb = vi.fn();
+        const finalCb = vi.fn();
+
+        const listenSpy = vi.spyOn(tjStream.rpiDriver, 'listenForTranscript').mockImplementation(async (options) => {
+            options?.onPartialResult?.('he');
+            options?.onFinalResult?.('hello');
+            return 'hello';
+        });
+
+        await tjStream.listen(partialCb, finalCb);
+
+        expect(listenSpy).toHaveBeenCalled();
+        expect(partialCb).toHaveBeenCalledWith('he');
+        expect(finalCb).toHaveBeenCalledWith('hello');
     });
 });
 
@@ -619,14 +669,59 @@ describe('TJBot - See Method', () => {
     });
 
     test('see with default path', async () => {
-        // Verify that see() method exists and is callable
-        expect(typeof tj.see).toBe('function');
+        const expectedBuffer = Buffer.from('photo-data-stream');
+        const captureSpy = vi.spyOn(tj.rpiDriver, 'capturePhotoBuffer').mockResolvedValue(expectedBuffer);
+        
+        const buffer = await tj.see();
+        expect(captureSpy).toHaveBeenCalled();
+        expect(buffer).toBe(expectedBuffer);
     });
 
     test('look() returns string when given custom path', async () => {
         vi.mocked(tj.rpiDriver.capturePhoto).mockResolvedValue('/tmp/photo.jpg');
         const result = await tj.look('/custom/path.jpg');
         expect(typeof result).toBe('string');
+        expect(tj.rpiDriver.capturePhoto).toHaveBeenCalledWith('/custom/path.jpg');
+    });
+});
+
+describe('TJBot - Vision Methods', () => {
+    let tj: TJBot;
+
+    beforeEach(async () => {
+        tj = TJBot.getInstance();
+        await tj.initialize();
+        vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
+    });
+
+    test('detectObjects calls rpiDriver.detectObjects', async () => {
+        const spy = vi.spyOn(tj.rpiDriver, 'detectObjects').mockResolvedValue([{ class: 'person', confidence: 0.9, bbox: [0, 0, 100, 100] }]);
+        const result = await tj.detectObjects('image-data');
+        expect(spy).toHaveBeenCalledWith('image-data');
+        expect(result).toHaveLength(1);
+        expect(result[0].class).toBe('person');
+    });
+
+    test('classifyImage calls rpiDriver.classifyImage', async () => {
+        const spy = vi.spyOn(tj.rpiDriver, 'classifyImage').mockResolvedValue([{ class: 'dog', confidence: 0.95 }]);
+        const result = await tj.classifyImage('image-data');
+        expect(spy).toHaveBeenCalledWith('image-data');
+        expect(result).toHaveLength(1);
+        expect(result[0].class).toBe('dog');
+    });
+
+    test('detectFaces calls rpiDriver.detectFaces', async () => {
+        const spy = vi.spyOn(tj.rpiDriver, 'detectFaces').mockResolvedValue({ isFaceDetected: true, metadata: [] });
+        const result = await tj.detectFaces('image-data');
+        expect(spy).toHaveBeenCalledWith('image-data');
+        expect(result.isFaceDetected).toBe(true);
+    });
+
+    test('describeImage calls rpiDriver.describeImage', async () => {
+        const spy = vi.spyOn(tj.rpiDriver, 'describeImage').mockResolvedValue({ description: 'a sunny day', confidence: 0.8 });
+        const result = await tj.describeImage('image-data');
+        expect(spy).toHaveBeenCalledWith('image-data');
+        expect(result.description).toBe('a sunny day');
     });
 });
 

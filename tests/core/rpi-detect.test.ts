@@ -248,7 +248,9 @@ Model		: Raspberry Pi 5 Model B Rev 1.0
         const pi3CpuInfo = 'Model\t\t: Raspberry Pi 3 Model B Rev 1.2';
         readFileSyncStub.mockReturnValue(pi3CpuInfo);
 
-        const model = RPiDetect.model();
-        expect(model).toContain('Raspberry Pi 3');
+        expect(RPiDetect.model()).toContain('Raspberry Pi 3');
+        expect(RPiDetect.isPi3()).toBe(true);
+        expect(RPiDetect.isPi4()).toBe(false);
+        expect(RPiDetect.isPi5()).toBe(false);
     });
 });
