@@ -214,7 +214,7 @@ export class LEDNeopixelSPI {
      * @returns A promise that resolves when the SPI transfer completes.
      */
     async render(color: string): Promise<void> {
-        winston.verbose(`${EMO} Rendering LED with color: ${color}`);
+        winston.debug(`${EMO} Rendering NeoPixel LED (SPI) with color: ${color}`);
 
         try {
             if (!this.isPrimed) {

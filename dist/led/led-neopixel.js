@@ -133,7 +133,7 @@ export class LEDNeopixel {
      * @param color Color as a 32-bit integer in RGB format (0xRRGGBB)
      */
     async render(color) {
-        winston.verbose(`${EMO} Rendering LED with color: ${color}`);
+        winston.debug(`${EMO} Rendering NeoPixel LED (IPC) with color: ${color}`);
         await this._ready;
         await this._send({ cmd: 'render', color }, 2_000);
     }

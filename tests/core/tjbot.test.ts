@@ -472,8 +472,8 @@ describe('TJBot - Pulse Method', () => {
         await expect(tj.pulse('red', 0.1)).resolves.toBeUndefined();
     });
 
-    test('pulse throws when duration exceeds 2.0 seconds', async () => {
-        await expect(tj.pulse('red', 2.5)).rejects.toBeInstanceOf(TJBotError);
+    test('pulse clamps duration to maximum 2.0 seconds', async () => {
+        await expect(tj.pulse('red', 2.5)).resolves.toBeUndefined();
     });
 
     test('pulse throws when capability not available', async () => {

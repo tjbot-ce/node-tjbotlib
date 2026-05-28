@@ -715,7 +715,7 @@ class TJBot {
             duration = 0.5;
         }
         if (duration > 2.0) {
-            throw new TJBotError('TJBot cannot pulse for more than 2 seconds, using duration of 2.0 seconds');
+            winston.warn(`${LogEmoji.LED} TJBot cannot pulse for more than 2 seconds, using duration of 2.0 seconds`);
             duration = 2.0;
         }
 
