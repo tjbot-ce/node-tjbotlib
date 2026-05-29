@@ -19,6 +19,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import TJBot from '../../src/tjbot.js';
 import { Capability, Hardware, TJBotError } from '../../src/utils/index.js';
 import { RPi3Driver, RPi5Driver, RPiDetect } from '../../src/rpi-drivers/index.js';
+import type { TJBotConfigSchema } from '../../src/config/config-types.js';
 
 // Mock the RPiDriver and its subclasses
 vi.mock('../../src/rpi-drivers/index.js', () => {
@@ -215,7 +216,7 @@ describe('TJBot - Constructor and Initialization', () => {
                 gpioChip: 1,
                 servoPin: 17,
             },
-        };
+        } satisfies Partial<TJBotConfigSchema>;
 
         // Create TJBot with override config using singleton pattern
         const tj = TJBot.getInstance();
@@ -713,19 +714,19 @@ describe('TJBot - Vision Methods', () => {
     test('[test_detectobjects_calls_rpidriver_detectobjects] detectObjects calls rpiDriver.detectObjects', async () => {
         const spy = vi
             .spyOn(tj.rpiDriver, 'detectObjects')
-            .mockResolvedValue([{ class: 'person', confidence: 0.9, bbox: [0, 0, 100, 100] }]);
+            .mockResolvedValue([{ label: 'person', confidence: 0.9, bbox: [0, 0, 100, 100] }]);
         const result = await tj.detectObjects('image-data');
         expect(spy).toHaveBeenCalledWith('image-data');
         expect(result).toHaveLength(1);
-        expect(result[0].class).toBe('person');
+        expect(result[0].label).toBe('person');
     });
 
     test('[test_classifyimage_calls_rpidriver_classifyimage] classifyImage calls rpiDriver.classifyImage', async () => {
-        const spy = vi.spyOn(tj.rpiDriver, 'classifyImage').mockResolvedValue([{ class: 'dog', confidence: 0.95 }]);
+        const spy = vi.spyOn(tj.rpiDriver, 'classifyImage').mockResolvedValue([{ label: 'dog', confidence: 0.95 }]);
         const result = await tj.classifyImage('image-data');
         expect(spy).toHaveBeenCalledWith('image-data');
         expect(result).toHaveLength(1);
-        expect(result[0].class).toBe('dog');
+        expect(result[0].label).toBe('dog');
     });
 
     test('[test_detectfaces_calls_rpidriver_detectfaces] detectFaces calls rpiDriver.detectFaces', async () => {
@@ -903,10 +904,11 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
 
     test('[test_listen_async_streaming_callbacks] listen async streaming callbacks', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
-        tj.config.listen = {
-            ...tj.config.listen,
-            backend: { type: 'local', local: { model: 'zipformer-en' } },
-        };
+        await tj.initialize({
+            listen: {
+                backend: { type: 'local', local: { model: 'zipformer-en' } },
+            },
+        });
 
         const partialCb = vi.fn();
         const finalCb = vi.fn();
@@ -924,10 +926,11 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
 
     test('[test_listen_async_offline_rejects_partial_callback] listen async offline rejects partial callback', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
-        tj.config.listen = {
-            ...tj.config.listen,
-            backend: { type: 'local', local: { model: 'moonshine-tiny' } },
-        };
+        await tj.initialize({
+            listen: {
+                backend: { type: 'local', local: { model: 'moonshine-tiny' } },
+            },
+        });
 
         await expect(
             tj.listen(
