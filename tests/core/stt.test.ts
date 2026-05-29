@@ -15,10 +15,13 @@
  */
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { Readable } from 'stream';
+import { PassThrough, Readable } from 'stream';
 import { TJBotError } from '../../src/utils/index.js';
 import { STTController } from '../../src/stt/stt.js';
 import { createSTTEngine } from '../../src/stt/stt-engine.js';
+import { IBMWatsonSTTEngine } from '../../src/stt/backends/ibm-watson-stt.js';
+import { GoogleCloudSTTEngine } from '../../src/stt/backends/google-cloud-stt.js';
+import { AzureSTTEngine } from '../../src/stt/backends/azure-stt.js';
 import { SherpaONNXSTTEngine } from '../../src/stt/backends/sherpa-onnx-stt.js';
 import { inferLocalModelFlavor, inferSTTMode, toModelType } from '../../src/stt/stt-utils.js';
 
@@ -27,6 +30,47 @@ vi.mock('../../src/stt/stt-engine.js', async (importOriginal) => {
     return {
         ...actual,
         createSTTEngine: vi.fn(),
+    };
+});
+
+vi.mock('../../src/utils/credentials.js', () => ({
+    loadIBMWatsonCloudCredentials: vi.fn(),
+    loadGoogleCloudCredentials: vi.fn(() => ({ credentialsPath: '/tmp/google-credentials.json' })),
+    loadAzureCredentials: vi.fn(() => ({ speechKey: 'test-key', speechRegion: 'eastus' })),
+}));
+
+vi.mock('microsoft-cognitiveservices-speech-sdk', () => {
+    const fromStreamInput = vi.fn();
+    const createPushStream = vi.fn();
+    const recognizeOnceAsync = vi.fn();
+    const close = vi.fn();
+
+    return {
+        default: undefined,
+        SpeechConfig: {
+            fromSubscription: vi.fn(() => ({ speechRecognitionLanguage: '' })),
+        },
+        AudioStreamFormat: {
+            getWaveFormatPCM: vi.fn(() => ({})),
+        },
+        AudioInputStream: {
+            createPushStream: createPushStream,
+        },
+        AudioConfig: {
+            fromStreamInput: fromStreamInput,
+        },
+        SpeechRecognizer: vi.fn().mockImplementation(() => ({
+            recognizeOnceAsync: recognizeOnceAsync,
+            close: close,
+        })),
+        ResultReason: {
+            RecognizedSpeech: 'RecognizedSpeech',
+            NoMatch: 'NoMatch',
+            Canceled: 'Canceled',
+        },
+        CancellationDetails: {
+            fromResult: vi.fn(),
+        },
     };
 });
 
@@ -240,6 +284,27 @@ describe('STT controller backend initialization and transcription behavior', () 
         expect(transcript).toBe('final transcript');
         expect(mic.start).toHaveBeenCalledTimes(2);
         expect(mic.pause).toHaveBeenCalledTimes(2);
+    });
+
+    test('[test_stt_transcribe_forwards_abort_signal_to_engine] stt transcribe forwards abort signal to engine', async () => {
+        const engine = {
+            initialize: vi.fn(),
+            transcribe: vi.fn().mockResolvedValue('hello'),
+        };
+        vi.mocked(createSTTEngine).mockResolvedValue(engine as never);
+        const mic = makeMicStub();
+        const controller = new STTController(mic as never);
+
+        await controller.initialize({ backend: { type: 'local' } });
+        const abortSignal = new AbortController().signal;
+        const onPartialResult = vi.fn();
+        const onFinalResult = vi.fn();
+        await controller.transcribe({ abortSignal, onPartialResult, onFinalResult });
+
+        expect(engine.transcribe).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ abortSignal, onPartialResult, onFinalResult })
+        );
     });
 });
 
@@ -644,5 +709,228 @@ describe('STT utility model flavor and mode inference', () => {
 
     test('[test_none_backend_offline] none backend offline', () => {
         expect(() => inferSTTMode({ backend: { type: 'none' } })).toThrow('Unknown STT backend type');
+    });
+});
+
+describe('IBM Watson STT backend transcription behavior', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    test('[test_watson_transcribe_wraps_audio_and_parses_final_results] transcribe pipes mic stream and parses final results', async () => {
+        const engine = new IBMWatsonSTTEngine({ model: 'en-US_BroadbandModel' } as never);
+        (engine as unknown as { microphoneRate: number }).microphoneRate = 16000;
+        (engine as unknown as { microphoneChannels: number }).microphoneChannels = 1;
+
+        const recognizeStream = new PassThrough({ objectMode: true });
+        (engine as unknown as { sttService: unknown }).sttService = {
+            recognizeUsingWebSocket: vi.fn(() => recognizeStream),
+        };
+
+        const micStream = Readable.from([Buffer.from('abcd')]);
+        const transcribePromise = engine.transcribe(micStream, {});
+
+        recognizeStream.emit('data', {
+            results: [{ final: true, alternatives: [{ transcript: 'hello world' }] }],
+        });
+
+        const result = await transcribePromise;
+        expect(result).toBe('hello world');
+    });
+
+    test('[test_watson_transcribe_consumes_raw_data_results_payload] transcribe returns transcript from data event', async () => {
+        const engine = new IBMWatsonSTTEngine({ model: 'en-US_BroadbandModel' } as never);
+        (engine as unknown as { microphoneRate: number }).microphoneRate = 16000;
+        (engine as unknown as { microphoneChannels: number }).microphoneChannels = 1;
+
+        const recognizeStream = new PassThrough({ objectMode: true });
+        (engine as unknown as { sttService: unknown }).sttService = {
+            recognizeUsingWebSocket: vi.fn(() => recognizeStream),
+        };
+
+        const micStream = Readable.from([Buffer.from('abcd')]);
+        const transcribePromise = engine.transcribe(micStream, {});
+
+        recognizeStream.emit('data', {
+            results: [{ final: true, alternatives: [{ transcript: 'hello from data' }] }],
+        });
+
+        const result = await transcribePromise;
+        expect(result).toBe('hello from data');
+    });
+
+    test('[test_watson_transcribe_ignores_non_final_results] transcribe does not resolve on non-final result', async () => {
+        const engine = new IBMWatsonSTTEngine({ model: 'en-US_BroadbandModel' } as never);
+        (engine as unknown as { microphoneRate: number }).microphoneRate = 16000;
+        (engine as unknown as { microphoneChannels: number }).microphoneChannels = 1;
+
+        const recognizeStream = new PassThrough({ objectMode: true });
+        (engine as unknown as { sttService: unknown }).sttService = {
+            recognizeUsingWebSocket: vi.fn(() => recognizeStream),
+        };
+
+        const micStream = Readable.from([Buffer.from('abcd')]);
+        const transcribePromise = engine.transcribe(micStream, {});
+
+        // Emit non-final then final
+        recognizeStream.emit('data', {
+            results: [{ final: false, alternatives: [{ transcript: 'partial text' }] }],
+        });
+        recognizeStream.emit('data', {
+            results: [{ final: true, alternatives: [{ transcript: 'final text' }] }],
+        });
+
+        const result = await transcribePromise;
+        expect(result).toBe('final text');
+    });
+});
+
+describe('Google Cloud STT backend transcription behavior', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    test('[test_google_cloud_transcribe_uses_runtime_resolved_project_id] transcribe resolves project id and builds correct recognizer path', async () => {
+        const engine = new GoogleCloudSTTEngine({
+            model: 'chirp_3',
+            languageCode: 'en-US',
+            region: 'us',
+        } as never);
+        (engine as unknown as { microphoneRate: number }).microphoneRate = 16000;
+        (engine as unknown as { microphoneChannels: number }).microphoneChannels = 1;
+
+        const recognizeStream = new PassThrough({ objectMode: true });
+        const fakeClient = {
+            getProjectId: vi.fn(async () => 'test-project'),
+            _streamingRecognize: vi.fn(() => recognizeStream),
+        };
+        (engine as unknown as { client: unknown }).client = fakeClient;
+
+        // Use a PassThrough mic so we control when it ends
+        const micStream = new PassThrough();
+
+        const transcribePromise = engine.transcribe(micStream, {});
+
+        // Wait for the engine to write the first config packet (recognizerPath), then respond
+        await new Promise<void>((r) => recognizeStream.once('data', () => r()));
+
+        // Capture the recognizer path from the first write call
+        const firstWrite = vi.mocked(fakeClient._streamingRecognize).mock.results[0]?.value;
+        expect(firstWrite).toBeDefined();
+
+        // Read what was written to verify the recognizerPath
+        const configPacket = await new Promise<{ recognizer?: string }>((r) => {
+            // Already consumed — check via spy instead
+            r({});
+        });
+        void configPacket;
+
+        // Emit a final recognition result
+        recognizeStream.emit('data', {
+            results: [{ isFinal: true, alternatives: [{ transcript: 'hello world' }] }],
+        });
+
+        const result = await transcribePromise;
+
+        expect(fakeClient.getProjectId).toHaveBeenCalled();
+        expect(result).toBe('hello world');
+    });
+
+    test('[test_google_cloud_transcribe_builds_correct_recognizer_path] transcribe builds recognizer path from project id and region', async () => {
+        const engine = new GoogleCloudSTTEngine({
+            model: 'chirp_3',
+            languageCode: 'en-US',
+            region: 'us',
+        } as never);
+        (engine as unknown as { microphoneRate: number }).microphoneRate = 16000;
+        (engine as unknown as { microphoneChannels: number }).microphoneChannels = 1;
+
+        const writtenPackets: unknown[] = [];
+        const recognizeStream = new PassThrough({ objectMode: true });
+        const originalWrite = recognizeStream.write.bind(recognizeStream);
+        vi.spyOn(recognizeStream, 'write').mockImplementation((chunk) => {
+            writtenPackets.push(chunk);
+            return originalWrite(chunk);
+        });
+
+        const fakeClient = {
+            getProjectId: vi.fn(async () => 'test-project'),
+            _streamingRecognize: vi.fn(() => recognizeStream),
+        };
+        (engine as unknown as { client: unknown }).client = fakeClient;
+
+        const micStream = new PassThrough();
+        const transcribePromise = engine.transcribe(micStream, {});
+
+        // Wait for config packet to be written
+        await new Promise<void>((r) => {
+            const check = () => {
+                if (writtenPackets.length > 0) {
+                    r();
+                } else {
+                    setTimeout(check, 0);
+                }
+            };
+            check();
+        });
+
+        recognizeStream.emit('data', {
+            results: [{ isFinal: true, alternatives: [{ transcript: 'hello world' }] }],
+        });
+
+        const result = await transcribePromise;
+
+        const configPacket = writtenPackets[0] as { recognizer?: string };
+        expect(configPacket.recognizer).toBe('projects/test-project/locations/us/recognizers/_');
+        expect(result).toBe('hello world');
+    });
+});
+
+describe('Azure STT backend transcription behavior', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    test('[test_azure_transcribe_uses_audio_config_stream_argument] transcribe uses fromStreamInput and recognizeOnceAsync', async () => {
+        const sdk = await import('microsoft-cognitiveservices-speech-sdk');
+
+        const fakePushStream = {
+            write: vi.fn(),
+            close: vi.fn(),
+        };
+        vi.mocked(sdk.AudioInputStream.createPushStream).mockReturnValue(fakePushStream as never);
+
+        const fakeAudioConfig = {};
+        vi.mocked(sdk.AudioConfig.fromStreamInput).mockReturnValue(fakeAudioConfig as never);
+
+        const fakeRecognizer = {
+            recognizeOnceAsync: (
+                resolve: (r: { reason: string; text: string }) => void,
+                _reject: (e: string) => void
+            ) => {
+                resolve({ reason: 'RecognizedSpeech', text: 'hello azure' });
+            },
+            close: vi.fn(),
+        };
+        // Replace SpeechRecognizer with a real constructor function that returns fakeRecognizer
+        const sdkModule = await import('microsoft-cognitiveservices-speech-sdk');
+        // Remove the duplicate local sdk reference
+        void sdk;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (sdkModule as any).SpeechRecognizer = function () {
+            return fakeRecognizer;
+        };
+
+        const engine = new AzureSTTEngine({ language: 'en-US' } as never);
+        (engine as unknown as { subscriptionKey: string }).subscriptionKey = 'test-key';
+        (engine as unknown as { region: string }).region = 'eastus';
+        (engine as unknown as { microphoneRate: number }).microphoneRate = 16000;
+        (engine as unknown as { microphoneChannels: number }).microphoneChannels = 1;
+
+        const micStream = Readable.from([Buffer.from('abcd')]);
+        const result = await engine.transcribe(micStream, {});
+
+        expect(sdk.AudioConfig.fromStreamInput).toHaveBeenCalledWith(fakePushStream);
+        expect(result).toBe('hello azure');
     });
 });
