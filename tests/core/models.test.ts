@@ -218,7 +218,7 @@ describe('ModelRegistry - Model Discovery', () => {
             expect(models.length).toBeGreaterThan(0);
         });
 
-        test('[test_lookup_models_filters_by_vision_face_detection] lookup models filters by vision face detection', () => {
+        test('[test_lookup_models_filters_by_vision_face_detection__2] lookup models filters by vision face detection', () => {
             const models = manager.lookupModels('vision.face-detection');
             expect(models.length).toBeGreaterThan(0);
             for (const m of models) {
@@ -226,7 +226,7 @@ describe('ModelRegistry - Model Discovery', () => {
             }
         });
 
-        test('[test_lookup_models_filters_by_vision_object_recognition] lookup models filters by vision object recognition', () => {
+        test('[test_lookup_models_filters_by_vision_object_recognition__2] lookup models filters by vision object recognition', () => {
             const models = manager.lookupModels('vision.object-recognition');
             expect(models.length).toBeGreaterThan(0);
             for (const m of models) {
@@ -240,21 +240,21 @@ describe('ModelRegistry - Model Discovery', () => {
             expect(models.length).toBe(0);
         });
 
-        test('[test_lookup_model_returns_stt_model] lookup model returns stt model', () => {
+        test('[test_lookup_model_returns_stt_model__2] lookup model returns stt model', () => {
             const model = manager.lookupModel('moonshine-tiny');
             expect(model).toBeDefined();
             expect(model.key).toBe('moonshine-tiny');
             expect(model.type).toBe('stt');
         });
 
-        test('[test_lookup_model_returns_tts_model] lookup model returns tts model', () => {
+        test('[test_lookup_model_returns_tts_model__2] lookup model returns tts model', () => {
             const model = manager.lookupModel('vits-piper-en_US-ryan-low');
             expect(model).toBeDefined();
             expect(model.key).toBe('vits-piper-en_US-ryan-low');
             expect(model.type).toBe('tts');
         });
 
-        test('[test_lookup_model_returns_vad_model] lookup model returns vad model', () => {
+        test('[test_lookup_model_returns_vad_model__2] lookup model returns vad model', () => {
             const model = manager.lookupModel('silero-vad');
             expect(model).toBeDefined();
             expect(model.type).toBe('vad');

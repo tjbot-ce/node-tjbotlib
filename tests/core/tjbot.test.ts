@@ -414,7 +414,7 @@ describe('TJBot - Shine Method', () => {
         await expect(tj.shine('on')).resolves.toBeUndefined();
     });
 
-    test('[test_shine_accepts] shine accepts "off" keyword', async () => {
+    test('[test_shine_accepts__2] shine accepts "off" keyword', async () => {
         await expect(tj.shine('off')).resolves.toBeUndefined();
     });
 
@@ -782,13 +782,13 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         vi.restoreAllMocks();
     });
 
-    test('[test_gets_tjbot_singleton_instance] tjbot get instance singleton', () => {
+    test('[test_gets_tjbot_singleton_instance__2] tjbot get instance singleton', () => {
         const a = TJBot.getInstance();
         const b = TJBot.getInstance();
         expect(a).toBe(b);
     });
 
-    test('[test_has_hardware_static_property] tjbot hardware static property', () => {
+    test('[test_has_hardware_static_property__2] tjbot hardware static property', () => {
         expect(TJBot.Hardware).toBeDefined();
         expect(TJBot.Hardware.LED).toBeDefined();
     });
@@ -813,7 +813,7 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         expect(Array.isArray(models)).toBe(true);
     });
 
-    test('[test_capability_error_messages_mention_required_hardware] capability error mentions required hardware', () => {
+    test('[test_capability_error_messages_mention_required_hardware__2] capability error mentions required hardware', () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
         try {
             tj['assertCapability'](Capability.SPEAK);
@@ -824,17 +824,17 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         }
     });
 
-    test('[test_listen_throws_when_capability_not_available] listen requires capability', async () => {
+    test('[test_listen_throws_when_capability_not_available__2] listen requires capability', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
         await expect(tj.listen()).rejects.toThrow(TJBotError);
     });
 
-    test('[test_speak_throws_when_capability_not_available] speak requires capability', async () => {
+    test('[test_speak_throws_when_capability_not_available__2] speak requires capability', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
         await expect(tj.speak('hello')).rejects.toThrow(TJBotError);
     });
 
-    test('[test_shine_throws_when_capability_not_available] shine throws when capability missing', async () => {
+    test('[test_shine_throws_when_capability_not_available__2] shine throws when capability missing', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
         await expect(tj.shine('red')).rejects.toThrow(TJBotError);
     });
@@ -846,14 +846,14 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         await expect(tj.shine('FF0000')).resolves.toBeUndefined();
     });
 
-    test('[test_shine_accepts] shine accepts on and off', async () => {
+    test('[test_shine_accepts__3] shine accepts on and off', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'renderLED').mockImplementation(async () => {});
         await expect(tj.shine('on')).resolves.toBeUndefined();
         await expect(tj.shine('off')).resolves.toBeUndefined();
     });
 
-    test('[test_play_does_not_check_for_speak_capability_before_execution] play does not require speak capability', async () => {
+    test('[test_play_does_not_check_for_speak_capability_before_execution__2] play does not require speak capability', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
         const playSpy = vi.spyOn(tj.rpiDriver, 'playAudio').mockResolvedValue();
         await tj.play('/tmp/test.wav');
@@ -882,7 +882,7 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         expect(spy).toHaveBeenCalledWith('hello');
     });
 
-    test('[test_look_returns_string_when_given_custom_path] look returns driver path', async () => {
+    test('[test_look_returns_string_when_given_custom_path__2] look returns driver path', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'capturePhoto').mockResolvedValue('/tmp/photo.jpg');
         const out = await tj.look('/tmp/photo.jpg');
@@ -897,12 +897,12 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         expect(out.toString()).toBe('abc');
     });
 
-    test('[test_see_throws_when_capability_not_available] see requires capability', async () => {
+    test('[test_see_throws_when_capability_not_available__2] see requires capability', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
         await expect(tj.see()).rejects.toThrow(TJBotError);
     });
 
-    test('[test_listen_async_streaming_callbacks] listen async streaming callbacks', async () => {
+    test('[test_listen_async_streaming_callbacks__2] listen async streaming callbacks', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         await tj.initialize({
             listen: {
@@ -962,7 +962,7 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         expect(onceSpy.mock.calls.length).toBe(first);
     });
 
-    test('[test_shinecolors_returns_an_array] tjbot shine colors and random color', () => {
+    test('[test_shinecolors_returns_an_array__2] tjbot shine colors and random color', () => {
         const colors = tj.shineColors();
         const c = tj.randomColor();
         expect(Array.isArray(colors)).toBe(true);
@@ -978,7 +978,7 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         await expect(tj.lowerArm()).resolves.toBeUndefined();
     });
 
-    test('[test_wave_calls_renderservoposition_multiple_times] wave calls servo multiple times', async () => {
+    test('[test_wave_calls_renderservoposition_multiple_times__2] wave calls servo multiple times', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         const servoSpy = vi.spyOn(tj.rpiDriver, 'renderServoPosition').mockImplementation(() => {});
         await tj.wave();
@@ -1014,7 +1014,7 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         await expect(tj.pulse('red', 99)).resolves.toBeUndefined();
     });
 
-    test('[test_pulse_clamps_duration_exceeding_2_0_seconds] pulse throws when duration exceeds max', async () => {
+    test('[test_pulse_clamps_duration_exceeding_2_0_seconds__2] pulse throws when duration exceeds max', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'renderLED').mockResolvedValue();
         // Current behavior clamps to max; ensure operation still completes.
@@ -1082,7 +1082,7 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         expect(bot.rpiDriver.setupServo).toHaveBeenCalled();
     });
 
-    test('[test_initializes_rpi_driver_based_on_model_pi_5] tjbot init pi5 driver', async () => {
+    test('[test_initializes_rpi_driver_based_on_model_pi_5__2] tjbot init pi5 driver', async () => {
         vi.spyOn(RPiDetect, 'model').mockReturnValue('Raspberry Pi 5 Model B Rev 1.0');
         await tj.initialize();
         expect(tj.rpiDriver).toBeInstanceOf(RPi5Driver);

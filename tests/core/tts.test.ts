@@ -118,7 +118,7 @@ describe('TTS controller backend initialization and synthesis behavior', () => {
         expect(speaker.playAudio).toHaveBeenCalledTimes(1);
     });
 
-    test('[test_tts_speak_delegates_to_engine_and_cleans_temp_file] tts transcribe delegates to engine', async () => {
+    test('[test_tts_speak_delegates_to_engine_and_cleans_temp_file__2] tts transcribe delegates to engine', async () => {
         const speaker = makeSpeakerStub();
         const engine = {
             initialize: vi.fn(),
@@ -152,7 +152,7 @@ describe('TTS controller backend initialization and synthesis behavior', () => {
         expect(speaker.playAudio).toHaveBeenCalledTimes(1);
     });
 
-    test('[test_tts_unknown_backend_leaves_engine_uninitialized] tts unknown backend is not initialized', async () => {
+    test('[test_tts_unknown_backend_leaves_engine_uninitialized__2] tts unknown backend is not initialized', async () => {
         vi.mocked(createTTSEngine).mockRejectedValue(new TJBotError('Unknown TTS backend type: bogus'));
         const controller = new TTSController(makeSpeakerStub() as never);
 
