@@ -31,7 +31,7 @@ describe('RPi Detection', () => {
         readFileSyncStub.mockRestore();
     });
 
-    test('detects Raspberry Pi 3 model correctly', () => {
+    test('[test_detects_raspberry_pi_3_model_correctly] detects Raspberry Pi 3 model correctly', () => {
         const pi3CpuInfo = `processor	: 0
 BogoMIPS	: 102.40
 Features	: half thumb fastmult vfp edsp neon vfpv4 idiva idivt vfpd32 lpae evtstrm crc32 nouserexcpd abe
@@ -79,7 +79,7 @@ Model		: Raspberry Pi 3 Model B Rev 1.2
         expect(model).toContain('Raspberry Pi 3');
     });
 
-    test('detect_rpi3', () => {
+    test('[test_detect_rpi3] detect rpi3', () => {
         const pi3CpuInfo = 'Model\t\t: Raspberry Pi 3 Model B Rev 1.2';
         readFileSyncStub.mockReturnValue(pi3CpuInfo);
         expect(RPiDetect.isPi3()).toBe(true);
@@ -87,7 +87,7 @@ Model		: Raspberry Pi 3 Model B Rev 1.2
         expect(RPiDetect.isPi5()).toBe(false);
     });
 
-    test('detects Raspberry Pi 4 model correctly', () => {
+    test('[test_detects_raspberry_pi_4_model_correctly] detects Raspberry Pi 4 model correctly', () => {
         const pi4CpuInfo = `processor	: 0
 BogoMIPS	: 108.00
 Features	: fp asimd evtstrm crc32 cpuid
@@ -135,7 +135,7 @@ Model		: Raspberry Pi 4 Model B Rev 1.4
         expect(model).toContain('Raspberry Pi 4');
     });
 
-    test('detect_rpi4', () => {
+    test('[test_detect_rpi4] detect rpi4', () => {
         const pi4CpuInfo = 'Model\t\t: Raspberry Pi 4 Model B Rev 1.4';
         readFileSyncStub.mockReturnValue(pi4CpuInfo);
         expect(RPiDetect.isPi3()).toBe(false);
@@ -143,7 +143,7 @@ Model		: Raspberry Pi 4 Model B Rev 1.4
         expect(RPiDetect.isPi5()).toBe(false);
     });
 
-    test('detects Raspberry Pi 5 model correctly', () => {
+    test('[test_detects_raspberry_pi_5_model_correctly] detects Raspberry Pi 5 model correctly', () => {
         const pi5CpuInfo = `processor	: 0
 BogoMIPS	: 108.00
 Features	: fp asimd evtstrm crc32 cpuid asimdrdm lrcpc dcache_clean aes sha1 sha2 sha512 asimddp sha3 sm3 sm4 asimdfhm dit uscat ilrcpc flagm ssbs sb pauth dpb dgh abe doitm i8mm bf16 bfloat16 w
@@ -191,7 +191,7 @@ Model		: Raspberry Pi 5 Model B Rev 1.0
         expect(model).toContain('Raspberry Pi 5');
     });
 
-    test('detect_rpi5', () => {
+    test('[test_detect_rpi5] detect rpi5', () => {
         const pi5CpuInfo = 'Model\t\t: Raspberry Pi 5 Model B Rev 1.0';
         readFileSyncStub.mockReturnValue(pi5CpuInfo);
         expect(RPiDetect.isPi3()).toBe(false);
@@ -199,40 +199,40 @@ Model		: Raspberry Pi 5 Model B Rev 1.0
         expect(RPiDetect.isPi5()).toBe(true);
     });
 
-    test('model_string', () => {
+    test('[test_model_string] model string', () => {
         const pi4CpuInfo = 'Model\t\t: Raspberry Pi 4 Model B Rev 1.4';
         readFileSyncStub.mockReturnValue(pi4CpuInfo);
         expect(RPiDetect.model()).toContain('Raspberry Pi 4');
     });
 
-    test('returns a non-empty model string', () => {
+    test('[test_returns_a_non_empty_model_string] returns a non-empty model string', () => {
         const model = RPiDetect.model();
         expect(typeof model).toBe('string');
         expect(model.length).toBeGreaterThan(0);
     });
 
-    test('model string contains identifying information', () => {
+    test('[test_model_string_contains_identifying_information] model string contains identifying information', () => {
         const model = RPiDetect.model();
         // Should contain some identifying info (either real RPi on actual device or fallback)
         expect(model).toMatch(/Raspberry Pi|Unknown device/i);
     });
 
-    test('isPi3 returns boolean', () => {
+    test('[test_is_pi3_returns_boolean] isPi3 returns boolean', () => {
         const result = RPiDetect.isPi3();
         expect(typeof result).toBe('boolean');
     });
 
-    test('isPi4 returns boolean', () => {
+    test('[test_is_pi4_returns_boolean] isPi4 returns boolean', () => {
         const result = RPiDetect.isPi4();
         expect(typeof result).toBe('boolean');
     });
 
-    test('isPi5 returns boolean', () => {
+    test('[test_is_pi5_returns_boolean] isPi5 returns boolean', () => {
         const result = RPiDetect.isPi5();
         expect(typeof result).toBe('boolean');
     });
 
-    test('each Pi version detector returns boolean', () => {
+    test('[test_each_pi_version_detector_returns_boolean] each Pi version detector returns boolean', () => {
         // Each detector should return a boolean regardless of current hardware
         const pi3 = RPiDetect.isPi3();
         const pi4 = RPiDetect.isPi4();
@@ -244,7 +244,7 @@ Model		: Raspberry Pi 5 Model B Rev 1.0
         expect(typeof pi5).toBe('boolean');
     });
 
-    test('Pi version detection is consistent with model string', () => {
+    test('[test_pi_version_detection_is_consistent_with_model_string] Pi version detection is consistent with model string', () => {
         const pi3CpuInfo = 'Model\t\t: Raspberry Pi 3 Model B Rev 1.2';
         readFileSyncStub.mockReturnValue(pi3CpuInfo);
 

@@ -26,87 +26,87 @@ import {
 } from '../../src/utils/index.js';
 
 describe('Utils - normalizeColor', () => {
-    test('normalizes "on" to white (FFFFFF)', () => {
+    test('[test_normalizes_on_to_white_ffffff] normalizes "on" to white (FFFFFF)', () => {
         const result = normalizeColor('on');
         expect(result).toBe('#FFFFFF');
     });
 
-    test('normalizes "off" to black (000000)', () => {
+    test('[test_normalizes_off_to_black_000000] normalizes "off" to black (000000)', () => {
         const result = normalizeColor('off');
         expect(result).toBe('#000000');
     });
 
-    test('normalizes undefined to black (off)', () => {
+    test('[test_normalizes_undefined_to_black_off] normalizes undefined to black (off)', () => {
         const result = normalizeColor(undefined as unknown as string);
         expect(result).toBe('#000000');
     });
 
-    test('normalizes 6-digit hex without prefix', () => {
+    test('[test_normalizes_6_digit_hex_without_prefix] normalizes 6-digit hex without prefix', () => {
         const result = normalizeColor('FF0000');
         expect(result).toBe('#FF0000');
     });
 
-    test('normalizes 6-digit hex with # prefix', () => {
+    test('[test_normalizes_6_digit_hex_with_prefix] normalizes 6-digit hex with # prefix', () => {
         const result = normalizeColor('#FF0000');
         expect(result).toBe('#FF0000');
     });
 
-    test('normalizes 6-digit hex with 0x prefix', () => {
+    test('[test_normalizes_6_digit_hex_with_0x_prefix] normalizes 6-digit hex with 0x prefix', () => {
         const result = normalizeColor('0xFF0000');
         expect(result).toBe('#FF0000');
     });
 
-    test('expands 3-digit hex to 6-digit (#abc → #aabbcc)', () => {
+    test('[test_expands_3_digit_hex_to_6_digit_abc_aabbcc] expands 3-digit hex to 6-digit (#abc → #aabbcc)', () => {
         expect(normalizeColor('F00')).toBe('#FF0000');
     });
 
-    test('expands 3-digit hex with # prefix (#ABC → #AABBCC)', () => {
+    test('[test_expands_3_digit_hex_with_prefix_abc_aabbcc] expands 3-digit hex with # prefix (#ABC → #AABBCC)', () => {
         expect(normalizeColor('#ABC')).toBe('#AABBCC');
     });
 
-    test('normalizes lowercase hex without forcing uppercase', () => {
+    test('[test_normalizes_lowercase_hex_without_forcing_uppercase] normalizes lowercase hex without forcing uppercase', () => {
         const result = normalizeColor('ff00ff');
         expect(result).toBe('#ff00ff');
     });
 
-    test('normalizes named color (red)', () => {
+    test('[test_normalizes_named_color_red] normalizes named color (red)', () => {
         const result = normalizeColor('red');
         expect(result).toMatch(/^#[0-9A-F]{6}$/);
     });
 
-    test('normalizes named color (blue)', () => {
+    test('[test_normalizes_named_color_blue] normalizes named color (blue)', () => {
         const result = normalizeColor('blue');
         expect(result).toMatch(/^#[0-9A-F]{6}$/);
     });
 
-    test('normalizes named color (green)', () => {
+    test('[test_normalizes_named_color_green] normalizes named color (green)', () => {
         const result = normalizeColor('green');
         expect(result).toMatch(/^#[0-9A-F]{6}$/);
     });
 
-    test('throws TJBotError for invalid color name', () => {
+    test('[test_throws_tjboterror_for_invalid_color_name] throws TJBotError for invalid color name', () => {
         expect(() => normalizeColor('notarealcolor123')).toThrow(TJBotError);
         expect(() => normalizeColor('notarealcolor123')).toThrow('TJBot did not understand the specified color');
     });
 
-    test('throws TJBotError for invalid hex format', () => {
+    test('[test_throws_tjboterror_for_invalid_hex_format] throws TJBotError for invalid hex format', () => {
         expect(() => normalizeColor('GGGGGG')).toThrow(TJBotError);
     });
 
-    test('throws TJBotError for 2-digit hex', () => {
+    test('[test_throws_tjboterror_for_2_digit_hex] throws TJBotError for 2-digit hex', () => {
         expect(() => normalizeColor('FF')).toThrow(TJBotError);
     });
 
-    test('throws TJBotError for 5-digit hex', () => {
+    test('[test_throws_tjboterror_for_5_digit_hex] throws TJBotError for 5-digit hex', () => {
         expect(() => normalizeColor('FF00F')).toThrow(TJBotError);
     });
 
-    test('handles mixed case named colors', () => {
+    test('[test_handles_mixed_case_named_colors] handles mixed case named colors', () => {
         const result = normalizeColor('Red');
         expect(result).toMatch(/^#[0-9A-F]{6}$/);
     });
 
-    test('normalizes color with leading/trailing case variations', () => {
+    test('[test_normalizes_color_with_leading_trailing_case_variations] normalizes color with leading/trailing case variations', () => {
         const red = normalizeColor('red');
         const blue = normalizeColor('blue');
 
@@ -117,28 +117,28 @@ describe('Utils - normalizeColor', () => {
 });
 
 describe('Utils - convertHexToRgbColor', () => {
-    test('converts hex with # prefix correctly', () => {
+    test('[test_converts_hex_with_prefix_correctly] converts hex with # prefix correctly', () => {
         const result = convertHexToRgbColor('#FF0000');
         expect(result).toEqual([255, 0, 0]);
     });
 
-    test('converts other colors with # prefix', () => {
+    test('[test_converts_other_colors_with_prefix] converts other colors with # prefix', () => {
         const result = convertHexToRgbColor('#00FF00');
         expect(result).toEqual([0, 255, 0]);
     });
 
-    test('returns array with three elements', () => {
+    test('[test_returns_array_with_three_elements] returns array with three elements', () => {
         const result = convertHexToRgbColor('#123ABC');
         expect(Array.isArray(result)).toBe(true);
         expect(result.length).toBe(3);
     });
 
-    test('handles 3-digit hex by expanding it', () => {
+    test('[test_handles_3_digit_hex_by_expanding_it] handles 3-digit hex by expanding it', () => {
         const result = convertHexToRgbColor('F00');
         expect(result).toEqual([255, 0, 0]);
     });
 
-    test('returns array with three elements for invalid hex (values may be NaN)', () => {
+    test('[test_returns_array_with_three_elements_for_invalid_hex_values_may_be_nan] returns array with three elements for invalid hex (values may be NaN)', () => {
         const result = convertHexToRgbColor('GGGGGG');
         // Function returns array with NaN values for invalid input
         expect(Array.isArray(result)).toBe(true);
@@ -147,37 +147,37 @@ describe('Utils - convertHexToRgbColor', () => {
 });
 
 describe('Utils - isCommandAvailable', () => {
-    test('returns true for available command (ls)', () => {
+    test('[test_returns_true_for_available_command_ls] returns true for available command (ls)', () => {
         const result = isCommandAvailable('ls');
         expect(result).toBe(true);
     });
 
-    test('returns true for available command (cat)', () => {
+    test('[test_returns_true_for_available_command_cat] returns true for available command (cat)', () => {
         const result = isCommandAvailable('cat');
         expect(result).toBe(true);
     });
 
-    test('returns true for available command (echo)', () => {
+    test('[test_returns_true_for_available_command_echo] returns true for available command (echo)', () => {
         const result = isCommandAvailable('echo');
         expect(result).toBe(true);
     });
 
-    test('returns false for unavailable command', () => {
+    test('[test_returns_false_for_unavailable_command] returns false for unavailable command', () => {
         const result = isCommandAvailable('notarealcommand12345xyz');
         expect(result).toBe(false);
     });
 
-    test('returns true for node', () => {
+    test('[test_returns_true_for_node] returns true for node', () => {
         const result = isCommandAvailable('node');
         expect(result).toBe(true);
     });
 
-    test('returns true for npm', () => {
+    test('[test_returns_true_for_npm] returns true for npm', () => {
         const result = isCommandAvailable('npm');
         expect(result).toBe(true);
     });
 
-    test('handles commands with special characters safely', () => {
+    test('[test_handles_commands_with_special_characters_safely] handles commands with special characters safely', () => {
         // These should return false safely without throwing
         const result1 = isCommandAvailable('command-does-not-exist');
         const result2 = isCommandAvailable('another_fake_cmd');
@@ -188,53 +188,53 @@ describe('Utils - isCommandAvailable', () => {
 });
 
 describe('Utils - sleep', () => {
-    test('sleep', () => {
+    test('[test_sleep] sleep', () => {
         expect(() => sleep(0.001)).not.toThrow();
     });
 
-    test('sleep completes without error', () => {
+    test('[test_sleep_completes_without_error] sleep completes without error', () => {
         expect(() => sleep(0.001)).not.toThrow();
     });
 
-    test('sleep with 0 seconds completes', () => {
+    test('[test_sleep_with_0_seconds_completes] sleep with 0 seconds completes', () => {
         expect(() => sleep(0)).not.toThrow();
     });
 
-    test('sleep is a function', () => {
+    test('[test_sleep_is_a_function] sleep is a function', () => {
         expect(typeof sleep).toBe('function');
     });
 
-    test('sleep accepts numeric argument', () => {
+    test('[test_sleep_accepts_numeric_argument] sleep accepts numeric argument', () => {
         expect(() => sleep(0.001)).not.toThrow();
     });
 });
 
 describe('Utils - getShineColors (curated LED colors)', () => {
-    test('returns an array of color names', () => {
+    test('[test_returns_an_array_of_color_names] returns an array of color names', () => {
         const colors = getShineColors();
         expect(Array.isArray(colors)).toBe(true);
         expect(colors.length).toBeGreaterThan(0);
     });
 
-    test('returns curated colors list', () => {
+    test('[test_returns_curated_colors_list] returns curated colors list', () => {
         const colors = getShineColors();
         expect(colors.length).toBeGreaterThan(0);
     });
 
-    test('includes basic colors (red, green, blue)', () => {
+    test('[test_includes_basic_colors_red_green_blue] includes basic colors (red, green, blue)', () => {
         const colors = getShineColors();
         expect(colors).toContain('red');
         expect(colors).toContain('green');
         expect(colors).toContain('blue');
     });
 
-    test('includes special colors (on, off)', () => {
+    test('[test_includes_special_colors_on_off] includes special colors (on, off)', () => {
         const colors = getShineColors();
         expect(colors).toContain('on');
         expect(colors).toContain('off');
     });
 
-    test('includes multi-word colors (lightpink, darkblue, etc)', () => {
+    test('[test_includes_multi_word_colors_lightpink_darkblue_etc] includes multi-word colors (lightpink, darkblue, etc)', () => {
         const colors = getShineColors();
         expect(colors).toContain('lightpink');
         expect(colors).toContain('darkblue');
@@ -242,63 +242,63 @@ describe('Utils - getShineColors (curated LED colors)', () => {
     });
 });
 
-describe('Utils - Python parity names', () => {
-    test('convert_hex_to_rgb', () => {
+describe('Utility aliases for Python parity naming', () => {
+    test('[test_convert_hex_to_rgb] convert hex to rgb', () => {
         expect(convertHexToRgbColor('#ffffff')).toEqual([255, 255, 255]);
     });
 
-    test('normalize_color', () => {
+    test('[test_normalize_color] normalize color', () => {
         expect(normalizeColor('red')).toBe('#FF0000');
     });
 
-    test('is_command_available', () => {
+    test('[test_is_command_available] is command available', () => {
         expect(isCommandAvailable('ls')).toBe(true);
         expect(isCommandAvailable('nonexistentcommand12345')).toBe(false);
     });
 });
 
 describe('Utils - normalizeColor with curated colors', () => {
-    test('normalizes curated color: red', () => {
+    test('[test_normalizes_curated_color_red] normalizes curated color: red', () => {
         const result = normalizeColor('red');
         expect(result).toBe('#FF0000');
     });
 
-    test('normalizes curated color: blue', () => {
+    test('[test_normalizes_curated_color_blue] normalizes curated color: blue', () => {
         const result = normalizeColor('blue');
         expect(result).toBe('#0000FF');
     });
 
-    test('normalizes curated color: green', () => {
+    test('[test_normalizes_curated_color_green] normalizes curated color: green', () => {
         const result = normalizeColor('green');
         expect(result).toBe('#008000');
     });
 
-    test('normalizes curated color: purple', () => {
+    test('[test_normalizes_curated_color_purple] normalizes curated color: purple', () => {
         const result = normalizeColor('purple');
         expect(result).toBe('#800080');
     });
 
-    test('normalizes multi-word color without spaces: lightpink', () => {
+    test('[test_normalizes_multi_word_color_without_spaces_lightpink] normalizes multi-word color without spaces: lightpink', () => {
         const result = normalizeColor('lightpink');
         expect(result).toBe('#FFB6C1');
     });
 
-    test('normalizes multi-word color WITH spaces: light pink', () => {
+    test('[test_normalizes_multi_word_color_with_spaces_light_pink] normalizes multi-word color WITH spaces: light pink', () => {
         const result = normalizeColor('light pink');
         expect(result).toBe('#FFB6C1');
     });
 
-    test('normalizes multi-word color with mixed case: Light Pink', () => {
+    test('[test_normalizes_multi_word_color_with_mixed_case_light_pink] normalizes multi-word color with mixed case: Light Pink', () => {
         const result = normalizeColor('Light Pink');
         expect(result).toBe('#FFB6C1');
     });
 
-    test('normalizes multi-word color all caps with spaces: LIGHT PINK', () => {
+    test('[test_normalizes_multi_word_color_all_caps_with_spaces_light_pink] normalizes multi-word color all caps with spaces: LIGHT PINK', () => {
         const result = normalizeColor('LIGHT PINK');
         expect(result).toBe('#FFB6C1');
     });
 
-    test('normalizes multi-word color: darkblue vs dark blue', () => {
+    test('[test_normalizes_multi_word_color_darkblue_vs_dark_blue] normalizes multi-word color: darkblue vs dark blue', () => {
         const result1 = normalizeColor('darkblue');
         const result2 = normalizeColor('dark blue');
         expect(result1).toBe('#00008B');
@@ -306,7 +306,7 @@ describe('Utils - normalizeColor with curated colors', () => {
         expect(result1).toBe(result2);
     });
 
-    test('normalizes multi-word color: skyblue vs sky blue', () => {
+    test('[test_normalizes_multi_word_color_skyblue_vs_sky_blue] normalizes multi-word color: skyblue vs sky blue', () => {
         const result1 = normalizeColor('skyblue');
         const result2 = normalizeColor('sky blue');
         expect(result1).toBe('#87CEEB');
@@ -314,7 +314,7 @@ describe('Utils - normalizeColor with curated colors', () => {
         expect(result1).toBe(result2);
     });
 
-    test('normalizes multi-word color: hotpink vs hot pink', () => {
+    test('[test_normalizes_multi_word_color_hotpink_vs_hot_pink] normalizes multi-word color: hotpink vs hot pink', () => {
         const result1 = normalizeColor('hotpink');
         const result2 = normalizeColor('hot pink');
         expect(result1).toBe('#FF69B4');
@@ -322,7 +322,7 @@ describe('Utils - normalizeColor with curated colors', () => {
         expect(result1).toBe(result2);
     });
 
-    test('throws error for color not in curated list', () => {
+    test('[test_throws_error_for_color_not_in_curated_list] throws error for color not in curated list', () => {
         expect(() => normalizeColor('chartreuse')).toThrow(TJBotError);
         expect(() => normalizeColor('lavender')).toThrow(TJBotError);
     });

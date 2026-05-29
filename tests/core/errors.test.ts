@@ -19,30 +19,30 @@ import { describe, test, expect } from 'vitest';
 import { TJBotError } from '../../src/utils/index.js';
 
 describe('TJBotError', () => {
-    test('tjbot_error_basic', () => {
+    test('[test_tjbot_error_basic] tjbot error basic', () => {
         const err = new TJBotError('Something went wrong');
         expect(err.message).toBe('Something went wrong');
         expect(err.code).toBeUndefined();
     });
 
-    test('tjbot_error_with_code', () => {
+    test('[test_tjbot_error_with_code] tjbot error with code', () => {
         const err = new TJBotError('Missing hardware', { code: 'HARDWARE_NOT_FOUND' });
         expect(err.code).toBe('HARDWARE_NOT_FOUND');
     });
 
-    test('tjbot_error_with_context', () => {
+    test('[test_tjbot_error_with_context] tjbot error with context', () => {
         const context = { hw: 'led', pin: 12 };
         const err = new TJBotError('GPIO error', { context });
         expect(err.context).toEqual(context);
     });
 
-    test('tjbot_error_with_cause', () => {
+    test('[test_tjbot_error_with_cause] tjbot error with cause', () => {
         const original = new Error('Bad value');
         const err = new TJBotError('Wrapper error', { cause: original });
         expect(err.cause).toBe(original);
     });
 
-    test('creates error with message only', () => {
+    test('[test_creates_error_with_message_only] creates error with message only', () => {
         const message = 'Test error message';
         const error = new TJBotError(message);
 
@@ -52,7 +52,7 @@ describe('TJBotError', () => {
         expect(error.name).toBe('TJBotError');
     });
 
-    test('creates error with code option', () => {
+    test('[test_creates_error_with_code_option] creates error with code option', () => {
         const message = 'Test error';
         const code = 'INVALID_CONFIG';
         const error = new TJBotError(message, { code });
@@ -61,7 +61,7 @@ describe('TJBotError', () => {
         expect(error.message).toBe(message);
     });
 
-    test('creates error with context option', () => {
+    test('[test_creates_error_with_context_option] creates error with context option', () => {
         const message = 'Test error';
         const context = { userId: 123, action: 'initialize' };
         const error = new TJBotError(message, { context });
@@ -70,7 +70,7 @@ describe('TJBotError', () => {
         expect(error.message).toBe(message);
     });
 
-    test('creates error with cause option', () => {
+    test('[test_creates_error_with_cause_option] creates error with cause option', () => {
         const originalError = new Error('Original error');
         const message = 'Wrapped error';
         const error = new TJBotError(message, { cause: originalError });
@@ -79,7 +79,7 @@ describe('TJBotError', () => {
         expect(error.message).toBe(message);
     });
 
-    test('creates error with all options', () => {
+    test('[test_creates_error_with_all_options] creates error with all options', () => {
         const originalError = new Error('Original');
         const message = 'Full error';
         const code = 'FULL_ERROR';
@@ -98,7 +98,7 @@ describe('TJBotError', () => {
         expect(error.name).toBe('TJBotError');
     });
 
-    test('has stack trace', () => {
+    test('[test_has_stack_trace] has stack trace', () => {
         const error = new TJBotError('Error with stack');
 
         expect(error.stack).toBeDefined();
@@ -106,7 +106,7 @@ describe('TJBotError', () => {
         expect(error.stack).toContain('Error with stack');
     });
 
-    test('maintains stack trace through chaining', () => {
+    test('[test_maintains_stack_trace_through_chaining] maintains stack trace through chaining', () => {
         const cause = new Error('Root cause');
         const error = new TJBotError('Chained error', { cause });
 
@@ -115,7 +115,7 @@ describe('TJBotError', () => {
         expect(error.cause?.stack).toBeDefined();
     });
 
-    test('undefined options create error without extra properties', () => {
+    test('[test_undefined_options_create_error_without_extra_properties] undefined options create error without extra properties', () => {
         const error = new TJBotError('Simple error', undefined);
 
         expect(error.code).toBeUndefined();
@@ -124,7 +124,7 @@ describe('TJBotError', () => {
         expect(error.message).toBe('Simple error');
     });
 
-    test('error can be thrown and caught', () => {
+    test('[test_error_can_be_thrown_and_caught] error can be thrown and caught', () => {
         const errorMessage = 'Throwable error';
 
         expect(() => {
@@ -136,7 +136,7 @@ describe('TJBotError', () => {
         }).toThrow(errorMessage);
     });
 
-    test('error is an instance of Error', () => {
+    test('[test_error_is_an_instance_of_error] error is an instance of Error', () => {
         const error = new TJBotError('Test');
 
         expect(error instanceof Error).toBe(true);

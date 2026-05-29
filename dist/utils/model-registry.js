@@ -143,10 +143,10 @@ export class ModelRegistry {
     lookupModels(modelType, installedOnly = false) {
         let models;
         if (installedOnly) {
-            models = Array.from(this.registeredModels.values()).filter((m) => m.type === modelType && this.isModelDownloaded(m.key));
+            models = Array.from(this.registeredModels.values()).filter((m) => (modelType === undefined || m.type === modelType) && this.isModelDownloaded(m.key));
         }
         else {
-            models = Array.from(this.registeredModels.values()).filter((m) => m.type === modelType);
+            models = Array.from(this.registeredModels.values()).filter((m) => modelType === undefined || m.type === modelType);
         }
         return models;
     }

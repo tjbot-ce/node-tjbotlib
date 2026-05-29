@@ -164,7 +164,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
         const vadConfig = config.vad as VADConfig;
         const vadEnabled = vadConfig.enabled ?? true;
         const isOffline = this.modelInfo.kind.startsWith('offline');
-        return isOffline && vadEnabled;
+        return isOffline && vadEnabled && Boolean(this.vadPath);
     }
 
     /**

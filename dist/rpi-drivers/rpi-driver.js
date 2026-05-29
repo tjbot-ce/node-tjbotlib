@@ -47,7 +47,7 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         this.initializedHardware = new Set();
     }
     getHardware() {
-        return this.initializedHardware;
+        return new Set(this.initializedHardware);
     }
     hasHardware(hardware) {
         return this.initializedHardware.has(hardware);

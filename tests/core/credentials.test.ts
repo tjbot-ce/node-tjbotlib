@@ -79,7 +79,7 @@ afterEach(() => {
 });
 
 describe('Credentials Loading', () => {
-    test('resolve_credentials_path_prefers_provided_path', () => {
+    test('[test_resolve_credentials_path_prefers_provided_path] resolve credentials path prefers provided path', () => {
         const filePath = createTempFile('azure-credentials.env', 'AZURE_VISION_KEY=test_key\n');
         try {
             const credentials = loadAzureCredentials(filePath);
@@ -89,11 +89,11 @@ describe('Credentials Loading', () => {
         }
     });
 
-    test('resolve_credentials_path_not_found_raises', () => {
+    test('[test_resolve_credentials_path_not_found_raises] resolve credentials path not found raises', () => {
         expect(() => loadAzureCredentials('/tmp/does-not-exist-credentials.env')).toThrow();
     });
 
-    test('load_google_cloud_credentials_sets_env', () => {
+    test('[test_load_google_cloud_credentials_sets_env] load google cloud credentials sets env', () => {
         const envSnapshot = captureEnvSnapshot();
         const filePath = createTempFile('google-credentials.json', '{"type":"service_account"}');
         try {
@@ -106,7 +106,7 @@ describe('Credentials Loading', () => {
         }
     });
 
-    test('load_azure_credentials_parses_env', () => {
+    test('[test_load_azure_credentials_parses_env] load azure credentials parses env', () => {
         const envSnapshot = captureEnvSnapshot();
         const filePath = createTempFile(
             'azure-credentials.env',
@@ -122,7 +122,7 @@ describe('Credentials Loading', () => {
         }
     });
 
-    test('loads Azure credentials from /tmp and exports vars to environment', () => {
+    test('[test_loads_azure_credentials_from_tmp_and_exports_vars_to_environment] loads Azure credentials from /tmp and exports vars to environment', () => {
         const envSnapshot = captureEnvSnapshot();
         const filePath = createTempFile(
             'azure-credentials.env',
@@ -152,7 +152,7 @@ describe('Credentials Loading', () => {
         }
     });
 
-    test('loads Google Cloud credentials path from /tmp and sets GOOGLE_APPLICATION_CREDENTIALS', () => {
+    test('[test_loads_google_cloud_credentials_path_from_tmp_and_sets_google_application_credentials] loads Google Cloud credentials path from /tmp and sets GOOGLE_APPLICATION_CREDENTIALS', () => {
         const envSnapshot = captureEnvSnapshot();
         const filePath = createTempFile(
             'google-credentials.json',
@@ -173,7 +173,7 @@ describe('Credentials Loading', () => {
         }
     });
 
-    test('loads IBM Watson credentials from /tmp and exports vars to environment', () => {
+    test('[test_loads_ibm_watson_credentials_from_tmp_and_exports_vars_to_environment] loads IBM Watson credentials from /tmp and exports vars to environment', () => {
         const envSnapshot = captureEnvSnapshot();
         const filePath = createTempFile(
             'ibm-credentials.env',

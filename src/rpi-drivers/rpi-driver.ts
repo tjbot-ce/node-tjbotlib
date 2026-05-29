@@ -117,7 +117,7 @@ export abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     }
 
     getHardware(): Set<Hardware> {
-        return this.initializedHardware;
+        return new Set(this.initializedHardware);
     }
 
     hasHardware(hardware: Hardware): boolean {
