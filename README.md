@@ -66,6 +66,12 @@ import TJBot from 'tjbot';
 const tj = TJBot.getInstance().initialize({
    hardware: {
       led: true
+   },
+   shine: {
+      hasNeopixelLED: true,
+      neopixel: {
+         gpioPin: 18  // or your LED's GPIO pin
+      }
    }
 });
 
@@ -89,7 +95,7 @@ This example demonstrates how to make TJBot speak!
 ```ts
 import TJBot from 'tjbot';
 
-const tj = TJBot.getInstance.initialize({
+const tj = TJBot.getInstance().initialize({
    hardware: {
       speaker: true
    }
@@ -139,7 +145,7 @@ import TJBot from 'tjbot';
 // read recipe-specific config
 const config = TJBot.getRecipeConfig();
 
-const tj = TJBot.getInstance.initialize({
+const tj = TJBot.getInstance().initialize({
    hardware: {
       led: true
    }
