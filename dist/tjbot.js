@@ -22,7 +22,7 @@ import { Capability, getShineColors, Hardware, initWinston, ModelRegistry, norma
 import { LogEmoji } from './utils/logging.js';
 // node modules
 import cm from 'color-model';
-import { readFileSync } from 'fs';
+import { promises as fsPromises, readFileSync } from 'fs';
 import { easeInOutQuad } from 'js-easing-functions';
 import { dirname, join } from 'path';
 import temp from 'temp';
@@ -467,8 +467,20 @@ class TJBot {
      */
     async see() {
         this.assertCapability(Capability.SEE);
-        const buffer = await this.rpiDriver.capturePhotoBuffer();
-        return buffer;
+        try {
+            const buffer = await this.rpiDriver.capturePhotoBuffer();
+            return buffer;
+        }
+        catch {
+            const photoPath = await this.rpiDriver.capturePhoto();
+            try {
+                return await fsPromises.readFile(photoPath);
+            }
+            finally {
+                // Best-effort cleanup for temporary capture paths.
+                await fsPromises.unlink(photoPath).catch(() => { });
+            }
+        }
     }
     /**
      * Capture an image and save it in the given path.
@@ -489,6 +501,7 @@ class TJBot {
      * @returns {Promise<ObjectDetectionResult[]>}
      */
     async detectObjects(image) {
+        this.assertCapability(Capability.SEE);
         return this.rpiDriver.detectObjects(image);
     }
     /**
@@ -497,6 +510,7 @@ class TJBot {
      * @returns {Promise<ImageClassificationResult[]>}
      */
     async classifyImage(image) {
+        this.assertCapability(Capability.SEE);
         return this.rpiDriver.classifyImage(image);
     }
     /**
@@ -505,6 +519,7 @@ class TJBot {
      * @returns {Promise<{isFaceDetected: boolean, metadata: FaceDetectionMetadata[]}>}
      */
     async detectFaces(image) {
+        this.assertCapability(Capability.SEE);
         return this.rpiDriver.detectFaces(image);
     }
     /**
@@ -513,6 +528,7 @@ class TJBot {
      * @returns {Promise<ImageDescriptionResult>}
      */
     async describeImage(image) {
+        this.assertCapability(Capability.SEE);
         return this.rpiDriver.describeImage(image);
     }
     /** ------------------------------------------------------------------------ */

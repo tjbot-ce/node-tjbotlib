@@ -16,6 +16,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { promises as fsPromises } from 'fs';
 import TJBot from '../../src/tjbot.js';
 import { Capability, Hardware, TJBotError } from '../../src/utils/index.js';
 import { RPi3Driver, RPi5Driver, RPiDetect } from '../../src/rpi-drivers/index.js';
@@ -1017,7 +1018,96 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
     test('[test_see_falls_back_to_temp_file_when_buffer_capture_missing] see falls back to temp file when buffer capture missing', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         vi.spyOn(tj.rpiDriver, 'capturePhotoBuffer').mockRejectedValue(new TJBotError('buffer unavailable'));
-        await expect(tj.see()).rejects.toThrow('buffer unavailable');
+        vi.spyOn(tj.rpiDriver, 'capturePhoto').mockResolvedValue('/tmp/fallback.jpg');
+        vi.spyOn(fsPromises, 'readFile').mockResolvedValue(Buffer.from('fallback-image'));
+        vi.spyOn(fsPromises, 'unlink').mockResolvedValue(undefined);
+
+        await expect(tj.see()).resolves.toEqual(Buffer.from('fallback-image'));
+    });
+
+    test('[test_tjbot_led_neopixel_from_real_config] tjbot neopixel config parses from real override', async () => {
+        const bot = TJBot.getInstance();
+        await bot.initialize({
+            hardware: { led: true },
+            shine: { hasNeopixelLED: true, neopixel: { gpioPin: 18 } },
+        });
+
+        expect(bot.config.hardware.led).toBe(true);
+        expect(bot.config.shine).toBeDefined();
+        expect(bot.config.shine?.hasNeopixelLED).toBe(true);
+        expect(bot.config.shine?.neopixel).toBeDefined();
+        expect(bot.config.shine?.neopixel?.gpioPin).toBe(18);
+    });
+
+    test('[test_tjbot_led_common_anode_from_real_config] tjbot common anode config parses from real override', async () => {
+        const bot = TJBot.getInstance();
+        await bot.initialize({
+            hardware: { led: true },
+            shine: {
+                hasCommonAnodeLED: true,
+                commonanode: { redPin: 21, greenPin: 20, bluePin: 26 },
+            },
+        });
+
+        expect(bot.config.hardware.led).toBe(true);
+        expect(bot.config.shine).toBeDefined();
+        expect(bot.config.shine?.hasCommonAnodeLED).toBe(true);
+        expect(bot.config.shine?.commonanode).toBeDefined();
+        expect(bot.config.shine?.commonanode?.redPin).toBe(21);
+        expect(bot.config.shine?.commonanode?.greenPin).toBe(20);
+        expect(bot.config.shine?.commonanode?.bluePin).toBe(26);
+    });
+
+    test('[test_tjbot_lazy_initialization] tjbot getInstance defers state until initialize', async () => {
+        (TJBot as unknown as { instance?: TJBot }).instance = undefined;
+        const bot = TJBot.getInstance();
+
+        expect((bot as unknown as { config?: unknown }).config).toBeUndefined();
+        expect((bot as unknown as { rpiDriver?: unknown }).rpiDriver).toBeUndefined();
+
+        await bot.initialize({
+            hardware: { led: true },
+            shine: { hasNeopixelLED: true, neopixel: { gpioPin: 18 } },
+        });
+
+        expect(bot.config).toBeDefined();
+        expect(bot.rpiDriver).toBeDefined();
+    });
+
+    test('[test_vision_see_and_detect_objects_integration] vision pipeline see and detectObjects works in sequence', async () => {
+        vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
+        const imageBuffer = Buffer.from('fake-image-data');
+        vi.spyOn(tj.rpiDriver, 'capturePhotoBuffer').mockResolvedValue(imageBuffer);
+        const detectSpy = vi
+            .spyOn(tj.rpiDriver, 'detectObjects')
+            .mockResolvedValue([{ label: 'person', confidence: 0.9, bbox: [0, 0, 100, 100] }]);
+
+        const captured = await tj.see();
+        const detections = await tj.detectObjects(captured);
+
+        expect(captured).toEqual(imageBuffer);
+        expect(detectSpy).toHaveBeenCalledWith(imageBuffer);
+        expect(detections).toHaveLength(1);
+    });
+
+    test('[test_detect_objects_throws_when_vision_not_initialized] detectObjects throws when called before initialize', async () => {
+        (TJBot as unknown as { instance?: TJBot }).instance = undefined;
+        const bot = TJBot.getInstance();
+        await expect(bot.detectObjects(Buffer.from('img'))).rejects.toBeInstanceOf(TJBotError);
+    });
+
+    test('[test_see_fallback_when_buffer_capture_fails_with_exception] see falls back to file capture when buffer capture fails', async () => {
+        vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
+        vi.spyOn(tj.rpiDriver, 'capturePhotoBuffer').mockRejectedValue(new Error('Buffer capture failed'));
+        vi.spyOn(tj.rpiDriver, 'capturePhoto').mockResolvedValue('/tmp/photo.jpg');
+        const readSpy = vi.spyOn(fsPromises, 'readFile').mockResolvedValue(Buffer.from('fallback-image-from-file'));
+        const unlinkSpy = vi.spyOn(fsPromises, 'unlink').mockResolvedValue(undefined);
+
+        const result = await tj.see();
+
+        expect(result).toEqual(Buffer.from('fallback-image-from-file'));
+        expect(readSpy).toHaveBeenCalledWith('/tmp/photo.jpg');
+        expect(unlinkSpy).toHaveBeenCalledWith('/tmp/photo.jpg');
     });
 
     test('[test_tjbot_initialize_twice_does_not_reregister_hooks] tjbot async then sync initialize does not reregister hooks', async () => {
