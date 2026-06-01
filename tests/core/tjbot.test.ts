@@ -557,30 +557,23 @@ describe('TJBot - Wave Method', () => {
     });
 
     test('[test_wave_executes_without_error] wave executes without error', async () => {
-        tj.wave();
-        expect(true).toBe(true);
+        await expect(tj.wave()).resolves.toBeUndefined();
     });
 
     test('[test_wave_calls_renderservoposition_multiple_times] wave calls renderServoPosition multiple times', async () => {
         const renderServoPosition = vi.spyOn(tj.rpiDriver, 'renderServoPosition');
-        tj.wave();
+        await tj.wave();
         expect(renderServoPosition.mock.calls.length).toBeGreaterThanOrEqual(3);
     });
 
     test('[test_wave_throws_when_capability_not_available] wave throws when capability not available', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
-
-        try {
-            tj.wave();
-            expect.fail('Should have thrown');
-        } catch (error) {
-            expect(error).toBeInstanceOf(TJBotError);
-        }
+        await expect(tj.wave()).rejects.toBeInstanceOf(TJBotError);
     });
 
     test('[test_wave_unsupported_servo_driver_raises] wave unsupported servo driver raises', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
-        expect(() => tj.wave()).toThrow(TJBotError);
+        await expect(tj.wave()).rejects.toBeInstanceOf(TJBotError);
     });
 });
 

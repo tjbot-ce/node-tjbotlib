@@ -18,7 +18,7 @@ import { TJBotConfig } from './config/tjbot-config.js';
 import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
 import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
-import { Capability, getShineColors, Hardware, initWinston, ModelRegistry, normalizeColor, sleep, TJBotError, } from './utils/index.js';
+import { Capability, getShineColors, Hardware, initWinston, ModelRegistry, normalizeColor, sleep as asyncSleep, TJBotError, } from './utils/index.js';
 import { LogEmoji } from './utils/logging.js';
 // node modules
 import cm from 'color-model';
@@ -418,7 +418,7 @@ class TJBot {
      * @param sec Number of seconds to sleep
      */
     async sleep(sec) {
-        await sleep(sec);
+        await asyncSleep(sec);
     }
     /** ------------------------------------------------------------------------ */
     /** LOCAL AI/ML MODELS                                                       */
@@ -593,7 +593,7 @@ class TJBot {
             const c = i < colorRamp.length ? colorRamp[i] : colorRamp[colorRamp.length - 1 - (i - colorRamp.length) - 1];
             winston.silly(`${LogEmoji.LED} pulse step ${i}: setting color to ${c}`);
             await this.shine(c);
-            sleep(easeDelays[i]);
+            await asyncSleep(easeDelays[i]);
         }
     }
     /**
@@ -696,19 +696,16 @@ class TJBot {
      * @returns {Promise<void>} Resolves when the wave is complete.
      * @public
      */
-    wave() {
+    async wave() {
         this.assertCapability(Capability.WAVE);
         winston.verbose(`${LogEmoji.SERVO} Waving TJBot's arm`);
         const delay = 0.2;
-        return new Promise((resolve) => {
-            this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
-            sleep(delay);
-            this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
-            sleep(delay);
-            this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
-            sleep(delay);
-            resolve();
-        });
+        this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+        await asyncSleep(delay);
+        this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
+        await asyncSleep(delay);
+        this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+        await asyncSleep(delay);
     }
 }
 /** ------------------------------------------------------------------------ */

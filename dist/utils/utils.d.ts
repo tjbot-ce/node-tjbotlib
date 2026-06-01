@@ -18,7 +18,12 @@
  * Put TJBot to sleep.
  * @param {number} sec Number of seconds to sleep for.
  */
-export declare function sleep(sec: number): void;
+export declare function sleepSync(sec: number): void;
+/**
+ * Put TJBot to sleep asynchronously.
+ * @param {number} sec Number of seconds to sleep for.
+ */
+export declare function sleep(sec: number): Promise<void>;
 /**
  * Check if a command-line tool is available in PATH
  * @param {string} command - The command to check for

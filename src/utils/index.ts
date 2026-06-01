@@ -29,4 +29,4 @@ export type {
     VADModelMetadata,
     VisionModelMetadata,
 } from './model-registry.js';
-export { isCommandAvailable, sleep } from './utils.js';
+export { isCommandAvailable, sleep, sleepSync } from './utils.js';

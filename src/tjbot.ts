@@ -28,7 +28,7 @@ import {
     initWinston,
     ModelRegistry,
     normalizeColor,
-    sleep,
+    sleep as asyncSleep,
     TJBotError,
 } from './utils/index.js';
 import { LogEmoji } from './utils/logging.js';
@@ -522,7 +522,7 @@ class TJBot {
      * @param sec Number of seconds to sleep
      */
     async sleep(sec: number) {
-        await sleep(sec);
+        await asyncSleep(sec);
     }
 
     /** ------------------------------------------------------------------------ */
@@ -757,7 +757,7 @@ class TJBot {
                 i < colorRamp.length ? colorRamp[i] : colorRamp[colorRamp.length - 1 - (i - colorRamp.length) - 1];
             winston.silly(`${LogEmoji.LED} pulse step ${i}: setting color to ${c}`);
             await this.shine(c);
-            sleep(easeDelays[i]);
+            await asyncSleep(easeDelays[i]);
         }
     }
 
@@ -876,24 +876,20 @@ class TJBot {
      * @returns {Promise<void>} Resolves when the wave is complete.
      * @public
      */
-    wave(): Promise<void> {
+    async wave(): Promise<void> {
         this.assertCapability(Capability.WAVE);
         winston.verbose(`${LogEmoji.SERVO} Waving TJBot's arm`);
 
         const delay = 0.2;
 
-        return new Promise((resolve) => {
-            this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
-            sleep(delay);
+        this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+        await asyncSleep(delay);
 
-            this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
-            sleep(delay);
+        this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
+        await asyncSleep(delay);
 
-            this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
-            sleep(delay);
-
-            resolve();
-        });
+        this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+        await asyncSleep(delay);
     }
 }
 

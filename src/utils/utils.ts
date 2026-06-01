@@ -21,9 +21,20 @@ import { execSync } from 'child_process';
  * Put TJBot to sleep.
  * @param {number} sec Number of seconds to sleep for.
  */
-export function sleep(sec: number) {
+export function sleepSync(sec: number): void {
     const msec = sec * 1000;
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, msec);
+}
+
+/**
+ * Put TJBot to sleep asynchronously.
+ * @param {number} sec Number of seconds to sleep for.
+ */
+export function sleep(sec: number): Promise<void> {
+    const msec = sec * 1000;
+    return new Promise((resolve) => {
+        setTimeout(resolve, msec);
+    });
 }
 
 /**

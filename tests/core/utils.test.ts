@@ -22,6 +22,7 @@ import {
     isCommandAvailable,
     normalizeColor,
     sleep,
+    sleepSync,
     TJBotError,
 } from '../../src/utils/index.js';
 
@@ -188,24 +189,34 @@ describe('Utils - isCommandAvailable', () => {
 });
 
 describe('Utils - sleep', () => {
-    test('[test_sleep] sleep', () => {
-        expect(() => sleep(0.001)).not.toThrow();
+    test('[test_sleep] sleep', async () => {
+        await expect(sleep(0.001)).resolves.toBeUndefined();
     });
 
-    test('[test_sleep_completes_without_error] sleep completes without error', () => {
-        expect(() => sleep(0.001)).not.toThrow();
+    test('[test_sleep_completes_without_error] sleep completes without error', async () => {
+        await expect(sleep(0.001)).resolves.toBeUndefined();
     });
 
-    test('[test_sleep_with_0_seconds_completes] sleep with 0 seconds completes', () => {
-        expect(() => sleep(0)).not.toThrow();
+    test('[test_sleep_with_0_seconds_completes] sleep with 0 seconds completes', async () => {
+        await expect(sleep(0)).resolves.toBeUndefined();
     });
 
     test('[test_sleep_is_a_function] sleep is a function', () => {
         expect(typeof sleep).toBe('function');
     });
 
-    test('[test_sleep_accepts_numeric_argument] sleep accepts numeric argument', () => {
-        expect(() => sleep(0.001)).not.toThrow();
+    test('[test_sleep_accepts_numeric_argument] sleep accepts numeric argument', async () => {
+        await expect(sleep(0.001)).resolves.toBeUndefined();
+    });
+});
+
+describe('Utils - sleepSync', () => {
+    test('[test_sleepsync] sleepSync', () => {
+        expect(() => sleepSync(0.001)).not.toThrow();
+    });
+
+    test('[test_sleepsync_with_0_seconds_completes] sleepSync with 0 seconds completes', () => {
+        expect(() => sleepSync(0)).not.toThrow();
     });
 });
 
