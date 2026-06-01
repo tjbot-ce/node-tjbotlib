@@ -522,12 +522,10 @@ describe('TJBot - Arm Movement Methods', () => {
         expect(renderServoPosition).toHaveBeenCalled();
     });
 
-    test('[test_raisearm_throws_when_capability_not_available] raiseArm throws when capability not available', () => {
+    test('[test_raisearm_throws_when_capability_not_available] raiseArm throws when capability not available', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
-        expect(() => {
-            tj.raiseArm();
-        }).toThrow(TJBotError);
+        await expect(tj.raiseArm()).rejects.toThrow(TJBotError);
     });
 
     test('[test_armback_throws_when_capability_not_available] armBack throws when capability not available', () => {
@@ -538,12 +536,10 @@ describe('TJBot - Arm Movement Methods', () => {
         }).toThrow(TJBotError);
     });
 
-    test('[test_lowerarm_throws_when_capability_not_available] lowerArm throws when capability not available', () => {
+    test('[test_lowerarm_throws_when_capability_not_available] lowerArm throws when capability not available', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(false);
 
-        expect(() => {
-            tj.lowerArm();
-        }).toThrow(TJBotError);
+        await expect(tj.lowerArm()).rejects.toThrow(TJBotError);
     });
 });
 

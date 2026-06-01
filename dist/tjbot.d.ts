@@ -301,6 +301,7 @@ declare class TJBot {
      * Waves TJBots's arm once.
      * @throws {TJBotError} if the servo hardware is not initialized
      * @returns {Promise<void>} Resolves when the wave is complete.
+     * @example tj.wave()
      * @public
      */
     wave(): Promise<void>;

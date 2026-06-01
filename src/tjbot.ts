@@ -857,7 +857,7 @@ class TJBot {
      * @example tj.raiseArm()
      * @public
      */
-    raiseArm(): Promise<void> {
+    async raiseArm(): Promise<void> {
         this.assertCapability(Capability.WAVE);
         winston.info(`${LogEmoji.SERVO} Raising TJBot's arm`);
 
@@ -874,7 +874,7 @@ class TJBot {
      * @example tj.lowerArm()
      * @public
      */
-    lowerArm(): Promise<void> {
+    async lowerArm(): Promise<void> {
         this.assertCapability(Capability.WAVE);
         winston.info(`${LogEmoji.SERVO} Lowering TJBot's arm`);
 
@@ -888,6 +888,7 @@ class TJBot {
      * Waves TJBots's arm once.
      * @throws {TJBotError} if the servo hardware is not initialized
      * @returns {Promise<void>} Resolves when the wave is complete.
+     * @example tj.wave()
      * @public
      */
     async wave(): Promise<void> {
