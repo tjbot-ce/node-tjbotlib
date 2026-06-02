@@ -7,10 +7,7 @@
 
 ## What is TJBot?
 
-[TJBot](https://tjbot-ce.github.io) is an open-source robot created by IBM for
-learning how to program artificial intelligence applications. This library
-provides a simple, high-level interface to control TJBot running on a
-Raspberry Pi.
+[TJBot](https://tjbot-ce.github.io) is an open-source robot created by IBM for learning how to program artificial intelligence applications. This library provides a simple, high-level interface to control TJBot running on a Raspberry Pi.
 
 ## What Can TJBot Do?
 
@@ -32,7 +29,7 @@ vision).
 Install additional system packages:
 
 ```bash
-sudo apt-get install libgpiod-dev liblgpiod-dev rpicam-apps-lite tidy
+sudo apt-get install libgpiod-dev liblgpiod-dev rpicam-apps-lite
 ```
 
 > [!TIP]
@@ -46,19 +43,31 @@ Install the library from npm:
 npm install --save tjbot
 ```
 
+> [!TIP]
+> The easiest way to create a new Node.js-based TJBot recipe is using the `tjbot` command: `tjbot create [recipe-name]`, which will automatically set up `node-tjbotlib` as a dependency.
+
 ## Quick Start
 
-### Importing TJBot
+### Importing & Instantiating TJBot
 
-TJBot uses ES6 module syntax:
+Use ES6 module syntax to import the TJBot class in your recipe. This example initializes TJBot's LED and servo motor.
 
 ```ts
 import TJBot from 'tjbot';
+
+tj = TJBot.getInstance().initialize({
+   hardware: {
+      led: true,
+      servo: true
+   }
+});
 ```
+
+> [!NOTE] TJBot uses a singleton pattern since there is only a single TJBot.
 
 ### Example 1: Control an LED
 
-This example initializes a NeoPixel LED and sets its color:
+This example initializes a NeoPixel LED on the GPIO 18 pin and sets it to various colors:
 
 ```ts
 import TJBot from 'tjbot';
@@ -70,7 +79,7 @@ const tj = TJBot.getInstance().initialize({
    shine: {
       hasNeopixelLED: true,
       neopixel: {
-         gpioPin: 18  // or your LED's GPIO pin
+         gpioPin: 18
       }
    }
 });
@@ -78,16 +87,16 @@ const tj = TJBot.getInstance().initialize({
 // Set LED to red
 await tj.shine('red');
 
-// Set LED to a custom hex color
+// Set LED to green (using hexadecimal)
 await tj.shine('#00FF00');
 
-// Pulse the LED
+// Pulse the LED blue
 await tj.pulse('blue');
 ```
 
 ### Example 2: Speak Text using Text-to-Speech (TTS)
 
-This example demonstrates how to make TJBot speak!
+This example demonstrates how to make TJBot speak using on-device Text-to-Speech.
 
 > [!NOTE]
 > The text-to-speech backend used by TJBot is set in TJBot's configuration file, located at `~/.tjbot/tjbot.toml`. By default, TJBot uses the `sherpa-onnx` text-to-speech backend.
@@ -98,16 +107,25 @@ import TJBot from 'tjbot';
 const tj = TJBot.getInstance().initialize({
    hardware: {
       speaker: true
+   },
+   speak: {
+      backend: {
+         type: "local"
+      }
    }
 });
 
-await tj.speak('Hello, I am TJBot!');
+await tj.speak('Hello, I am T J Bot!');
 ```
+
+> [!IMPORTANT]
+> Many Text-to-Speech models are not trained to pronounce "TJBot" the way it is written. Writing it out as "T J Bot" makes it easier for these models to pronounce it correctly.
+
 
 ### Example 3: Change TJBot's Configuration
 
 TJBot uses a cascading configuration system that loads settings from multiple
-sources in order of priority. First, default configuration settings are loaded from the `tjbot.default.toml` file that is bundled within `node-tjbotlib`. Next, user-specific configuration is loaded from the `~/.tjbot/tjbot.toml` file. Finally, recipe-specific configuration is loaded from the `recipe.toml` file in your current working directory (if present).
+sources in order of priority. First, default configuration settings are loaded from the `tjbot.default.toml` file that is bundled within `node-tjbotlib`. Next, user-specific configuration is loaded from your `~/.tjbot/tjbot.toml` configuration file. Finally, recipe-specific configuration is loaded from the `recipe.toml` file in your recipe's directory (if present).
 
 **User configuration (`~/.tjbot/tjbot.toml`):**
 
@@ -155,9 +173,37 @@ const favorite_color = config.favorite_color as string;
 tj.shine(favorite_color);
 ```
 
+### Using `override_config` for Runtime Configuration
+
+You can also pass specific configuration requirements directly to the `TJBot.initialize()` method using the `overrideConfig` parameter. This configuration **merges with** the cascaded defaults (not replaces them):
+
+```ts
+import TJBot from 'tjbot';
+
+const config = {
+    shine: {
+        hasNeopixelLED: true,
+        neopixel: {gpioPin: 18}
+    }
+};
+
+tj = TJBot.getInstance().initialize(config);
+
+// The final config is: defaults + ~/.tjbot/tjbot.toml + override_config
+```
+
+> [!TIP]
+> You can use `overrideConfig` to explicitly enable any specific hardware required for your recipe.
+
 ## Configuration Reference
 
-TJBot uses [TOML](https://toml.io/en/) for its configuration. The canonical default configuration lives in [vendor/tjbot-config/tjbot.default.toml](vendor/tjbot-config/tjbot.default.toml) and is synced into [src/config/tjbot.default.toml](src/config/tjbot.default.toml) during builds.
+TJBot uses [TOML](https://toml.io/en/) for its configuration. The canonical default configuration lives in [vendor/tjbot-config/tjbot.default.toml](vendor/tjbot-config/tjbot.default.toml) and follows the schema specified in [vendor/tjbot-config/tjbot-config.schema.yaml](vendor/tjbot-config/tjbot-config.schema.yaml).
+
+These files are synced into [src/config/](src/config/) during builds. They can be syncled manually by running this command:
+
+```bash
+npm run sync:config-schema
+```
 
 ### Custom Models & Model Registry
 
@@ -190,7 +236,7 @@ You can register custom speech models in the same way.
 ## API Documentation
 
 For detailed API documentation, method signatures, and advanced usage, visit
-the [TJBot API Reference](https://tjbot-ce.github.io/docs/node-tjbotlib/3.0.0/).
+the [TJBot Node.js SDK Reference](https://tjbot-ce.github.io/docs/node-tjbotlib/3.0.0/).
 
 ## Testing
 
