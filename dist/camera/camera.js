@@ -14,93 +14,142 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { RPICam } from 'rpi-cam-lib';
+import { execFile } from 'child_process';
 import temp from 'temp';
-import winston from 'winston';
 import { TJBotError } from '../utils/index.js';
+import { getLogger } from '../utils/logging.js';
+const logger = getLogger(import.meta.url);
 /**
  * Camera controller for TJBot
  * Handles camera initialization and photo capture using rpi-cam-lib
  */
 export class CameraController {
+    resolution;
+    verticalFlip;
+    horizontalFlip;
+    captureTimeout;
+    zeroShutterLag;
     constructor() {
         this.resolution = [1920, 1080];
         this.verticalFlip = false;
         this.horizontalFlip = false;
+        this.captureTimeout = 500;
+        this.zeroShutterLag = false;
     }
     /**
      * Initialize the camera with configuration
      * @param resolution Camera resolution as [width, height]
      * @param verticalFlip Whether to vertically flip the image
      * @param horizontalFlip Whether to horizontally flip the image
+     * @param captureTimeout Timeout in milliseconds before capturing (default: 500)
+     * @param zeroShutterLag Enable zero shutter lag mode (default: false)
      */
-    initialize(resolution, verticalFlip, horizontalFlip) {
+    initialize(resolution, verticalFlip, horizontalFlip, captureTimeout = 500, zeroShutterLag = false) {
         this.resolution = resolution;
         this.verticalFlip = verticalFlip;
         this.horizontalFlip = horizontalFlip;
-        // Instantiate the camera once during initialization
-        if (!this.camera) {
-            this.camera = new RPICam(0, { autoReserve: false });
-            winston.debug('📷 camera instance created');
-        }
+        this.captureTimeout = captureTimeout;
+        this.zeroShutterLag = zeroShutterLag;
+        logger.debug(`initialized camera with config:
+            resolution: ${resolution[0]}x${resolution[1]}
+            verticalFlip: ${verticalFlip}
+            horizontalFlip: ${horizontalFlip}
+            captureTimeout: ${captureTimeout}ms
+            zeroShutterLag: ${zeroShutterLag}`);
     }
     /**
-     * Capture a photo
+     * Build rpicam-still command arguments
+     * @param outputPath Output path or '-' for stdout
+     * @param encoding Optional encoding format (e.g., 'jpg')
+     * @returns Array of command-line arguments
+     */
+    buildCameraArgs(outputPath, encoding) {
+        const args = [
+            '--output',
+            outputPath,
+            '--width',
+            this.resolution[0].toString(),
+            '--height',
+            this.resolution[1].toString(),
+            '--nopreview',
+            '--camera',
+            '0',
+        ];
+        if (encoding) {
+            args.push('--encoding', encoding);
+        }
+        if (this.verticalFlip)
+            args.push('--vflip');
+        if (this.horizontalFlip)
+            args.push('--hflip');
+        // Add timeout argument
+        if (this.captureTimeout === 0) {
+            args.push('--immediate');
+        }
+        else {
+            args.push('--timeout', this.captureTimeout.toString());
+        }
+        // Add zero shutter lag if enabled
+        if (this.zeroShutterLag) {
+            args.push('--zsl');
+        }
+        logger.debug(`built camera args:
+            ${args.join(' ')}`);
+        return args;
+    }
+    /**
+     * Capture a photo by invoking rpicam-still via child_process
      * @param atPath Optional path to save the photo. If not provided, a temporary file will be used.
      * @returns Path to the saved photo
-     * @throws TJBotError if the camera is not initialized or if capture fails
+     * @throws TJBotError if the camera command fails
      */
     async capturePhoto(atPath) {
-        if (!this.camera) {
-            throw new TJBotError('Camera not initialized. Call initialize() first.');
-        }
-        if (atPath === undefined) {
-            atPath = temp.path({
+        const photoPath = atPath ??
+            temp.path({
                 prefix: 'tjbot',
                 suffix: '.jpg',
             });
-        }
-        // Generate a unique task ID for this capture
-        const taskId = `tjbot-photo-${Date.now()}`;
-        // Map config to rpi-cam-lib options
-        const cameraOptions = {
-            flipHorizontal: this.horizontalFlip,
-            flipVertical: this.verticalFlip,
-        };
-        winston.verbose(`📷 capturing image at path: ${atPath}`);
-        winston.debug(`📷 camera options: ${JSON.stringify(cameraOptions)}`);
-        try {
-            const result = await this.camera.serveStill(atPath, this.resolution[0], this.resolution[1], taskId, cameraOptions);
-            if (!result.success) {
-                const errorMessage = result.error?.readable || JSON.stringify(result.error) || 'Unknown camera error';
-                throw new TJBotError(errorMessage);
-            }
-            return atPath;
-        }
-        catch (error) {
-            let errorMessage = 'Unknown error';
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-            else if (typeof error === 'object' && error !== null) {
-                errorMessage = JSON.stringify(error);
-            }
-            else if (typeof error === 'string') {
-                errorMessage = error;
-            }
-            winston.error(`📷 failed to capture image: ${errorMessage}`);
-            throw error;
-        }
+        logger.verbose(`Capturing image at path: ${photoPath}`);
+        const args = this.buildCameraArgs(photoPath);
+        return new Promise((resolve, reject) => {
+            execFile('rpicam-still', args, (error, stdout, stderr) => {
+                if (error) {
+                    logger.error(`rpicam-still error: ${stderr || error.message}`);
+                    reject(new TJBotError(stderr || error.message));
+                }
+                else {
+                    logger.debug(`rpicam-still stdout: ${stdout}`);
+                    resolve(photoPath);
+                }
+            });
+        });
     }
     /**
-     * Clean up resources
+     * Capture a photo and return it as a Buffer
+     * @returns Promise that resolves to a Buffer containing the photo data
+     * @throws TJBotError if the camera capture fails
+     */
+    async capturePhotoBuffer() {
+        logger.verbose('Capturing image to buffer');
+        const args = this.buildCameraArgs('-', 'jpg');
+        return new Promise((resolve, reject) => {
+            execFile('rpicam-still', args, { encoding: 'buffer', maxBuffer: 10 * 1024 * 1024 }, (error, stdout, stderr) => {
+                if (error) {
+                    logger.error(`rpicam-still error: ${stderr?.toString() || error.message}`);
+                    reject(new TJBotError(stderr?.toString() || error.message));
+                }
+                else {
+                    logger.debug(`captured image buffer (${stdout.length} bytes)`);
+                    resolve(stdout);
+                }
+            });
+        });
+    }
+    /**
+     * Clean up resources (no-op for direct process invocation)
      */
     cleanup() {
-        if (this.camera) {
-            // Kill any remaining tasks before cleanup
-            this.camera.killAllTasks(true);
-            winston.debug('📷 camera cleaned up');
-        }
+        logger.debug('CameraController cleanup (no-op for rpicam-still)');
     }
 }
 //# sourceMappingURL=camera.js.map

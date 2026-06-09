@@ -15,14 +15,14 @@
  * limitations under the License.
  */
 
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import TextToSpeechV1 from 'ibm-watson/text-to-speech/v1.js';
-import winston from 'winston';
-import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
+import type { TTSBackendIBMWatsonConfig } from '../../config/config-types.js';
+import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
+import { getLogger } from '../../utils/logging.js';
+import { TTSEngine } from '../tts-engine.js';
+
+const logger = getLogger(import.meta.url);
 
 /**
  * IBM Watson Text-to-Speech Engine
@@ -32,72 +32,27 @@ import { TJBotError } from '../../utils/index.js';
  * @public
  */
 export class IBMTTSEngine extends TTSEngine {
-    private ttsService: TextToSpeechV1 | undefined;
-
-    constructor(config?: TTSEngineConfig) {
-        super(config);
-    }
+    private ttsService?: TextToSpeechV1;
 
     /**
      * Initialize the IBM Watson TTS service.
      * Creates a new TextToSpeechV1 instance.
      */
     async initialize(): Promise<void> {
-        try {
-            const credentialsPath = (this.config as Record<string, unknown>)?.credentialsPath as string | undefined;
-            this.loadCredentials(credentialsPath);
-            this.ttsService = new TextToSpeechV1({});
-            winston.info('🔈 IBM Watson TTS engine initialized');
-        } catch (error) {
-            winston.error('Failed to initialize IBM Watson TTS:', error);
-            throw error;
-        }
-    }
+        const config = this.config as TTSBackendIBMWatsonConfig;
+        loadIBMWatsonCloudCredentials(config?.credentialsPath);
 
-    private loadCredentials(credentialsPath?: string): void {
-        let resolvedPath: string | undefined = credentialsPath;
-
-        // If no path provided, check default locations in order
-        if (!resolvedPath) {
-            // 1. Check CWD
-            const cwdPath = path.join(process.cwd(), 'ibm-credentials.env');
-            if (fs.existsSync(cwdPath)) {
-                resolvedPath = cwdPath;
-            } else {
-                // 2. Check ~/.tjbot/ibm-credentials.env
-                const homePath = path.join(os.homedir(), '.tjbot', 'ibm-credentials.env');
-                if (fs.existsSync(homePath)) {
-                    resolvedPath = homePath;
-                }
-            }
-        }
-
-        // If path is specified (either provided or found), load credentials
-        if (resolvedPath) {
-            try {
-                if (!fs.existsSync(resolvedPath)) {
-                    throw new TJBotError(`IBM credentials file not found at: ${resolvedPath}`);
-                }
-                const credentialsContent = fs.readFileSync(resolvedPath, 'utf-8');
-                credentialsContent.split('\n').forEach((line) => {
-                    line = line.trim();
-                    if (line && !line.startsWith('#')) {
-                        const [key, ...valueParts] = line.split('=');
-                        if (key) {
-                            process.env[key.trim()] = valueParts.join('=').trim();
-                        }
-                    }
-                });
-                winston.debug(`🔈 Loaded IBM credentials from: ${resolvedPath}`);
-            } catch (err) {
-                winston.error(`Failed to load IBM credentials from ${resolvedPath}:`, err);
-                throw err;
-            }
-        } else {
+        if (!config?.voice) {
             throw new TJBotError(
-                'IBM Watson TTS credentials not found. Place credentials at: ./ibm-credentials.env or ~/.tjbot/ibm-credentials.env'
+                'IBM Watson TTS voice not specified. Provide voice in speak.backend.ibm-watson-tts config.'
             );
         }
+
+        this.ttsService = new TextToSpeechV1({});
+        logger.info('IBM Watson TTS engine initialized');
+        logger.debug(`Initialized IBMWatsonTTSEngine with config:
+            voice: ${config?.voice},
+            credentialsPath: ${config?.credentialsPath}`);
     }
 
     /**
@@ -109,22 +64,26 @@ export class IBMTTSEngine extends TTSEngine {
      * @throws Error if service is not initialized or synthesis fails
      */
     async synthesize(text: string): Promise<Buffer> {
-        this.validateText(text);
-
         if (!this.ttsService) {
             throw new TJBotError('IBM Watson TTS service not initialized. Call initialize() first.');
         }
 
+        this.validateText(text);
+
         try {
             // Use voice from configuration
-            const voiceToUse = (this.config?.voice as string) ?? 'en-US_MichaelV3Voice';
-            winston.debug(`🔈 Synthesizing with IBM Watson TTS: voice=${voiceToUse}`);
+            const voiceName = this.config?.voice as string;
+            if (!voiceName) {
+                throw new TJBotError('IBM Watson TTS voice not specified. Provide voice in speak config.');
+            }
 
             const params = {
                 text,
-                voice: voiceToUse,
+                voice: voiceName,
                 accept: 'audio/wav',
             };
+
+            logger.verbose(`Synthesizing speech with IBM Watson TTS (voice=${voiceName})`);
 
             const response = await this.ttsService.synthesize(params);
 
@@ -142,18 +101,17 @@ export class IBMTTSEngine extends TTSEngine {
 
                 response.result.on('end', () => {
                     const buffer = Buffer.concat(chunks);
-                    winston.debug(`🔈 IBM Watson TTS synthesis complete: ${buffer.length} bytes`);
+                    logger.debug(`IBM Watson TTS synthesis complete: ${buffer.length} bytes`);
                     resolve(buffer);
                 });
 
                 response.result.on('error', (err) => {
-                    winston.error('Error during IBM Watson TTS synthesis:', err);
+                    logger.error('Error during IBM Watson TTS synthesis:', err);
                     reject(err);
                 });
             });
         } catch (error) {
-            winston.error('IBM Watson TTS synthesis failed:', error);
-            throw error;
+            throw new TJBotError('IBM Watson TTS synthesis failed', { cause: error as Error });
         }
     }
 }

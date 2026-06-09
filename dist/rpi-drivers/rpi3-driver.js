@@ -14,36 +14,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import winston from 'winston';
-import { Hardware } from '../utils/index.js';
-import { RPiBaseHardwareDriver } from './rpi-driver.js';
 import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
-import { PiGPIOServoController } from '../servo/index.js';
+import { LGPIOServoController } from '../servo/index.js';
+import { Hardware } from '../utils/index.js';
+import { getLogger } from '../utils/logging.js';
+import { RPiBaseHardwareDriver } from './rpi-driver.js';
+const logger = getLogger(import.meta.url);
 class RPi3Driver extends RPiBaseHardwareDriver {
+    commonAnodeLed;
+    neopixelLed;
+    useGRBFormat;
+    servo;
+    userHasBeenWarned = {};
     constructor() {
         super();
-        winston.debug('🥧 initializing RPi3 hardware driver');
-        this.useGRBFormat = false;
+        this.useGRBFormat = true;
     }
     setupLEDCommonAnode(config) {
         const redPin = config?.redPin ?? 19;
         const greenPin = config?.greenPin ?? 13;
         const bluePin = config?.bluePin ?? 12;
-        winston.verbose(`💡 initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`);
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
-        this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
+        this.initializedHardware.add(Hardware.LED);
     }
-    setupLEDNeopixel(config) {
-        const pin = config?.gpioPin ?? 21;
-        winston.verbose(`💡 initializing ${Hardware.LED_NEOPIXEL} on pin ${pin}`);
+    async setupLEDNeopixel(config) {
+        const pin = config?.gpioPin ?? 18;
         this.neopixelLed = new LEDNeopixel(pin);
-        this.useGRBFormat = config?.useGRBFormat ?? false;
-        this.initializedHardware.add(Hardware.LED_NEOPIXEL);
+        await this.neopixelLed.initialize();
+        this.useGRBFormat = config?.useGRBFormat ?? true;
+        this.initializedHardware.add(Hardware.LED);
     }
     setupServo(config) {
         const pin = config.servoPin ?? 18;
-        winston.verbose(`🦾 initializing ${Hardware.SERVO} on PIN ${pin}`);
-        this.servo = new PiGPIOServoController(pin);
+        this.servo = new LGPIOServoController(0, pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
     renderLEDCommonAnode(rgbColor) {
@@ -51,50 +54,91 @@ class RPi3Driver extends RPiBaseHardwareDriver {
             this.commonAnodeLed.render(rgbColor);
         }
         else {
-            winston.warn('attempted to render on an uninitialized Common Anode LED');
+            logger.warn('Attempted to render on an uninitialized Common Anode LED');
         }
     }
     async renderLEDNeopixel(hexColor) {
         if (this.neopixelLed) {
-            const c = hexColor;
+            const c = hexColor.startsWith('#') ? hexColor.slice(1) : hexColor;
+            if (c.length !== 6) {
+                logger.warn(`Invalid NeoPixel color '${hexColor}'`);
+                return;
+            }
             if (this.useGRBFormat) {
-                const grbStr = `0x${c[3]}${c[4]}${c[1]}${c[2]}${c[5]}${c[6]}`;
+                const grbStr = `0x${c[2]}${c[3]}${c[0]}${c[1]}${c[4]}${c[5]}`;
                 const grb = parseInt(grbStr, 16);
-                this.neopixelLed.render(grb);
+                await this.neopixelLed.render(grb);
             }
             else {
-                const rgbStr = `0x${c[1]}${c[2]}${c[3]}${c[4]}${c[5]}${c[6]}`;
+                const rgbStr = `0x${c}`;
                 const rgb = parseInt(rgbStr, 16);
-                this.neopixelLed.render(rgb);
+                await this.neopixelLed.render(rgb);
             }
         }
         else {
-            winston.warn('attempted to render on an uninitialized Neopixel LED');
+            logger.warn('Attempted to render on an uninitialized Neopixel LED');
         }
+    }
+    async cleanup() {
+        if (this.neopixelLed) {
+            await this.neopixelLed.cleanup();
+        }
+        await super.cleanup();
     }
     renderServoPosition(position) {
         if (this.servo) {
             this.servo.setPosition(position);
         }
         else {
-            winston.warn('attempted to render on an uninitialized servo');
+            logger.warn('Attempted to render on an uninitialized servo');
         }
     }
-    async listenForTranscript() {
-        // Warn about performance on RPi3 when using local STT
-        const backend = this.listenConfig.backend?.type ?? 'local';
-        if (backend === 'local') {
-            winston.warn('⚠️  Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
+    warnIfUsingLocalAI(aiType) {
+        if (this.userHasBeenWarned[aiType]) {
+            return;
         }
+        switch (aiType) {
+            case 'stt':
+                if (this.listenConfig.backend?.type === 'local') {
+                    logger.warn('Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
+                }
+                break;
+            case 'tts':
+                if (this.speakConfig.backend?.type === 'local') {
+                    logger.warn('Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
+                }
+                break;
+            case 'vision':
+                if (this.seeConfig.backend?.type === 'local') {
+                    logger.warn('Using local Vision on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
+                }
+                break;
+        }
+        this.userHasBeenWarned[aiType] = true;
+    }
+    async listenForTranscript() {
+        this.warnIfUsingLocalAI('stt');
         return super.listenForTranscript();
     }
     async speak(message) {
-        // Warn about performance on RPi3 when using local TTS
-        const backend = this.speakConfig.backend?.type ?? 'local';
-        if (backend === 'local') {
-            winston.warn('⚠️  Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
-        }
+        this.warnIfUsingLocalAI('tts');
         return super.speak(message);
+    }
+    async detectObjects(image) {
+        this.warnIfUsingLocalAI('vision');
+        return super.detectObjects(image);
+    }
+    async classifyImage(image) {
+        this.warnIfUsingLocalAI('vision');
+        return super.classifyImage(image);
+    }
+    async describeImage(image) {
+        this.warnIfUsingLocalAI('vision');
+        return super.describeImage(image);
+    }
+    async detectFaces(image) {
+        this.warnIfUsingLocalAI('vision');
+        return super.detectFaces(image);
     }
 }
 export default RPi3Driver;

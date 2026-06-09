@@ -22,12 +22,11 @@ import { STTEngine, STTRequestOptions } from '../stt-engine.js';
  * @public
  */
 export declare class AzureSTTEngine extends STTEngine {
-    private subscriptionKey;
-    private region;
-    constructor(config?: Record<string, unknown>);
-    initialize(): Promise<void>;
-    private loadCredentials;
-    private resolveCredentialsPath;
-    private loadCredentialsFromFile;
+    private microphoneRate;
+    private microphoneChannels;
+    private subscriptionKey?;
+    private region?;
+    initialize(microphoneRate: number, microphoneChannels: number): Promise<void>;
     transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string>;
 }
+//# sourceMappingURL=azure-stt.d.ts.map

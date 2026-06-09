@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 import { TTSEngine } from '../tts-engine.js';
-import { TTSEngineConfig } from '../../config/index.js';
 /**
  * Google Cloud Text-to-Speech Engine
  *
@@ -23,10 +22,8 @@ import { TTSEngineConfig } from '../../config/index.js';
  * @public
  */
 export declare class GoogleCloudTTSEngine extends TTSEngine {
-    private client;
-    constructor(config?: TTSEngineConfig);
+    private client?;
     initialize(): Promise<void>;
-    private resolveCredentialsPath;
     synthesize(text: string): Promise<Buffer>;
     /**
      * Add WAV header to raw PCM audio data
@@ -38,3 +35,4 @@ export declare class GoogleCloudTTSEngine extends TTSEngine {
      */
     private addWavHeader;
 }
+//# sourceMappingURL=google-cloud-tts.d.ts.map

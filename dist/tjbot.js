@@ -14,78 +14,130 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// internal classes
-import { Capability, Hardware, normalizeColor, sleep, TJBotError } from './utils/index.js';
-import { ServoPosition } from './servo/index.js';
-import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
 import { TJBotConfig } from './config/tjbot-config.js';
+import { RPi3Driver, RPi4Driver, RPi5Driver, RPiDetect } from './rpi-drivers/index.js';
+import { ServoPosition } from './servo/index.js';
 import { inferSTTMode } from './stt/stt-utils.js';
+import { Capability, getShineColors, Hardware, initWinston, ModelRegistry, normalizeColor, sleep as asyncSleep, TJBotError, } from './utils/index.js';
+import { getLogger } from './utils/logging.js';
 // node modules
-import temp from 'temp';
-import colorToHex from 'colornames';
 import cm from 'color-model';
-import winston from 'winston';
+import { promises as fsPromises, readFileSync } from 'fs';
 import { easeInOutQuad } from 'js-easing-functions';
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import temp from 'temp';
+import { fileURLToPath } from 'url';
+const logger = getLogger(import.meta.url);
 // Read version from package.json
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const packageJson = JSON.parse(readFileSync(join(__dirname, '../package.json'), 'utf-8'));
+const DIRNAME = dirname(fileURLToPath(import.meta.url));
+const PACKAGE_JSON = JSON.parse(readFileSync(join(DIRNAME, '../package.json'), 'utf-8'));
+// Configure winston logging at module load time so all internals share one logger format.
+initWinston('info');
 /**
  * Class representing a TJBot
  */
 class TJBot {
     /**
-     * TJBot constructor. Loads configuration in the following order:
-     * 1. Base config from tjbot.default.toml
-     * 2. Local tjbot.toml (if it exists)
-     * 3. Override config (if provided)
-     * Hardware is automatically initialized based on the [hardware] configuration section.
-     * @constructor
-     * @param  {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
-     * @throws {TJBotError} if configuration file cannot be loaded or is invalid
-     * @public
+     * TJBot library version
+     * @readonly
      */
-    constructor(overrideConfig) {
-        /**
-         * Cache of the colors recognized by TJBot
-         */
-        this._shineColors = [];
-        // set up logging -- start with the 'info' level
-        // Custom formatter for pretty-printing error objects with color
-        const prettyErrorFormat = winston.format.printf((info) => {
-            let message = `${info.message}`;
-            // If there are additional metadata fields (like error objects), pretty-print them
-            const metadata = { ...info };
-            delete metadata.level;
-            delete metadata.message;
-            delete metadata[Symbol.for('level')];
-            delete metadata[Symbol.for('message')];
-            delete metadata[Symbol.for('splat')];
-            if (Object.keys(metadata).length > 0) {
-                // Pretty-print the metadata as colored JSON
-                const jsonString = JSON.stringify(metadata, null, 2);
-                // Add cyan color to the JSON output
-                message += ' \x1b[36m' + jsonString + '\x1b[0m';
-            }
-            return message;
-        });
-        winston.configure({
-            level: 'info',
-            format: winston.format.combine(winston.format.colorize(), prettyErrorFormat),
-            transports: [new winston.transports.Console()],
-        });
-        this.config = new TJBotConfig(overrideConfig);
-        // change the level if it was defined differently in the config
-        const logConfig = this.config.log;
-        if (logConfig && logConfig.level) {
-            winston.level = logConfig.level;
-        }
+    static VERSION = `v${PACKAGE_JSON.version}`;
+    /**
+     * Singleton instance
+     * @private
+     */
+    static instance;
+    /**
+     * Hardware list
+     * @readonly
+     */
+    static Hardware = Hardware;
+    /**
+     * TJBot configuration
+     */
+    config;
+    /**
+     * Raspberry Pi model on which TJBot is running
+     * @example "Raspberry Pi 5"
+     */
+    rpiModel;
+    /**
+     * Raspberry Pi hardware driver
+     */
+    rpiDriver;
+    /**
+     * Cache of the colors recognized by TJBot
+     */
+    _shineColors = [];
+    /**
+     * Flag to track if TJBot has been initialized
+     */
+    _initialized = false;
+    /**
+     * Promise for in-flight cleanup operation, if any.
+     */
+    _cleanupPromise = null;
+    /**
+     * Guard to ensure process lifecycle hooks are installed only once.
+     */
+    _processHooksInstalled = false;
+    /**
+     * Private constructor.
+     * @private
+     */
+    constructor() {
         // automatically track and clean up temporary files
         temp.track();
-        // figure out which RPi we're running on
+    }
+    /**
+     * Get the singleton instance of TJBot.
+     * @returns {TJBot} The singleton TJBot instance
+     * @public
+     */
+    static getInstance() {
+        if (!TJBot.instance) {
+            TJBot.instance = new TJBot();
+        }
+        return TJBot.instance;
+    }
+    /**
+     * Get recipe-specific configuration. This method can be used before calling `TJBot.getInstance().initialize()`
+     * in case a recipe needs to dynamically determine which hardware components should be configured.
+     * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
+     * @return {Record<string, unknown>} The recipe configuration as a key-value object. If no recipe configuration file is found, returns an empty object.
+     *
+     */
+    static getRecipeConfig(recipeConfigPath = 'recipe.toml') {
+        const config = new TJBotConfig(undefined, recipeConfigPath);
+        return config.recipe;
+    }
+    /**
+     * Initialize TJBot with configuration. Can be called multiple times to reconfigure.
+     * Performs cleanup of previous initialization, loads configuration, detects hardware,
+     * initializes all configured hardware and AI models eagerly.
+     * @param {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
+     * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
+     * @throws {TJBotError} if configuration file cannot be loaded, is invalid, or cleanup fails
+     * @public
+     */
+    async initialize(overrideConfig, recipeConfigPath) {
+        logger.info('Initializing TJBot...');
+        this.installProcessCleanupHooks();
+        // Cleanup previous initialization if any
+        if (this._initialized) {
+            logger.info('Cleaning up previous initialization...');
+            await this.cleanup();
+        }
+        // Load configuration
+        this.config = new TJBotConfig(overrideConfig, recipeConfigPath);
+        // Update log level from config
+        const logConfig = this.config.log;
+        if (logConfig && logConfig.level) {
+            logger.level = logConfig.level;
+        }
+        // Detect Raspberry Pi model and instantiate driver
         this.rpiModel = RPiDetect.model();
+        logger.info(`Detected hardware: ${this.rpiModel}`);
         if (this.rpiModel.startsWith('Raspberry Pi 3')) {
             this.rpiDriver = new RPi3Driver();
         }
@@ -96,24 +148,27 @@ class TJBot {
             this.rpiDriver = new RPi5Driver();
         }
         else {
-            winston.warn('TJBot is running on unsupported Raspberry Pi hardware. Restorting to RPi3 hardware driver, but errors may occur.');
+            logger.warn('TJBot is running on unsupported Raspberry Pi hardware. Resorting to RPi3 hardware driver, but errors may occur.');
             this.rpiDriver = new RPi3Driver();
         }
-        // say hello
-        winston.info(`👋 Hello from TJBot! Running on ${this.rpiModel}`);
-        winston.verbose(`🤖 TJBot library version ${TJBot.VERSION}`);
-        winston.debug(`🛠️ TJBot configuration:\n${JSON.stringify(this.config, null, 2)}`);
-        // Auto-initialize hardware from configuration
-        this._initializeHardwareFromConfig();
+        logger.verbose(`TJBot library version ${TJBot.VERSION}`);
+        logger.debug(`TJBot configuration:\n${JSON.stringify(this.config, null, 2)}`);
+        // Initialize hardware
+        await this.initializeHardware();
+        // Eagerly initialize AI models (if configured)
+        await this.initializeAIModels();
+        this._initialized = true;
+        logger.info('TJBot initialization complete');
+        return this;
     }
     /**
-     * Auto-initialize hardware devices based on configuration
+     * Initialize hardware devices
      * @private
      */
-    _initializeHardwareFromConfig() {
+    async initializeHardware() {
         const hwConfig = this.config.hardware;
         if (!hwConfig || Object.keys(hwConfig).length === 0) {
-            winston.debug('No hardware configured in config file');
+            logger.debug('No hardware configured');
             return;
         }
         const hardwareToInit = [];
@@ -127,11 +182,8 @@ class TJBot {
         if (hwConfig.camera) {
             hardwareToInit.push(Hardware.CAMERA);
         }
-        if (hwConfig.led_neopixel) {
-            hardwareToInit.push(Hardware.LED_NEOPIXEL);
-        }
-        if (hwConfig.led_common_anode) {
-            hardwareToInit.push(Hardware.LED_COMMON_ANODE);
+        if (hwConfig.led) {
+            hardwareToInit.push(Hardware.LED);
         }
         if (hwConfig.servo) {
             hardwareToInit.push(Hardware.SERVO);
@@ -139,45 +191,167 @@ class TJBot {
         if (hardwareToInit.length === 0) {
             return;
         }
-        // Set up the hardware
-        const hw = hardwareToInit.join(', ');
-        winston.info(`🤖 Initializing TJBot with ${hw}`);
-        hardwareToInit.forEach((device) => {
+        logger.info('Initializing hardware...');
+        for (const device of hardwareToInit) {
             switch (device) {
                 case Hardware.CAMERA: {
                     const config = this.config.see;
                     this.rpiDriver.setupCamera(config);
                     break;
                 }
-                case Hardware.LED_NEOPIXEL: {
+                case Hardware.LED: {
                     const shineConfig = this.config.shine;
-                    this.rpiDriver.setupLEDNeopixel(shineConfig.neopixel ?? {});
-                    break;
-                }
-                case Hardware.LED_COMMON_ANODE: {
-                    const shineConfig = this.config.shine;
-                    this.rpiDriver.setupLEDCommonAnode(shineConfig.commonanode ?? {});
+                    const hasNeopixel = shineConfig?.hasNeopixelLED ?? false;
+                    const hasCommonAnode = shineConfig?.hasCommonAnodeLED ?? false;
+                    if (!hasNeopixel && !hasCommonAnode) {
+                        throw new TJBotError('LED hardware enabled but no LED type configured. Set shine.hasNeopixelLED or shine.hasCommonAnodeLED to true in your tjbot configuration file (~/.tjbot/tjbot.toml).');
+                    }
+                    if (hasNeopixel) {
+                        logger.info('Setting up NeoPixel LED ' +
+                            '[' +
+                            (shineConfig?.neopixel?.gpioPin ? `pin: ${shineConfig?.neopixel?.gpioPin}` : '') +
+                            ' ' +
+                            (shineConfig?.neopixel?.spiInterface
+                                ? `SPI: ${shineConfig.neopixel?.spiInterface}`
+                                : '') +
+                            ']');
+                    }
+                    if (hasCommonAnode) {
+                        logger.info(`Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`);
+                    }
+                    await this.rpiDriver.setupLED(shineConfig);
                     break;
                 }
                 case Hardware.MICROPHONE: {
                     const config = this.config.listen;
+                    logger.info(`Setting up microphone [device: ${config?.device || 'default'}]`);
                     this.rpiDriver.setupMicrophone(config);
                     break;
                 }
                 case Hardware.SERVO: {
                     const config = this.config.wave;
+                    logger.info(`Setting up servo [pin: ${config?.servoPin}]`);
                     this.rpiDriver.setupServo(config);
                     break;
                 }
                 case Hardware.SPEAKER: {
                     const config = this.config.speak;
+                    logger.info(`Setting up speaker [device: ${config?.device || 'default'}]`);
                     this.rpiDriver.setupSpeaker(config);
                     break;
                 }
                 default:
                     break;
             }
-        }, this);
+        }
+    }
+    /**
+     * Eagerly initialize local AI models (STT, TTS, Vision) if configured
+     * @private
+     */
+    async initializeAIModels() {
+        // Initialize STT engine if microphone is configured
+        if (this.rpiDriver.hasCapability(Capability.LISTEN)) {
+            logger.info('Initializing STT engine...');
+            await this.rpiDriver.initializeSTTEngine();
+        }
+        // Initialize TTS engine if speaker is configured
+        if (this.rpiDriver.hasCapability(Capability.SPEAK)) {
+            logger.info('Initializing TTS engine...');
+            await this.rpiDriver.initializeTTSEngine();
+        }
+        // Initialize Vision engine if camera is configured
+        if (this.rpiDriver.hasCapability(Capability.SEE)) {
+            logger.info('Initializing Vision engine...');
+            await this.rpiDriver.initializeVisionEngine();
+        }
+    }
+    /**
+     * Clean up all resources. Called automatically before re-initialization.
+     * @throws {TJBotError} if cleanup fails
+     * @private
+     */
+    async cleanup() {
+        if (this._cleanupPromise) {
+            return this._cleanupPromise;
+        }
+        this._cleanupPromise = (async () => {
+            try {
+                if (this.rpiDriver) {
+                    await this.rpiDriver.cleanup();
+                }
+                this._initialized = false;
+            }
+            catch (error) {
+                throw new TJBotError('Failed to clean up TJBot resources', {
+                    cause: error instanceof Error ? error : new Error(String(error)),
+                });
+            }
+            finally {
+                this._cleanupPromise = null;
+            }
+        })();
+        return this._cleanupPromise;
+    }
+    /**
+     * Install process lifecycle hooks so TJBot hardware resources are cleaned up
+     * automatically when a recipe exits or is interrupted.
+     */
+    installProcessCleanupHooks() {
+        if (this._processHooksInstalled) {
+            return;
+        }
+        this._processHooksInstalled = true;
+        process.once('beforeExit', () => {
+            void this.runLifecycleCleanup('beforeExit');
+        });
+        process.once('SIGINT', () => {
+            void this.runLifecycleCleanup('SIGINT', 130);
+        });
+        process.once('SIGTERM', () => {
+            void this.runLifecycleCleanup('SIGTERM', 143);
+        });
+        process.once('SIGHUP', () => {
+            void this.runLifecycleCleanup('SIGHUP', 129);
+        });
+        process.once('uncaughtException', (err) => {
+            logger.error(`uncaughtException: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
+            void this.runLifecycleCleanup('uncaughtException', 1);
+        });
+        process.once('unhandledRejection', (reason) => {
+            logger.error(`unhandledRejection: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`);
+            void this.runLifecycleCleanup('unhandledRejection', 1);
+        });
+    }
+    /**
+     * Best-effort automatic cleanup path used by process lifecycle hooks.
+     * Uses a timeout in fatal/signal scenarios so process termination does not hang.
+     */
+    async runLifecycleCleanup(reason, exitCode) {
+        const CLEANUP_TIMEOUT_MS = 3000;
+        if (exitCode === undefined) {
+            try {
+                await this.cleanup();
+            }
+            catch (err) {
+                logger.warn(`automatic cleanup failed during ${reason}: ${String(err)}`);
+            }
+            process.exit(0);
+            return;
+        }
+        process.exitCode = exitCode;
+        try {
+            await Promise.race([
+                this.cleanup(),
+                new Promise((resolve) => setTimeout(resolve, CLEANUP_TIMEOUT_MS)),
+            ]);
+        }
+        catch (err) {
+            logger.warn(`automatic cleanup failed during ${reason}: ${String(err)}`);
+        }
+        finally {
+            process.exit(exitCode);
+        }
     }
     /**
      * Change the level of TJBot's logging.
@@ -185,14 +359,19 @@ class TJBot {
      * @public
      */
     setLogLevel(level) {
-        winston.level = level;
+        logger.level = level;
     }
     /**
      * Assert that TJBot is able to perform a specified capability.
      * @private
      * @param {string} capability The capability assert (see TJBot.prototype.capabilities).
      */
-    _assertCapability(capability) {
+    assertCapability(capability) {
+        if (!this._initialized) {
+            throw new TJBotError('TJBot has not been initialized. Please call await tj.initialize() before using TJBot.');
+        }
+        logger.debug(`Asserting capability: ${capability}`);
+        logger.silly(`TJBot capabilities: ${Array.from(this.rpiDriver.getHardware()).join(', ')}`);
         switch (capability) {
             case Capability.LISTEN:
                 if (!this.rpiDriver.hasCapability(Capability.LISTEN)) {
@@ -201,9 +380,9 @@ class TJBot {
                         `${Hardware.MICROPHONE} hardware in TJBot's configuration.`);
                 }
                 break;
-            case Capability.LOOK:
-                if (!this.rpiDriver.hasCapability(Capability.LOOK)) {
-                    throw new TJBotError('TJBot is not configured to look. ' +
+            case Capability.SEE:
+                if (!this.rpiDriver.hasCapability(Capability.SEE)) {
+                    throw new TJBotError('TJBot is not configured to see. ' +
                         'Please check that you included the ' +
                         `${Hardware.CAMERA} hardware in TJBot's configuration.`);
                 }
@@ -212,8 +391,8 @@ class TJBot {
                 if (!this.rpiDriver.hasCapability(Capability.SHINE)) {
                     throw new TJBotError('TJBot is not configured with an LED. ' +
                         'Please check that you included the ' +
-                        `${Hardware.LED_NEOPIXEL} or ${Hardware.LED_COMMON_ANODE} ` +
-                        'hardware in TJBot\'s configuration.');
+                        `${Hardware.LED} ` +
+                        "hardware in TJBot's configuration.");
                 }
                 break;
             case Capability.SPEAK:
@@ -234,54 +413,123 @@ class TJBot {
                 break;
         }
     }
+    /**
+     * Sleep for the specified number of seconds.
+     * @param sec Number of seconds to sleep
+     */
+    async sleep(sec) {
+        await asyncSleep(sec);
+    }
     /** ------------------------------------------------------------------------ */
-    /** LISTEN                                                                   */
+    /** LOCAL AI/ML MODELS                                                       */
     /** ------------------------------------------------------------------------ */
     /**
-     * Listen for a spoken utterance.
-     * @returns {Promise<string>} The transcribed text
-     * @throws {TJBotError} if the microphone hardware is not initialized
-     * @async
-     * @public
+     * List the AI/ML models on this device.
+     * @returns {string[]} Array of installed model keys
      */
-    async listen(callback) {
+    getLocalModels(modelType, installedOnly = true) {
+        const registry = ModelRegistry.getInstance();
+        const models = registry.lookupModels(modelType, installedOnly);
+        return models.map((model) => model.key);
+    }
+    async listen(onPartialResult, onFinalResult) {
         // make sure we can listen
-        this._assertCapability(Capability.LISTEN);
+        this.assertCapability(Capability.LISTEN);
         const listenConfig = this.config.listen ?? {};
         const mode = inferSTTMode(listenConfig);
-        const modelName = listenConfig.backend?.local?.model ?? listenConfig.model ?? '<unknown>';
-        if (mode === 'streaming' && !callback) {
-            throw new TJBotError(`STT model "${modelName}" is streaming. Call listen(callback) so TJBot can deliver partial/final transcripts.`);
+        const modelName = listenConfig.backend?.local?.model ?? '<unknown>';
+        if (mode === 'streaming' && !onPartialResult) {
+            throw new TJBotError(`STT model "${modelName}" is streaming. Call listen(onPartialResult, onFinalResult) so TJBot can deliver partial/final transcripts.`);
         }
-        if (mode === 'offline' && callback) {
+        if (mode === 'offline' && onPartialResult) {
             throw new TJBotError(`STT model "${modelName}" is offline. Call await listen() without a callback.`);
         }
         if (mode === 'streaming') {
             // Streaming: deliver partial/final via the provided callback. The promise resolves when the backend signals completion.
             return await this.rpiDriver.listenForTranscript({
-                onPartialResult: (text) => callback?.(text),
-                onFinalResult: (text) => callback?.(text),
+                onPartialResult: (text) => onPartialResult?.(text),
+                onFinalResult: (text) => onFinalResult?.(text),
             });
         }
         // Offline / single-shot: return the transcript
-        return await this.rpiDriver.listenForTranscript();
+        const message = await this.rpiDriver.listenForTranscript();
+        logger.info(`Heard: "${message}"`);
+        return message;
     }
     /** ------------------------------------------------------------------------ */
-    /** LOOK                                                                      */
+    /** SEE                                                                      */
     /** ------------------------------------------------------------------------ */
+    /**
+     * Capture an image and return it as a buffer.
+     * @return {Promise<Buffer>} The captured image as a buffer.
+     * @throws {TJBotError} if the camera hardware is not initialized
+     * @public
+     */
+    async see() {
+        this.assertCapability(Capability.SEE);
+        try {
+            const buffer = await this.rpiDriver.capturePhotoBuffer();
+            return buffer;
+        }
+        catch {
+            const photoPath = await this.rpiDriver.capturePhoto();
+            try {
+                return await fsPromises.readFile(photoPath);
+            }
+            finally {
+                // Best-effort cleanup for temporary capture paths.
+                await fsPromises.unlink(photoPath).catch(() => { });
+            }
+        }
+    }
     /**
      * Capture an image and save it in the given path.
      * @param  {string=} filePath (optional) Path at which to save the photo file. If not
      * specified, photo will be saved in a temp location.
      * @return {string} Path at which the photo was saved.
      * @throws {TJBotError} if the camera hardware is not initialized
-     * @async
      * @public
      */
     async look(filePath) {
-        this._assertCapability(Capability.LOOK);
+        this.assertCapability(Capability.SEE);
         const path = await this.rpiDriver.capturePhoto(filePath);
         return path;
+    }
+    /**
+     * Detect objects in an image using the configured vision engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ObjectDetectionResult[]>}
+     */
+    async detectObjects(image) {
+        this.assertCapability(Capability.SEE);
+        return this.rpiDriver.detectObjects(image);
+    }
+    /**
+     * Classify an image using the configured vision engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageClassificationResult[]>}
+     */
+    async classifyImage(image) {
+        this.assertCapability(Capability.SEE);
+        return this.rpiDriver.classifyImage(image);
+    }
+    /**
+     * Detect faces in an image using the configured vision engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<{isFaceDetected: boolean, metadata: FaceDetectionMetadata[]}>}
+     */
+    async detectFaces(image) {
+        this.assertCapability(Capability.SEE);
+        return this.rpiDriver.detectFaces(image);
+    }
+    /**
+     * Describe an image using the configured vision engine (Azure only).
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageDescriptionResult>}
+     */
+    async describeImage(image) {
+        this.assertCapability(Capability.SEE);
+        return this.rpiDriver.describeImage(image);
     }
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */
@@ -298,7 +546,7 @@ class TJBot {
      * @public
      */
     async shine(color) {
-        this._assertCapability(Capability.SHINE);
+        this.assertCapability(Capability.SHINE);
         // normalize the color
         let c = normalizeColor(color);
         // remove leading '#' if present
@@ -322,13 +570,13 @@ class TJBot {
      * @public
      */
     async pulse(color, duration = 1.0) {
-        this._assertCapability(Capability.SHINE);
+        this.assertCapability(Capability.SHINE);
         if (duration < 0.5) {
-            winston.warn('TJBot cannot pulse for less than 0.5 seconds, using duration of 0.5 seconds');
+            logger.warn('TJBot cannot pulse for less than 0.5 seconds, using duration of 0.5 seconds');
             duration = 0.5;
         }
         if (duration > 2.0) {
-            throw new TJBotError('TJBot cannot pulse for more than 2 seconds, using duration of 2.0 seconds');
+            logger.warn('TJBot cannot pulse for more than 2 seconds, using duration of 2.0 seconds');
             duration = 2.0;
         }
         // number of easing steps
@@ -354,14 +602,14 @@ class TJBot {
             const l = 0.0 + (i / (numSteps / 2)) * 0.5;
             colorRamp[i] = hex.toHsl().lightness(l).toRgb().toHexString().replace('#', '0x');
         }
-        winston.verbose(`💡 color ramp for pulse: ${colorRamp.join(', ')}`);
+        logger.silly(`color ramp for pulse: ${colorRamp.join(', ')}`);
         // perform the ease
-        winston.verbose(`💡 pulsing my LED to RGB color ${rgb}`);
+        logger.verbose(`pulsing my LED to RGB color ${rgb}`);
         for (let i = 0; i < easeDelays.length; i += 1) {
             const c = i < colorRamp.length ? colorRamp[i] : colorRamp[colorRamp.length - 1 - (i - colorRamp.length) - 1];
-            winston.verbose(`💡 pulse step ${i}: setting color to ${c}`);
+            logger.silly(`pulse step ${i}: setting color to ${c}`);
             await this.shine(c);
-            sleep(easeDelays[i]);
+            await asyncSleep(easeDelays[i]);
         }
     }
     /**
@@ -370,8 +618,8 @@ class TJBot {
      * @public
      */
     shineColors() {
-        if (this._shineColors === undefined) {
-            this._shineColors = colorToHex.all().map((elt) => elt.name);
+        if (this._shineColors.length === 0) {
+            this._shineColors = getShineColors();
         }
         return this._shineColors;
     }
@@ -393,22 +641,21 @@ class TJBot {
      * Speak a message.
      * @param {string} message The message to speak.
      * @throws {TJBotError} if the speaker hardware is not initialized
-     * @async
      * @public
      */
     async speak(message) {
-        this._assertCapability(Capability.SPEAK);
-        winston.info(`💬 TJBot speaking: "${message}"`);
+        this.assertCapability(Capability.SPEAK);
+        logger.info(`Speaking: "${message}"`);
         // Delegate to the SpeakerController which handles TTS synthesis and audio playback
         await this.rpiDriver.speak(message);
     }
     /**
      * Play a sound at the specified path.
      * @param {string} soundFile The path to the sound file to be played.
-     * @async
      * @public
      */
     async play(soundFile) {
+        logger.info(`Playing sound: ${soundFile}`);
         await this.rpiDriver.playAudio(soundFile);
     }
     /** ------------------------------------------------------------------------ */
@@ -417,66 +664,67 @@ class TJBot {
     /**
      * Moves TJBot's arm all the way back. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_BACK may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully back.
      * @example tj.armBack()
      * @public
      */
     armBack() {
-        // make sure we have an arm
-        this._assertCapability(Capability.WAVE);
-        winston.verbose("🦾 Moving TJBot's arm back");
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_BACK);
+        this.assertCapability(Capability.WAVE);
+        logger.info("Moving TJBot's arm back");
+        return new Promise((resolve) => {
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_BACK);
+            resolve();
+        });
     }
     /**
      * Raises TJBot's arm. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_UP may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully raised.
      * @example tj.raiseArm()
      * @public
      */
-    raiseArm() {
-        // make sure we have an arm
-        this._assertCapability(Capability.WAVE);
-        winston.verbose("🦾 Raising TJBot's arm");
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+    async raiseArm() {
+        this.assertCapability(Capability.WAVE);
+        logger.info("Raising TJBot's arm");
+        return new Promise((resolve) => {
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
+            resolve();
+        });
     }
     /**
      * Lowers TJBot's arm. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_DOWN may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully lowered.
      * @example tj.lowerArm()
      * @public
      */
-    lowerArm() {
-        // make sure we have an arm
-        this._assertCapability(Capability.WAVE);
-        winston.verbose("🦾 Lowering TJBot's arm");
-        this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
+    async lowerArm() {
+        this.assertCapability(Capability.WAVE);
+        logger.info("Lowering TJBot's arm");
+        return new Promise((resolve) => {
+            this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
+            resolve();
+        });
     }
     /**
      * Waves TJBots's arm once.
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the wave is complete.
+     * @example tj.wave()
      * @public
      */
-    wave() {
-        this._assertCapability(Capability.WAVE);
-        winston.verbose("🦾 Waving TJBot's arm");
+    async wave() {
+        this.assertCapability(Capability.WAVE);
+        logger.verbose("Waving TJBot's arm");
         const delay = 0.2;
         this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
-        sleep(delay);
+        await asyncSleep(delay);
         this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
-        sleep(delay);
+        await asyncSleep(delay);
         this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
-        sleep(delay);
+        await asyncSleep(delay);
     }
 }
-/**
- * TJBot library version
- * @readonly
- */
-TJBot.VERSION = `v${packageJson.version}`;
-/**
- * Hardware list
- * @readonly
- */
-TJBot.Hardware = Hardware;
 /** ------------------------------------------------------------------------ */
 /** MODULE EXPORTS                                                           */
 /** ------------------------------------------------------------------------ */

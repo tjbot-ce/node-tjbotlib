@@ -1,0 +1,432 @@
+/**
+ * Copyright 2025 IBM Corp. All Rights Reserved.
+ * Copyright 2026-present TJBot Contributors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { select } from '@inquirer/prompts';
+import { execSync } from 'child_process';
+import type { ListenConfig, STTBackendConfig } from '../../src/config/config-types.js';
+import { inferSTTMode } from '../../src/stt/stt-utils.js';
+import { TJBot } from '../../src/tjbot.js';
+import { ModelRegistry } from '../../src/utils/index.js';
+import type { STTModelMetadata } from '../../src/utils/index.js';
+import { initWinston } from '../../src/utils/logging.js';
+import { formatSection, formatTitle } from './utils.js';
+
+// ANSI color codes for output
+const COLORS = {
+    RESET: '\x1b[0m',
+    DIM: '\x1b[2m',
+    BRIGHT: '\x1b[1m',
+    GREEN: '\x1b[32m',
+    BLUE: '\x1b[34m',
+    YELLOW: '\x1b[33m',
+};
+
+const LOG_LEVEL = 'info';
+
+const BACKENDS = [
+    { key: 'local', label: 'Local (Sherpa-ONNX)' },
+    { key: 'ibm-watson-stt', label: 'IBM Watson' },
+    { key: 'google-cloud-stt', label: 'Google Cloud' },
+    { key: 'azure-stt', label: 'Azure' },
+];
+
+interface AlsaDevice {
+    name: string;
+    value: string;
+}
+
+interface BackendConfig {
+    model?: string;
+    vad?: { enabled: boolean };
+    backgroundAudioSuppression?: number;
+    languageCode?: string;
+    region?: string;
+    language?: string;
+}
+
+async function runTest(): Promise<void> {
+    // Note: Sherpa-ONNX native stderr output is suppressed at the module level
+    initWinston(LOG_LEVEL);
+    console.log(formatTitle('TJBot STT Test'));
+
+    // Get user configuration choices
+    const selectedBackend = await promptBackendChoice();
+    const backendConfig = await promptBackendSpecificOptions(selectedBackend);
+    const selectedDevice = await promptDeviceChoice();
+
+    // Build listen config from user choices
+    const listenConfig = buildListenConfig(selectedBackend, backendConfig, selectedDevice);
+
+    console.log(
+        formatSection(
+            `Initializing TJBot with STT (${selectedBackend}${backendConfig.model ? `: ${backendConfig.model}` : ''})`
+        )
+    );
+
+    // Instantiate TJBot with override configuration
+    const tjbot = await TJBot.getInstance().initialize({
+        log: { level: LOG_LEVEL },
+        hardware: {
+            camera: false,
+            led: false,
+            microphone: true,
+            servo: false,
+            speaker: false,
+        },
+        listen: listenConfig,
+    });
+    console.log('✓ TJBot initialized');
+
+    console.log(formatSection('Interactive test'));
+    console.log('Start speaking. Press Ctrl+C when you are finished with the test.');
+
+    let lastPartial = '';
+    const onPartialResult = (text: string): void => {
+        if (text && text !== lastPartial) {
+            lastPartial = text;
+            console.log(`${COLORS.DIM}Partial: ${text}${COLORS.RESET}`);
+        }
+    };
+
+    const onFinalResult = (text: string): void => {
+        if (text) {
+            console.log(`${COLORS.BRIGHT}${COLORS.GREEN}Final: ${text}${COLORS.RESET}`);
+        }
+    };
+
+    // Detect if model is streaming or offline
+    const mode = inferSTTMode(listenConfig) as string;
+    const isStreaming = mode === 'streaming' || mode === 'streaming-zipformer';
+
+    // Setup graceful shutdown
+    let isShuttingDown = false;
+    const handleSigint = (): void => {
+        if (!isShuttingDown) {
+            isShuttingDown = true;
+            console.log(`\n${COLORS.YELLOW}Shutting down...${COLORS.RESET}`);
+            process.exit(0);
+        }
+    };
+
+    process.on('SIGINT', handleSigint);
+
+    // Main loop: continuously listen until user presses Ctrl+C
+    try {
+        while (!isShuttingDown) {
+            try {
+                // Streaming models use callbacks, offline models return final result
+                if (isStreaming) {
+                    await tjbot.listen(onPartialResult, onFinalResult);
+                } else {
+                    const transcript = await tjbot.listen();
+                    if (transcript) {
+                        console.log(`${COLORS.BRIGHT}${COLORS.GREEN}Heard: ${transcript}${COLORS.RESET}`);
+                    }
+                }
+                lastPartial = '';
+            } catch (error) {
+                if (!isShuttingDown) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    console.error(`${COLORS.YELLOW}Error during transcription: ${message}${COLORS.RESET}`);
+                    // Exit if there's an error (likely backend initialization failure)
+                    isShuttingDown = true;
+                    process.exit(1);
+                }
+            }
+        }
+    } catch (error) {
+        if (!isShuttingDown) {
+            const message = (error as Error)?.message ?? String(error);
+            console.error('✗ STT test failed:', message);
+            process.exit(1);
+        }
+    }
+}
+
+function listAlsaDevices(): AlsaDevice[] {
+    try {
+        const output = execSync('arecord -l', { encoding: 'utf8' });
+        const devices: AlsaDevice[] = [];
+        const lines = output.split('\n');
+
+        for (const line of lines) {
+            // Parse: "card 2: Device [USB PnP Sound Device], device 0: USB Audio [USB Audio]"
+            const match = line.match(/card (\d+):.*?\[(.+?)\].*device (\d+):.*?\[(.+?)\]/);
+            if (match) {
+                const card = match[1];
+                const cardName = match[2];
+                const device = match[3];
+                const deviceName = match[4];
+                const value = `plughw:${card},${device}`;
+                const name = `Card ${card}: ${cardName} (Device ${device}: ${deviceName})`;
+                devices.push({ name, value });
+            }
+        }
+
+        return devices;
+    } catch (_err) {
+        return [];
+    }
+}
+
+async function promptDeviceChoice(): Promise<string | undefined> {
+    const devices = listAlsaDevices();
+    if (devices.length === 0) {
+        console.log('ℹ️  No ALSA devices found; using system default');
+        return undefined;
+    }
+    if (devices.length === 1) {
+        console.log(`ℹ️  Using single ALSA device: ${devices[0].name}`);
+        return devices[0].value;
+    }
+
+    const deviceValue = await select({
+        message: 'Select audio input device:',
+        choices: devices,
+        default: devices[0].value,
+    });
+    return deviceValue;
+}
+
+async function promptBackendChoice(): Promise<string> {
+    const backendKey = await select({
+        message: 'Select an STT backend to test:',
+        choices: BACKENDS.map((b) => ({ name: b.label, value: b.key })),
+        default: 'local',
+    });
+    return backendKey;
+}
+
+async function promptBackendSpecificOptions(selectedBackend: string): Promise<BackendConfig> {
+    const config: BackendConfig = {};
+
+    if (selectedBackend === 'local') {
+        return await promptSherpaONNXOptions();
+    } else if (selectedBackend === 'ibm-watson-stt') {
+        return await promptIBMWatsonOptions();
+    } else if (selectedBackend === 'google-cloud-stt') {
+        return await promptGoogleCloudOptions();
+    } else if (selectedBackend === 'azure-stt') {
+        return await promptAzureOptions();
+    }
+
+    return config;
+}
+
+async function promptSherpaONNXOptions(): Promise<BackendConfig> {
+    // Get available models from metadata
+    const registry = ModelRegistry.getInstance();
+    const models = registry.lookupModels<STTModelMetadata>('stt', false);
+
+    // Get installed models once (outside the loop for efficiency)
+    const tjbot = TJBot.getInstance();
+    const installedModelKeys = tjbot.getLocalModels('stt', true);
+    const installedModels = new Set(installedModelKeys);
+    const choices = models.map((m) => {
+        const downloaded = installedModels.has(m.key);
+        const status = downloaded ? '✓ downloaded' : '✗ not downloaded';
+        return {
+            name: `${m.label || m.key} ${status}`,
+            value: m.key,
+            short: m.label || m.key,
+        };
+    });
+
+    const modelKey = await select({
+        message: 'Select a Sherpa-ONNX STT model:',
+        choices,
+        default: models[0].key,
+    });
+
+    const selectedModel = models.find((m) => m.key === modelKey);
+    if (!selectedModel) {
+        throw new Error(`Selected model not found in registry: ${modelKey}`);
+    }
+
+    const config: BackendConfig = {
+        model: selectedModel.key,
+    };
+
+    // For offline models, ask about VAD
+    if (selectedModel.kind.startsWith('offline')) {
+        const enableVAD = await select({
+            message: 'Enable Voice Activity Detection (VAD) for better endpointing?',
+            choices: [
+                { name: 'Yes', value: true },
+                { name: 'No', value: false },
+            ],
+            default: true,
+        });
+
+        config.vad = { enabled: enableVAD };
+    }
+
+    return config;
+}
+
+async function promptIBMWatsonOptions(): Promise<BackendConfig> {
+    const modelChoice = await select({
+        message: 'Select IBM Watson model:',
+        choices: [
+            { name: 'Multimedia (general audio)', value: 'en-US_Multimedia' },
+            { name: 'Telephony (phone/VoIP)', value: 'en-US_Telephony' },
+            { name: 'Broadband', value: 'en-US_BroadbandModel' },
+            { name: 'Narrowband (8kHz)', value: 'en-US_ShortForm_NarrowbandModel' },
+        ],
+        default: 'en-US_Multimedia',
+    });
+
+    const noiseLevel = await select({
+        message: 'Background audio suppression level (0=none, 1=max):',
+        choices: [
+            { name: 'None (0.0)', value: 0.0 },
+            { name: 'Low (0.3)', value: 0.3 },
+            { name: 'Medium (0.5)', value: 0.5 },
+            { name: 'High (0.8)', value: 0.8 },
+            { name: 'Maximum (1.0)', value: 1.0 },
+        ],
+        default: 0.4,
+    });
+
+    return {
+        model: modelChoice,
+        backgroundAudioSuppression: noiseLevel,
+    };
+}
+
+async function promptGoogleCloudOptions(): Promise<BackendConfig> {
+    const supportedRegionsByModel = {
+        chirp_3: [
+            { name: 'US (multi-region)', value: 'us' },
+            { name: 'EU (multi-region)', value: 'eu' },
+        ],
+        chirp_2: [
+            { name: 'US Central 1', value: 'us-central1' },
+            { name: 'Europe West 4', value: 'europe-west4' },
+            { name: 'Asia Southeast 1', value: 'asia-southeast1' },
+        ],
+    } as const;
+
+    const languageCode = await select({
+        message: 'Select language:',
+        choices: [
+            { name: 'English (US)', value: 'en-US' },
+            { name: 'English (GB)', value: 'en-GB' },
+            { name: 'Spanish (Spain)', value: 'es-ES' },
+            { name: 'Spanish (Mexico)', value: 'es-MX' },
+            { name: 'French (France)', value: 'fr-FR' },
+            { name: 'German', value: 'de-DE' },
+            { name: 'Chinese (Mandarin)', value: 'zh-CN' },
+            { name: 'Japanese', value: 'ja-JP' },
+            { name: 'Korean', value: 'ko-KR' },
+        ],
+        default: 'en-US',
+    });
+
+    const modelType = await select({
+        message: 'Select model type:',
+        choices: [
+            { name: 'Chirp 3 (v2)', value: 'chirp_3' },
+            { name: 'Chirp 2 (v2)', value: 'chirp_2' },
+        ],
+        default: 'chirp_3',
+    });
+
+    const regionChoices = supportedRegionsByModel[modelType as keyof typeof supportedRegionsByModel];
+    const region = await select({
+        message: 'Select region:',
+        choices: regionChoices,
+        default: regionChoices[0].value,
+    });
+
+    return {
+        languageCode,
+        model: modelType,
+        region,
+    };
+}
+
+async function promptAzureOptions(): Promise<BackendConfig> {
+    const language = await select({
+        message: 'Select language:',
+        choices: [
+            { name: 'English (US)', value: 'en-US' },
+            { name: 'English (GB)', value: 'en-GB' },
+            { name: 'Spanish (Spain)', value: 'es-ES' },
+            { name: 'Spanish (Mexico)', value: 'es-MX' },
+            { name: 'French (France)', value: 'fr-FR' },
+            { name: 'German', value: 'de-DE' },
+            { name: 'Chinese (Mandarin)', value: 'zh-CN' },
+            { name: 'Japanese', value: 'ja-JP' },
+            { name: 'Korean', value: 'ko-KR' },
+        ],
+        default: 'en-US',
+    });
+
+    return { language };
+}
+
+function buildListenConfig(selectedBackend: string, backendConfig: BackendConfig, device?: string): ListenConfig {
+    // Build backend-specific configuration dynamically based on selected backend
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const backend: Record<string, any> = {
+        type: selectedBackend,
+    };
+
+    if (selectedBackend === 'local') {
+        backend.local = {
+            model: backendConfig.model,
+        };
+        if (backendConfig.vad !== undefined) {
+            backend.local.vad = backendConfig.vad;
+        }
+    } else if (selectedBackend === 'ibm-watson-stt') {
+        backend['ibm-watson-stt'] = {
+            model: backendConfig.model,
+            backgroundAudioSuppression: backendConfig.backgroundAudioSuppression,
+        };
+    } else if (selectedBackend === 'google-cloud-stt') {
+        backend['google-cloud-stt'] = {
+            languageCode: backendConfig.languageCode,
+            model: backendConfig.model,
+            region: backendConfig.region,
+        };
+    } else if (selectedBackend === 'azure-stt') {
+        backend['azure-stt'] = {
+            language: backendConfig.language,
+        };
+    }
+
+    // Assemble and return the final ListenConfig
+    const listenConfig: ListenConfig = {
+        microphoneRate: 16000,
+        microphoneChannels: 1,
+        backend: backend as STTBackendConfig,
+    };
+
+    if (device) {
+        listenConfig.device = device;
+    }
+
+    return listenConfig;
+}
+
+runTest().catch((error: Error) => {
+    const message = (error as Error)?.message ?? String(error);
+    console.error('✗ STT test failed:', message);
+    process.exit(1);
+});

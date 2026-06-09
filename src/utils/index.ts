@@ -15,7 +15,18 @@
  * limitations under the License.
  */
 
+export { convertHexToRgbColor, getShineColors, normalizeColor } from './colors.js';
 export { Capability, Hardware } from './constants.js';
-export { sleep, convertHexToRgbColor, normalizeColor, isCommandAvailable } from './utils.js';
 export { TJBotError } from './errors.js';
-export { SherpaModelManager, SherpaModel, SherpaSTTModelMetadata, VADModelConfig } from './sherpa-utils.js';
+export { getLogger, initWinston } from './logging.js';
+export type { TJBotLogLevel } from './logging.js';
+export { ModelRegistry } from './model-registry.js';
+export type {
+    BaseModelMetadata,
+    ModelType,
+    STTModelMetadata,
+    TTSModelMetadata,
+    VADModelMetadata,
+    VisionModelMetadata,
+} from './model-registry.js';
+export { isCommandAvailable, sleep, sleepSync } from './utils.js';

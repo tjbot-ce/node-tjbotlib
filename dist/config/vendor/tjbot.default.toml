@@ -1,0 +1,452 @@
+################################################################################
+# TJBot Configuration File
+################################################################################
+
+[log]
+# Valid logging levels are 'error', 'warning', 'info', 'verbose', 'debug'
+# Set this to 'error' or 'warning' to reduce log verbosity
+# Set this to 'verbose' or 'debug' to see detailed logs for troubleshooting
+level = 'info'
+
+# =============================================================================
+# Hardware Configuration
+# =============================================================================
+# Hardware devices to initialize with TJBot
+# Set to true to enable, false (or omit) to disable
+
+[hardware]
+camera = false           # Camera for image capture
+led = false              # LED (either NeoPixel or Common Anode)
+microphone = false       # Microphone for audio input (for STT)
+servo = false            # Servo motor for arm/movement
+speaker = false          # Speaker for audio playback (including TTS)
+
+# =============================================================================
+# Listen
+# =============================================================================
+# Configuration for TJBot's ability to listen and transcribe speech
+
+[listen]
+# 'device' specifies the audio device `arecord` will use for audio recording.
+# Leave blank to auto-pick, or run `aplay -l` to list devices.
+device = ''
+
+# Microphone sampling rate in Hz (44.1k works; 16k reduces CPU for offline models)
+microphoneRate = 44100
+
+# Number of audio channels (1 is typical for mics; 2 also works)
+microphoneChannels = 2
+
+[listen.backend]
+# 'type' chooses the STT provider:
+#   'none'                -> disable STT
+#   'local'               -> on-device Sherpa-ONNX STT
+#   'ibm-watson-stt'      -> IBM Cloud STT
+#   'google-cloud-stt'    -> Google Cloud STT
+#   'azure-stt'           -> Microsoft Azure STT
+type = 'local'
+
+[listen.backend.local]
+# DEFAULT MODEL (OFFLINE): Whisper base.en (good accuracy, English-only, ~140MB)
+# See model-registry.yaml for other available models.
+model = 'whisper-base'
+
+[listen.backend.local.vad]
+# Voice activity detection (VAD) is used for local OFFLINE models (e.g. whisper, moonshine).
+# When enabled, TJBot uses a VAD model to segment speech and stop on silence.
+# Streaming models (zipformer, paraformer) use built-in endpoint detection instead.
+# We recommend keeping VAD enabled, but you can disable it if desired.
+enabled = true
+
+# DEFAULT MODEL: Silero VAD (~350KB)
+# See model-registry.yaml for other available models.
+model = 'silero-vad'
+
+[listen.backend.ibm-watson-stt]
+# IBM Watson STT model to use.
+#
+# Full list of IBM Watson STT models:
+# https://cloud.ibm.com/docs/speech-to-text?topic=speech-to-text-models-ng
+model = 'en-US_Multimedia'
+
+# 'inactivityTimeout' specifies the number of seconds of silence allowed
+# after which the listening session will automatically end.
+# Set to -1 to disable automatic timeout.
+inactivityTimeout = -1
+
+# 'backgroundAudioSuppression' specifies the level of background audio suppression
+# to apply during speech recognition. Ranges from 0.0 to 1.0, where higher values
+# result in more aggressive suppression of background noise.
+backgroundAudioSuppression = 0.4
+
+# If true, interim results will be returned during streaming recognition.
+interimResults = false
+
+# Path to ibm-credentials.env file containing IBM API credentials
+# If not specified, TJBot will search for the file in this order:
+#   1. Current working directory (./ibm-credentials.env)
+#   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
+credentialsPath = ''
+
+[listen.backend.google-cloud-stt]
+# Path to the google-credentials.json file containing Google Cloud API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./google-credentials.json)
+#   2. .tjbot directory (~/.tjbot/google-credentials.json)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
+credentialsPath = ''
+
+# Google Cloud Speech-to-Text supports the following models:
+#   chirp_3 (supported in regions: us, eu)
+#   chirp_2 (supported in regions: us-central1, europe-west4, asia-southeast1)
+# See these pages for more information:
+#   https://docs.cloud.google.com/speech-to-text/docs/models/chirp-3
+#   https://docs.cloud.google.com/speech-to-text/docs/models/chirp-2
+model = 'chirp_3'
+
+# The region in which the STT service operates. It must match a region supported
+# by the model.
+region = 'us'
+
+# Google Cloud Speech-to-Text language code (e.g., 'en-US', 'en-GB', 'fr-FR')
+languageCode = 'en-US'
+
+# If true, automatically add punctuation to transcriptions (e.g., commas, periods).
+enableAutomaticPunctuation = true
+
+# If true, Google Cloud Speech-to-Text will attempt to detect profane words
+# and return only the first letter followed by asterisks in the transcript.
+profanityFilter = true
+
+# If true, interim results will be returned during streaming recognition.
+interimResults = false
+
+[listen.backend.azure-stt]
+# Path to the azure-credentials.env file containing Azure Speech API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./azure-credentials.env)
+#   2. .tjbot directory (~/.tjbot/azure-credentials.env)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
+credentialsPath = ''
+
+# Azure Speech-to-Text language code (e.g., 'en-US', 'en-GB', 'fr-FR')
+language = ''
+
+# If true, interim results will be returned during streaming recognition.
+interimResults = false
+
+# =============================================================================
+# See
+# =============================================================================
+# Configuration for TJBot's ability to see and recognize objects, faces, and text
+
+[see]
+# Camera resolution is width x height
+# Common resolutions: [1920, 1080], [1280, 720], [640, 480]
+cameraResolution = [1920, 1080]
+
+# If true, flips the camera image vertically
+verticalFlip = false
+
+# If true, flips the camera image horizontally
+horizontalFlip = false
+
+# Camera capture timeout in milliseconds
+# This controls how long the camera preview runs before capturing the photo.
+# The preview allows auto-exposure and white balance to stabilize.
+#   500  - Fast capture with minimal preview (recommended for responsive behavior)
+#   1000 - 1 second preview (good balance of speed and quality)
+#   5000 - Full 5 second preview (maximum quality, default if not specified)
+#   0    - Immediate capture with no preview (fastest but may have poor exposure)
+captureTimeout = 500
+
+# Enable zero shutter lag for faster repeated captures
+# When enabled, the camera streams continuously in the background so captures
+# use recent frames that are already properly exposed. Best for taking multiple
+# photos in quick succession.
+zeroShutterLag = false
+
+[see.backend]
+# 'type' chooses the CV provider:
+#   'none'                -> disable computer vision
+#   'local'               -> on-device ONNX (OFFLINE)
+#   'google-cloud-vision' -> Google Cloud Vision (CLOUD)
+#   'azure-vision'        -> Microsoft Azure Vision (CLOUD)
+type = 'local'
+
+[see.backend.local]
+# DEFAULT MODELS (OFFLINE): Specialized quantized models for each vision task
+# All models are downloaded and cached automatically when using local backend
+# See model-registry.yaml for available models for each task
+objectDetectionModel = 'ssd-mobilenet-v2'
+imageClassificationModel = 'mobilenetv3'
+faceDetectionModel = 'scrfd-2.5g'
+
+# Confidence thresholds for filtering results
+# Results with confidence scores below these thresholds will be excluded
+# Valid range: 0.0 to 1.0 (0.5 = 50% confidence)
+# Note: SCRFD confidence is direct model score; 0.5 is a good starting threshold
+objectDetectionConfidence = 0.8
+imageClassificationConfidence = 0.8
+faceDetectionConfidence = 0.5
+
+[see.backend.google-cloud-vision]
+# Path to the google-credentials.json file containing Google Cloud Vision API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./google-credentials.json)
+#   2. .tjbot directory (~/.tjbot/google-credentials.json)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
+credentialsPath = ''
+
+# Confidence thresholds for filtering cloud results client-side after API response
+# Valid range: 0.0 to 1.0
+objectDetectionConfidence = 0.8
+imageClassificationConfidence = 0.8
+faceDetectionConfidence = 0.5
+
+[see.backend.azure-vision]
+# Path to the azure-credentials.env file containing Azure Vision API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./azure-credentials.env)
+#   2. .tjbot directory (~/.tjbot/azure-credentials.env)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
+credentialsPath = ''
+
+# Confidence thresholds for filtering cloud results client-side after API response
+# Valid range: 0.0 to 1.0
+objectDetectionConfidence = 0.8
+imageClassificationConfidence = 0.8
+
+# =============================================================================
+# Shine
+# =============================================================================
+# Configuration for TJBot's ability to shine its LED
+
+[shine]
+hasNeopixelLED = false       # set to true if your TJBot has a NeoPixel LED
+hasCommonAnodeLED = false    # set to true if your TJBot has a Common Anode LED
+
+[shine.neopixel]
+# NeoPixel LED Pin Configuration
+#
+# Note: Configuration parameters are model-specific. Each Raspberry Pi driver uses
+# only the parameters relevant to its hardware:
+#   - Raspberry Pi 3 & 4: Uses 'gpioPin' (PWM-based NeoPixel control)
+#   - Raspberry Pi 5:     Uses 'spiInterface' (SPI-based NeoPixel control)
+#
+# Recommended pin set with default TJBot servo pin:
+#   - RPi 3/4: NeoPixel on GPIO21, servo on GPIO18
+#   - RPi 5:   NeoPixel via SPI MOSI (GPIO10), servo on GPIO18
+
+# ====== FOR RASPBERRY PI 3 & 4: GPIO PIN ======
+# Available pins: GPIO10, GPIO12, GPIO18, GPIO21
+#
+# GPIO21 is the recommended default when servoPin = 18.
+# This avoids putting both NeoPixel and servo on the same GPIO.
+#
+# GPIO18 also works but requires disabling audio:
+#   1. Edit /boot/config.txt
+#   2. Change: dtparam=audio=on
+#   3. To: dtparam=audio=off
+#   4. Reboot your Pi
+# If you choose gpioPin = 18 for NeoPixel, move servoPin to a different GPIO.
+gpioPin = 21  # GPIO21 / Physical pin 40 (RPi3/4 only)
+
+# ====== FOR RASPBERRY PI 5: SPI INTERFACE ======
+# Raspberry Pi 5 uses the Serial Peripheral Interface (SPI) for NeoPixel control.
+# Enable SPI in /boot/firmware/config.txt using:
+#   dtparam=spi=on
+# Then reboot your Raspberry Pi for the change to take effect.
+#
+# NeoPixel data is sent on SPI MOSI (GPIO10 / physical pin 19).
+# GPIO8 is SPI chip-select (CE0), not NeoPixel data, and should not be used as
+# the LED data pin.
+#
+# The SPI interface is exposed via the /dev filesystem, and is
+# commonly located at /dev/spidev0.0.
+spiInterface = "/dev/spidev0.0"
+
+# Use GRB format for NeoPixel colors. Change this to 'false' if your LED shines
+# green when it is supposed to shine red.
+useGRBFormat = true
+
+[shine.commonanode]
+# Common Anode LEDs are connected with three GPIO pins for red, green, and blue.
+redPin = 19   # GPIO19 / Physical pin 35
+greenPin = 13 # GPIO13 / Physical pin 33
+bluePin = 12  # GPIO12 / Physical pin 32
+
+# =============================================================================
+# Speak
+# =============================================================================
+# Configuration for TJBot's ability to speak using text-to-speech synthesis
+
+[speak]
+# 'device' specifies the audio device `aplay` will use for audio playback
+# in most cases, leaving this blank should just work. if you have difficulty
+# with audio playback, please refer to the TJBot wiki:
+#   https://github.com/ibmtjbot/tjbot/wiki/Troubleshooting-TJBot#audio-issues
+# also, you can use `aplay -l` to list available audio output devices
+device = ''
+
+[speak.backend]
+# 'type' chooses the TTS provider:
+#   'none'                -> disable TTS
+#   'local'               -> on-device Sherpa-ONNX TTS
+#   'ibm-watson-tts'      -> IBM Cloud TTS
+#   'google-cloud-tts'    -> Google Cloud TTS
+#   'azure-tts'           -> Microsoft Azure TTS
+type = 'local'
+
+[speak.backend.local]
+# DEFAULT MODEL: VITS Piper en_US Ryan medium
+# See model-registry.yaml for other available models.
+model = 'vits-piper-en_US-ryan-medium'
+
+[speak.backend.ibm-watson-tts]
+# Path to the ibm-credentials.env file containing IBM Cloud Watson API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./ibm-credentials.env)
+#   2. .tjbot directory (~/.tjbot/ibm-credentials.env)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
+credentialsPath = ''
+
+# 'voice' specifies the IBM Watson Text-to-Speech voice to use.
+# Available IBM voices include:
+#   en-US_AllisonExpressive
+#   en-US_AllisonV3Voice
+#   en-US_EllieNatural
+#   en-US_EmilyV3Voice
+#   en-US_EmmaExpressive
+#   en-US_EmmaNatural
+#   en-US_EthanNatural
+#   en-US_HenryV3Voice
+#   en-US_JacksonNatural
+#   en-US_KevinV3Voice
+#   en-US_LisaExpressive
+#   en-US_LisaV3Voice
+#   en-US_MichaelExpressive
+#   en-US_MichaelV3Voice
+#   en-US_OliviaV3Voice
+#   en-US_VictoriaNatural
+# For a complete list of available voices, see:
+#   https://cloud.ibm.com/docs/text-to-speech?topic=text-to-speech-voices
+voice = 'en-US_MichaelV3Voice'
+
+[speak.backend.google-cloud-tts]
+# Path to the google-credentials.json file containing Google Cloud API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./google-credentials.json)
+#   2. .tjbot directory (~/.tjbot/google-credentials.json)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
+credentialsPath = ''
+
+# Google Cloud TTS voice name
+# Examples:
+#   en-US-Neural2-A
+#   en-US-Neural2-C
+#   en-US-Neural2-D
+#   en-US-Neural2-E
+#   en-US-Neural2-F
+#   en-US-Neural2-G
+#   en-US-Neural2-H
+#   en-US-Neural2-I
+#   en-US-Neural2-J
+#   en-US-Studio-O
+#   en-US-Studio-Q
+# For a complete list of available voices, see:
+#   https://docs.cloud.google.com/text-to-speech/docs/list-voices-and-types
+voice = 'en-US-Neural2-C'
+
+# Google Cloud language code (e.g., 'en-US', 'en-GB', 'fr-FR')
+# This should match the locale prefix of the voice specified above (e.g., 'en-US' for 'en-US-Neural2-A').
+languageCode = 'en-US'
+
+[speak.backend.azure-tts]
+# Path to the azure-credentials.env file containing Azure Speech API credentials
+# By default, TJBot will search for the file in this order:
+#   1. Current working directory (./azure-credentials.env)
+#   2. .tjbot directory (~/.tjbot/azure-credentials.env)
+# You only need to set credentialsPath if your credential file is kept elsewhere.
+credentialsPath = ''
+
+# Azure TTS voice name
+# Examples:
+#   en-US-AmberNeural
+#   en-US-AndrewNeural
+#   en-US-AriaNeural
+#   en-US-AshleyNeural
+#   en-US-AvaNeural
+#   en-US-BrianNeural
+#   en-US-DavisNeural
+#   en-US-EmmaNeural
+#   en-US-GuyNeural
+#   en-US-JennyNeural
+#   en-US-RogerNeural
+#   en-US-SteffanNeural
+# For a complete list of available voices, see:
+#   https://learn.microsoft.com/azure/ai-services/speech-service/language-support?tabs=tts
+voice = 'en-US-EmmaNeural'
+
+# =============================================================================
+# Wave
+# =============================================================================
+# Configuration for TJBot's ability to wave its arm using a servo motor
+
+[wave]
+# The GPIO pin number for controlling a servo motor connected to TJBot's arm.
+# Recommended default across RPi 3/4/5 is GPIO18.
+# If NeoPixel on RPi 3/4 is also assigned to GPIO18, change one of them.
+servoPin = 18 # GPIO18 / Physical Pin 12
+
+# ============================================================================
+# On-Device ML Models
+# ============================================================================
+# TJBot supports on-device ML models for speech and vision tasks using the
+# sherpa-onnx runtime (speech) and onnx runtime (vision). Several models are
+# available by default, defined in the model registry (model-registry.yaml).
+# You can also register additional models here. Models must be in the ONNX
+# format and compatible with the sherpa-onnx or onnx runtimes.
+#
+# On-device models are registered in the [[models]] array. Each model entry
+# includes:
+#   type       -> Model type (e.g., 'stt', 'tts', 'vad',
+#                 'vision.object-recognition')
+#   key        -> Unique model identifier (e.g., 'sherpa-onnx-whisper-base.en')
+#   label      -> Human-readable name for the model
+#   url        -> URL to download the model files (can be file:// for local
+#                 files)
+#   folder     -> Folder name to store the model files locally
+#   kind       -> Model architecture:
+#                 STT: 'offline', 'offline-whisper', 'streaming-zipformer',
+#                 'streaming'
+#                 TTS: 'vits-piper'
+#                 Vision: 'detection', 'classification', 'face-detection',
+#                 'image-description'
+#   required   -> List of required files for the model (used to validate the
+#                 model was downloaded correctly)
+#   inputShape -> (Vision models only) Expected input tensor shape [batch,
+#                 channels, height, width]
+#   labelUrl   -> (Vision models only) URL to download label/class names file
+#
+# Example: Register a custom STT model
+# [[models]]
+# type = 'stt'
+# key = 'my-custom-stt-model'
+# label = 'My Custom STT Model'
+# url = "file:///path/to/my/model.onnx"
+# folder = "my-custom-stt-model"
+# kind = "offline"
+# required = ["model.onnx", "tokens.txt"]
+
+# Example: Register a custom vision classification model
+# [[models]]
+# type = 'vision.classification'
+# key = 'my-vision-classifier'
+# label = 'My Vision Classifier'
+# url = "file:///path/to/my/classifier.zip"
+# folder = "my-vision-classifier"
+# kind = "classification"
+# required = ["model.onnx", "labels.txt"]
+# labelUrl = "file:///path/to/labels.txt"
+# inputShape = [1, 3, 224, 224]

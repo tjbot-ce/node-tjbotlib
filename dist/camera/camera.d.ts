@@ -19,27 +19,44 @@
  * Handles camera initialization and photo capture using rpi-cam-lib
  */
 export declare class CameraController {
-    private camera?;
     private resolution;
     private verticalFlip;
     private horizontalFlip;
+    private captureTimeout;
+    private zeroShutterLag;
     constructor();
     /**
      * Initialize the camera with configuration
      * @param resolution Camera resolution as [width, height]
      * @param verticalFlip Whether to vertically flip the image
      * @param horizontalFlip Whether to horizontally flip the image
+     * @param captureTimeout Timeout in milliseconds before capturing (default: 500)
+     * @param zeroShutterLag Enable zero shutter lag mode (default: false)
      */
-    initialize(resolution: [number, number], verticalFlip: boolean, horizontalFlip: boolean): void;
+    initialize(resolution: [number, number], verticalFlip: boolean, horizontalFlip: boolean, captureTimeout?: number, zeroShutterLag?: boolean): void;
     /**
-     * Capture a photo
+     * Build rpicam-still command arguments
+     * @param outputPath Output path or '-' for stdout
+     * @param encoding Optional encoding format (e.g., 'jpg')
+     * @returns Array of command-line arguments
+     */
+    private buildCameraArgs;
+    /**
+     * Capture a photo by invoking rpicam-still via child_process
      * @param atPath Optional path to save the photo. If not provided, a temporary file will be used.
      * @returns Path to the saved photo
-     * @throws TJBotError if the camera is not initialized or if capture fails
+     * @throws TJBotError if the camera command fails
      */
     capturePhoto(atPath?: string): Promise<string>;
     /**
-     * Clean up resources
+     * Capture a photo and return it as a Buffer
+     * @returns Promise that resolves to a Buffer containing the photo data
+     * @throws TJBotError if the camera capture fails
+     */
+    capturePhotoBuffer(): Promise<Buffer>;
+    /**
+     * Clean up resources (no-op for direct process invocation)
      */
     cleanup(): void;
 }
+//# sourceMappingURL=camera.d.ts.map

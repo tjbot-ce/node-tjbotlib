@@ -14,31 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import type { SpeakConfig } from '../config/config-types.js';
 import { SpeakerController } from '../speaker/index.js';
 /**
- * TTS Controller for TJBot
- * Manages text-to-speech synthesis and engine lifecycle.
+ * TTS controller manages text-to-speech synthesis and engine lifecycle.
  * TTS engine is eagerly initialized during setupSpeaker() and cached for reuse.
- * Delegates audio playback to SpeakerController.
+
  */
 export declare class TTSController {
-    private ttsEngine;
-    private ttsBackend;
-    private speakConfig;
+    private ttsEngine?;
     private speakerController;
+    private speakConfig?;
     constructor(speakerController: SpeakerController);
     /**
      * Initialize the TTS backend
      * Called during setupSpeaker to eagerly load TTS engine
      * @param config Configuration object with backend, IBM settings, and Sherpa settings
      */
-    initialize(config: Record<string, unknown>): Promise<void>;
+    initialize(config: SpeakConfig): Promise<void>;
     /**
      * Synthesize text to speech and play the audio.
      * Lazily initializes the TTS engine on first call.
      *
      * @param text The text to speak
-     * @param config The speak configuration with TTS backend settings
      */
-    speak(text: string, config: Record<string, unknown>): Promise<void>;
+    speak(text: string): Promise<void>;
+    /**
+     * Clean up TTS resources.
+     */
+    cleanup(): Promise<void>;
 }
+//# sourceMappingURL=tts.d.ts.map

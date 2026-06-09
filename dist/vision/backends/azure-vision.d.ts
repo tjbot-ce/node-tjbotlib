@@ -1,0 +1,33 @@
+/**
+ * Copyright 2026-present TJBot Contributors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import { VisionEngine, type FaceDetectionMetadata, type ImageClassificationResult, type ImageDescriptionResult, type ObjectDetectionResult } from '../vision-engine.js';
+export declare class AzureVisionEngine extends VisionEngine {
+    private visionKey?;
+    private visionEndpoint?;
+    private client?;
+    initialize(): Promise<void>;
+    private readImageBuffer;
+    private getObjectDetectionConfidenceThreshold;
+    private getImageClassificationConfidenceThreshold;
+    detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
+    describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
+}
+//# sourceMappingURL=azure-vision.d.ts.map

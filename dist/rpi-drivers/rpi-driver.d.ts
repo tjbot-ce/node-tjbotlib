@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 import { Transform } from 'stream';
 import { CameraController } from '../camera/index.js';
 import { ListenConfig, SeeConfig, ShineConfig, SpeakConfig, WaveConfig } from '../config/index.js';
@@ -24,27 +23,42 @@ import { SpeakerController } from '../speaker/index.js';
 import { STTController } from '../stt/stt.js';
 import { TTSController } from '../tts/tts.js';
 import { Capability, Hardware } from '../utils/index.js';
+import { FaceDetectionMetadata, ImageClassificationResult, ImageDescriptionResult, ObjectDetectionResult } from '../vision/index.js';
+import { VisionController } from '../vision/vision.js';
 export declare abstract class RPiHardwareDriver {
+    abstract getHardware(): Set<Hardware>;
     abstract hasHardware(hardware: Hardware): boolean;
     abstract hasCapability(capability: Capability): boolean;
     abstract setupCamera(config: SeeConfig): void;
+    abstract setupLED(config: ShineConfig): Promise<void>;
     abstract setupLEDCommonAnode(config: ShineConfig['commonanode']): void;
-    abstract setupLEDNeopixel(config: ShineConfig['neopixel']): void;
+    abstract setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void>;
     abstract setupMicrophone(config: ListenConfig): void;
     abstract setupServo(config: WaveConfig): void;
     abstract setupSpeaker(config: SpeakConfig): void;
+    abstract cleanup(): Promise<void>;
+    abstract initializeSTTEngine(): Promise<void>;
+    abstract initializeTTSEngine(): Promise<void>;
+    abstract initializeVisionEngine(): Promise<void>;
     abstract startMic(): void;
     abstract pauseMic(): void;
     abstract resumeMic(): void;
     abstract stopMic(): void;
     abstract getMicInputStream(): Transform;
-    abstract connectMicStreamToSTTStream(sttStream: RecognizeStream): RecognizeStream;
     abstract listenForTranscript(options?: {
         onPartialResult?: (text: string) => void;
         onFinalResult?: (text: string) => void;
         abortSignal?: AbortSignal;
     }): Promise<string>;
     abstract capturePhoto(atPath?: string): Promise<string>;
+    abstract capturePhotoBuffer(): Promise<Buffer>;
+    abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    abstract detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
+    abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
     abstract renderLED(hexColor: string): Promise<void>;
     abstract renderLEDCommonAnode(rgbColor: [number, number, number]): void;
     abstract renderLEDNeopixel(hexColor: string): Promise<void>;
@@ -59,27 +73,44 @@ export declare abstract class RPiBaseHardwareDriver extends RPiHardwareDriver {
     protected speakerController?: SpeakerController;
     protected sttController?: STTController;
     protected ttsController?: TTSController;
-    protected speakConfig: SpeakConfig;
+    protected visionController?: VisionController;
     protected listenConfig: ListenConfig;
+    protected shineConfig: ShineConfig;
+    protected seeConfig: SeeConfig;
+    protected speakConfig: SpeakConfig;
     constructor();
+    getHardware(): Set<Hardware>;
     hasHardware(hardware: Hardware): boolean;
     hasCapability(capability: Capability): boolean;
     setupCamera(config: SeeConfig): void;
+    setupLED(config: ShineConfig): Promise<void>;
     setupMicrophone(config: ListenConfig): void;
     setupSpeaker(config: SpeakConfig): void;
+    cleanup(): Promise<void>;
+    initializeSTTEngine(): Promise<void>;
+    initializeTTSEngine(): Promise<void>;
+    initializeVisionEngine(): Promise<void>;
     startMic(): void;
     pauseMic(): void;
     resumeMic(): void;
     stopMic(): void;
     getMicInputStream(): Transform;
-    connectMicStreamToSTTStream(sttStream: RecognizeStream): RecognizeStream;
     listenForTranscript(options?: {
         onPartialResult?: (text: string) => void;
         onFinalResult?: (text: string) => void;
         abortSignal?: AbortSignal;
     }): Promise<string>;
     capturePhoto(atPath?: string): Promise<string>;
+    capturePhotoBuffer(): Promise<Buffer>;
+    detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
     renderLED(hexColor: string): Promise<void>;
     playAudio(audioPath: string): Promise<void>;
     speak(message: string): Promise<void>;
 }
+//# sourceMappingURL=rpi-driver.d.ts.map

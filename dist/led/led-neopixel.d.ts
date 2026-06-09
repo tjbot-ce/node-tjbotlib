@@ -15,19 +15,43 @@
  * limitations under the License.
  */
 /**
- * LED controller for NeoPixel (WS281x) LEDs
- * This uses the native pigpio library for ws281x support
+ * LED controller for NeoPixel (WS281x) LEDs on Raspberry Pi 3/4.
+ *
+ * rpi-ws281x-native requires root privileges. Rather than launching every
+ * TJBot recipe that uses the LED as root, this class spawns a small, long-lived
+ * helper process (in led-neopixel-ws281x.js) using sudo and communicates with it
+ * over a newline-delimited JSON IPC channel on stdin/stdout.
+ *
+ * Sudo authentication is performed once at construction time (either
+ * passwordless or via an interactive prompt). Subsequent render() calls are
+ * cheap IPC messages with no additional privilege escalation.
  */
 export declare class LEDNeopixel {
-    neopixel: any;
+    private helper;
+    private reader?;
+    private helperStderrTail;
+    private _ready;
+    private _pendingById;
+    private _nextId;
+    private _helperDead;
     constructor(pin: number);
     /**
-     * Render the NeoPixel to a specific color
+     * Wait for the NeoPixel helper to be fully initialized and ready.
+     * Call this before loading long-running tasks if the LED needs to be available early.
+     */
+    initialize(): Promise<void>;
+    /**
+     * Render the NeoPixel to a specific color.
      * @param color Color as a 32-bit integer in RGB format (0xRRGGBB)
      */
-    render(color: number): void;
+    render(color: number): Promise<void>;
     /**
-     * Clean up resources
+     * Send a reset command and terminate the helper process.
      */
-    cleanup(): void;
+    cleanup(): Promise<void>;
+    private _handleLine;
+    private _send;
+    private _setHelperHandleRefState;
+    private _killHelper;
 }
+//# sourceMappingURL=led-neopixel.d.ts.map

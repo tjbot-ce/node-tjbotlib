@@ -19,3 +19,4 @@ export { default as RPi3Driver } from './rpi3-driver.js';
 export { default as RPi4Driver } from './rpi4-driver.js';
 export { default as RPi5Driver } from './rpi5-driver.js';
 export { default as RPiDetect } from './rpi-detect.js';
+//# sourceMappingURL=index.d.ts.map

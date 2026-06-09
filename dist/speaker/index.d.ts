@@ -15,3 +15,4 @@
  * limitations under the License.
  */
 export { SpeakerController } from './speaker.js';
+//# sourceMappingURL=index.d.ts.map

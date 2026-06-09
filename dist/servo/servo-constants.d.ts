@@ -24,3 +24,10 @@ export declare enum ServoPosition {
     ARM_UP = 1400,
     ARM_DOWN = 2300
 }
+/**
+ * Servo pulse widths in milliseconds.
+ */
+export declare const MIN_PULSE_MS = 0.5;
+export declare const MID_PULSE_MS = 1.5;
+export declare const MAX_PULSE_MS = 2.5;
+//# sourceMappingURL=servo-constants.d.ts.map

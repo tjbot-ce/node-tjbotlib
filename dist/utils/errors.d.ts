@@ -23,3 +23,4 @@ export declare class TJBotError extends Error {
         cause?: Error;
     });
 }
+//# sourceMappingURL=errors.d.ts.map

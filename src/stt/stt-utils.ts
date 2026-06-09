@@ -17,13 +17,58 @@
 
 import { ListenConfig, STTBackendType } from '../config/index.js';
 import { TJBotError } from '../utils/index.js';
-import { inferLocalModelFlavor, toModelType, ModelType } from './model-type.js';
 
-export function inferSTTMode(listenConfig: ListenConfig): ModelType {
-    const backend = (listenConfig.backend?.type as STTBackendType) ?? 'local';
+export type STTModelType = 'streaming' | 'offline';
+export type STTModelFlavor = 'streaming-zipformer' | 'streaming-paraformer' | 'offline-whisper' | 'offline-moonshine';
 
-    if (backend === 'ibm-watson-stt' || backend === 'google-cloud-stt') {
-        return 'streaming';
+/**
+ * Infer sherpa-onnx local model flavor from model name/URL.
+ * Throws a TJBotError if the flavor cannot be determined.
+ */
+export function inferLocalModelFlavor(modelName?: string, modelUrl?: string): STTModelFlavor {
+    const name = modelName?.toLowerCase() ?? '';
+    const url = modelUrl?.toLowerCase() ?? '';
+
+    const haystack = `${name} ${url}`;
+
+    const isWhisper = /whisper/.test(haystack);
+    const isMoonshine = /moonshine/.test(haystack);
+    const isZipformer = /zipformer|transducer|streaming-zipformer/.test(haystack);
+    const isParaformer = /paraformer/.test(haystack);
+
+    if (isWhisper) return 'offline-whisper';
+    if (isMoonshine) return 'offline-moonshine';
+    if (isZipformer) return 'streaming-zipformer';
+    if (isParaformer) return 'streaming-paraformer';
+
+    throw new TJBotError(
+        'Unable to infer STT model type. Provide a sherpa-onnx model name/URL that indicates whisper, moonshine, zipformer, or paraformer.'
+    );
+}
+
+export function toModelType(flavor: STTModelFlavor): STTModelType {
+    return flavor.startsWith('streaming') ? 'streaming' : 'offline';
+}
+
+export function inferSTTMode(listenConfig: ListenConfig): STTModelType {
+    const backend = listenConfig.backend?.type as STTBackendType;
+
+    if (backend === 'ibm-watson-stt') {
+        const config = listenConfig.backend?.['ibm-watson-stt'] as Record<string, unknown>;
+        if (config.interimResults) {
+            return 'streaming';
+        } else {
+            return 'offline';
+        }
+    }
+
+    if (backend === 'google-cloud-stt') {
+        const config = listenConfig.backend?.['google-cloud-stt'] as Record<string, unknown>;
+        if (config.interimResults) {
+            return 'streaming';
+        } else {
+            return 'offline';
+        }
     }
 
     if (backend === 'azure-stt') {
@@ -32,13 +77,64 @@ export function inferSTTMode(listenConfig: ListenConfig): ModelType {
     }
 
     if (backend === 'local') {
-        const modelName =
-            ((listenConfig.backend?.local as Record<string, unknown>)?.model as string) ??
-            (listenConfig.model as string) ??
-            '';
+        const modelName = ((listenConfig.backend?.local as Record<string, unknown>)?.model as string) ?? '';
         const modelUrl = ((listenConfig.backend?.local as Record<string, unknown>)?.modelUrl as string) ?? '';
         const flavor = inferLocalModelFlavor(modelName, modelUrl);
         return toModelType(flavor);
     }
+
     throw new TJBotError(`Unknown STT backend type: ${backend}`);
+}
+
+const TIMEOUT_LIKE_STREAM_END_PATTERNS: RegExp[] = [
+    /max duration.*5 minutes.*stream/i,
+    /maximum stream duration/i,
+    /stream.*time(?:d)? out/i,
+    /request.*time(?:d)? out/i,
+    /session stopped/i,
+    /inactivity timeout/i,
+];
+
+const NO_SPEECH_LIKE_REASON_PATTERNS: RegExp[] = [
+    /no speech/i,
+    /no audio/i,
+    /speech inactivity/i,
+    /inactivity timeout/i,
+];
+
+export interface StreamEndTranscriptResolutionOptions {
+    finalTranscript?: string;
+    partialTranscript?: string;
+    allowPartialOnTimeoutLikeEnd?: boolean;
+    timeoutLikeEnd: boolean;
+}
+
+export function isTimeoutLikeStreamEndReason(reason: string | undefined | null): boolean {
+    if (!reason) {
+        return false;
+    }
+
+    return TIMEOUT_LIKE_STREAM_END_PATTERNS.some((pattern) => pattern.test(reason));
+}
+
+export function isNoSpeechLikeReason(reason: string | undefined | null): boolean {
+    if (!reason) {
+        return false;
+    }
+
+    return NO_SPEECH_LIKE_REASON_PATTERNS.some((pattern) => pattern.test(reason));
+}
+
+export function resolveTranscriptForStreamEnd(options: StreamEndTranscriptResolutionOptions): string | undefined {
+    const finalTranscript = options.finalTranscript?.trim();
+    if (finalTranscript) {
+        return finalTranscript;
+    }
+
+    const partialTranscript = options.partialTranscript?.trim();
+    if (options.timeoutLikeEnd && (options.allowPartialOnTimeoutLikeEnd ?? true) && partialTranscript) {
+        return partialTranscript;
+    }
+
+    return undefined;
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { TTSEngineConfig } from '../config/index.js';
+import { SpeakConfig, TTSEngineConfig } from '../config/index.js';
 /**
  * Abstract Text-to-Speech Engine Base Class
  *
@@ -25,19 +25,21 @@ export declare abstract class TTSEngine {
     protected config: TTSEngineConfig;
     constructor(config?: TTSEngineConfig);
     /**
-     * Initialize the TTS engine.
-     * This method may perform setup tasks such as loading models or authenticating with services.
-     * Should be called before the first call to synthesize().
-     *
+     * Initialize the TTS engine. Must be called before synthesize().
      * @throws {TJBotError} if initialization fails
      * @public
      */
     abstract initialize(): Promise<void>;
     /**
+     * Clean up resources used by the TTS engine.
+     * Optional method for backends that need to release resources.
+     * @public
+     */
+    cleanup?(): Promise<void>;
+    /**
      * Synthesize text to WAV audio.
      * Both backends should validate input text and return audio as a Buffer in WAV format.
      * Voice is configured at engine initialization time and cannot be changed per synthesis call.
-     *
      * @param text - Text to synthesize
      * @returns WAV audio buffer
      * @throws {TJBotError} if synthesis fails
@@ -56,9 +58,10 @@ export declare abstract class TTSEngine {
 /**
  * Create a TTS engine instance based on the configuration.
  * Uses dynamic imports to lazily load backend implementations only when needed.
- * @param config - Configuration for the TTS engine with backend settings
+ * @param speakConfig - Configuration for the TTS engine with backend settings
  * @returns {Promise<TTSEngine>} Initialized TTS engine instance
  * @throws {TJBotError} if backend type is unknown or dependencies are not installed
  * @public
  */
-export declare function createTTSEngine(config: Record<string, unknown>): Promise<TTSEngine>;
+export declare function createTTSEngine(speakConfig: SpeakConfig): Promise<TTSEngine>;
+//# sourceMappingURL=tts-engine.d.ts.map

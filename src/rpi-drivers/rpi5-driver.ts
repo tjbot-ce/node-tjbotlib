@@ -15,48 +15,49 @@
  * limitations under the License.
  */
 
-import winston from 'winston';
+import { getLogger } from '../utils/logging.js';
 
-import { Hardware } from '../utils/index.js';
-import { ServoPosition } from '../servo/index.js';
-import { RPiBaseHardwareDriver } from './rpi-driver.js';
-import { LEDCommonAnode, LEDNeopixelSPI } from '../led/index.js';
-import { LibGPIOServoController } from '../servo/index.js';
 import { ShineConfig, WaveConfig } from '../config/index.js';
+import { LEDCommonAnode, LEDNeopixelSPI } from '../led/index.js';
+import { LGPIOServoController, ServoPosition } from '../servo/index.js';
+import { Hardware } from '../utils/index.js';
+import { RPiBaseHardwareDriver } from './rpi-driver.js';
+
+const logger = getLogger(import.meta.url);
 
 class RPi5Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed: LEDCommonAnode | undefined;
     private neopixelLed: LEDNeopixelSPI | undefined;
-    private servo: LibGPIOServoController | undefined;
+    private servo: LGPIOServoController | undefined;
 
     constructor() {
         super();
-        winston.debug('🥧 initializing RPi5 hardware driver');
+        logger.debug('initializing RPi5 hardware driver');
     }
 
     setupLEDCommonAnode(config: ShineConfig['commonanode']): void {
         const redPin: number = config?.redPin ?? 19;
         const greenPin: number = config?.greenPin ?? 13;
         const bluePin: number = config?.bluePin ?? 12;
-        winston.verbose(
-            `💡 initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
+        logger.verbose(
+            `initializing Common Anode LED on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
         );
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
-        this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
+        this.initializedHardware.add(Hardware.LED);
     }
 
-    setupLEDNeopixel(config: ShineConfig['neopixel']): void {
+    async setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void> {
         const spiInterface: string = config?.spiInterface ?? '/dev/spidev0.0';
         const useGRBFormat: boolean = config?.useGRBFormat ?? false;
-        winston.verbose(`💡 initializing ${Hardware.LED_NEOPIXEL} on SPI ${spiInterface}`);
+        logger.verbose(`initializing NeoPixel LED on SPI ${spiInterface}`);
         this.neopixelLed = new LEDNeopixelSPI(spiInterface, useGRBFormat);
-        this.initializedHardware.add(Hardware.LED_NEOPIXEL);
+        this.initializedHardware.add(Hardware.LED);
     }
 
     setupServo(config: WaveConfig): void {
         const pin: number = config.servoPin ?? 18;
-        const chipNumber: number = config.gpioChip ?? 0;
-        this.servo = new LibGPIOServoController(chipNumber, pin);
+        const chipNumber: number = 0; // GPIO chip 0 (standard Raspberry Pi configuration)
+        this.servo = new LGPIOServoController(chipNumber, pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
 
@@ -64,7 +65,7 @@ class RPi5Driver extends RPiBaseHardwareDriver {
         if (this.commonAnodeLed) {
             this.commonAnodeLed.render(rgbColor);
         } else {
-            winston.warn('attempted to render on an uninitialized Common Anode LED');
+            logger.warn('attempted to render on an uninitialized Common Anode LED');
         }
     }
 
@@ -72,20 +73,15 @@ class RPi5Driver extends RPiBaseHardwareDriver {
         if (this.neopixelLed) {
             await this.neopixelLed.render(hexColor);
         } else {
-            winston.warn('attempted to render on an uninitialized Neopixel LED');
+            logger.warn('attempted to render on an uninitialized Neopixel LED');
         }
     }
 
     renderServoPosition(position: ServoPosition): void {
         if (this.servo) {
-            // Convert ServoPosition (500-2300 microseconds) to pulse width in milliseconds
-            // ServoPosition uses pigpio servo pulse format: 500-2500 microseconds
-            // LibGPIOServoController expects pulse width: 0.5-2.5 milliseconds
-            const pulseMs = position / 1000;
-            winston.verbose(`setting servo position to ${position} μs (${pulseMs} ms)`);
-            this.servo.setPulseWidth(pulseMs);
+            this.servo.setPosition(position);
         } else {
-            winston.warn('attempted to render on an uninitialized servo');
+            logger.warn('attempted to render on an uninitialized servo');
         }
     }
 }

@@ -15,23 +15,16 @@
  * limitations under the License.
  */
 
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 import SpeechToTextV1 from 'ibm-watson/speech-to-text/v1.js';
-import winston from 'winston';
-import { STTEngine, STTRequestOptions } from '../stt-engine.js';
-import { ListenConfig } from '../../config/index.js';
+import type { STTBackendIBMWatsonConfig } from '../../config/config-types.js';
+import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
+import { getLogger } from '../../utils/logging.js';
+import { STTEngine, STTRequestOptions } from '../stt-engine.js';
+import { isNoSpeechLikeReason, isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
 
-interface IBMWatsonSTTConfig {
-    model?: string;
-    inactivityTimeout?: number;
-    backgroundAudioSuppression?: number;
-    interimResults?: boolean;
-    credentialsPath?: string;
-}
+const logger = getLogger(import.meta.url);
 
 /**
  * IBM Watson Speech-to-Text Engine
@@ -41,135 +34,203 @@ interface IBMWatsonSTTConfig {
  * @public
  */
 export class IBMWatsonSTTEngine extends STTEngine {
+    private microphoneRate: number = 44100;
+    private microphoneChannels: number = 2;
     private sttService: SpeechToTextV1 | undefined;
 
-    constructor(config?: Record<string, unknown>) {
-        super(config);
-    }
+    async initialize(microphoneRate: number, microphoneChannels: number): Promise<void> {
+        const config = this.config as STTBackendIBMWatsonConfig;
+        loadIBMWatsonCloudCredentials(config?.credentialsPath);
 
-    async initialize(): Promise<void> {
-        try {
-            const config = this.config as IBMWatsonSTTConfig | undefined;
-            const credentialsPath = config?.credentialsPath;
-            // Load IBM credentials from file
-            this.loadCredentials(credentialsPath);
-            this.sttService = new SpeechToTextV1({});
-            winston.debug('🗣️ IBM Watson STT engine initialized');
-        } catch (err) {
-            winston.error('Failed to initialize IBM Watson STT:', err);
-            throw err;
-        }
-    }
-
-    private loadCredentials(credentialsPath?: string): void {
-        let resolvedPath: string | undefined = credentialsPath;
-
-        // If no path provided, check default locations in order
-        if (!resolvedPath) {
-            // 1. Check CWD
-            const cwdPath = path.join(process.cwd(), 'ibm-credentials.env');
-            if (fs.existsSync(cwdPath)) {
-                resolvedPath = cwdPath;
-            } else {
-                // 2. Check ~/.tjbot/ibm-credentials.env
-                const homePath = path.join(os.homedir(), '.tjbot', 'ibm-credentials.env');
-                if (fs.existsSync(homePath)) {
-                    resolvedPath = homePath;
-                }
-            }
-        }
-
-        // If path is specified (either provided or found), load credentials
-        if (resolvedPath) {
-            try {
-                if (!fs.existsSync(resolvedPath)) {
-                    throw new TJBotError(`IBM credentials file not found at: ${resolvedPath}`);
-                }
-                const credentialsContent = fs.readFileSync(resolvedPath, 'utf-8');
-                credentialsContent.split('\n').forEach((line) => {
-                    line = line.trim();
-                    if (line && !line.startsWith('#')) {
-                        const [key, ...valueParts] = line.split('=');
-                        if (key) {
-                            process.env[key.trim()] = valueParts.join('=').trim();
-                        }
-                    }
-                });
-                winston.debug(`🗣️ Loaded IBM credentials from: ${resolvedPath}`);
-            } catch (err) {
-                winston.error(`Failed to load IBM credentials from ${resolvedPath}:`, err);
-                throw err;
-            }
-        } else {
+        if (!config?.model) {
             throw new TJBotError(
-                'IBM Watson STT credentials not found. Place credentials at: ./ibm-credentials.env or ~/.tjbot/ibm-credentials.env'
+                'IBM Watson STT model not specified. Provide model in listen.backend.ibm-watson-stt config.'
             );
         }
+
+        this.microphoneRate = microphoneRate;
+        this.microphoneChannels = microphoneChannels;
+
+        this.sttService = new SpeechToTextV1({});
+        logger.info('IBM Watson STT engine initialized');
+        logger.debug(`Initialized IBMWatsonSTTEngine with config:
+            model: ${config?.model},
+            inactivityTimeout: ${config?.inactivityTimeout},
+            backgroundAudioSuppression: ${config?.backgroundAudioSuppression},
+            interimResults: ${config?.interimResults},
+            microphoneRate: ${this.microphoneRate},
+            microphoneChannels: ${this.microphoneChannels},
+            credentialsPath: ${config?.credentialsPath}`);
     }
 
     async transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string> {
+        const config = this.config as STTBackendIBMWatsonConfig;
+
         if (!this.sttService) {
             throw new TJBotError('IBM Watson STT service not initialized. Call initialize() first.');
         }
 
-        const listenConfig: ListenConfig = options.listenConfig ?? {};
-        const backendConfig = (listenConfig.backend?.['ibm-watson-stt'] ?? {}) as IBMWatsonSTTConfig;
+        const model: string = config?.model as string;
+        const inactivityTimeout: number = (config?.inactivityTimeout as number) ?? -1;
+        const backgroundAudioSuppression: number = (config?.backgroundAudioSuppression as number) ?? 0.4;
+        const interimResults: boolean = (config?.interimResults as boolean) ?? false;
 
-        const rate: number = (listenConfig.microphoneRate as number) ?? 44100;
-        const channels: number = (listenConfig.microphoneChannels as number) ?? 2;
-        const inactivityTimeout: number =
-            backendConfig.inactivityTimeout ?? (listenConfig.inactivityTimeout as number) ?? -1;
-        const backgroundAudioSuppression: number =
-            backendConfig.backgroundAudioSuppression ?? (listenConfig.backgroundAudioSuppression as number) ?? 0.4;
-        const model: string = backendConfig.model ?? (listenConfig.model as string);
-        if (!model) {
-            throw new TJBotError('IBM Watson STT model not specified. Provide model in listen config.');
-        }
-        const interimResults: boolean = backendConfig.interimResults ?? false;
+        logger.verbose(`Transcribing speech with IBM Watson STT (model=${model})`);
 
         const params = {
-            objectMode: false,
-            contentType: `audio/l16; rate=${rate}; channels=${channels}`,
+            objectMode: true,
+            contentType: `audio/l16; rate=${this.microphoneRate}; channels=${this.microphoneChannels}`,
             model,
             inactivityTimeout,
             interimResults,
             backgroundAudioSuppression,
         };
 
-        winston.debug(`🎤 recognizeUsingWebSocket params: ${JSON.stringify(params)}`);
+        logger.silly('IBM Watson STT params:', JSON.stringify(params, null, 2));
 
         const recognizeStream: RecognizeStream = this.sttService.recognizeUsingWebSocket(params) as RecognizeStream;
-        recognizeStream.setEncoding('utf8');
 
         // Pipe microphone to STT
         this.ensureStream(micStream).pipe(recognizeStream);
 
         return new Promise<string>((resolve, reject) => {
-            const handleData = (data: string) => {
+            let settled = false;
+            let latestPartialTranscript = '';
+            let latestFinalTranscript = '';
+
+            const settleResolve = (transcript: string) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
                 cleanup();
-                resolve(data.trim());
+                resolve(transcript);
+            };
+
+            const settleReject = (error: TJBotError) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                reject(error);
+            };
+
+            const handleData = (data: unknown) => {
+                const payload = data as {
+                    results?: Array<{
+                        final?: boolean;
+                        alternatives?: Array<{
+                            transcript?: string;
+                        }>;
+                    }>;
+                };
+
+                if (!payload.results || payload.results.length === 0) {
+                    return;
+                }
+
+                const result = payload.results[0];
+                if (!result.alternatives || result.alternatives.length === 0) {
+                    return;
+                }
+
+                const transcript = result.alternatives[0].transcript?.trim();
+                if (!transcript) {
+                    return;
+                }
+
+                if (interimResults && !result.final) {
+                    latestPartialTranscript = transcript;
+                    options.onPartialResult?.(transcript);
+                    return;
+                }
+
+                if (result.final) {
+                    latestFinalTranscript = transcript;
+                    logger.debug(`IBM Watson STT recognized: ${transcript}`);
+                    if (interimResults) {
+                        options.onFinalResult?.(transcript);
+                    }
+                    settleResolve(transcript);
+                }
             };
 
             const handleError = (err: Error) => {
-                cleanup();
-                reject(err);
+                logger.error('IBM Watson STT stream error:', err);
+                const timeoutLikeEnd = isTimeoutLikeStreamEndReason(err.message);
+                const noSpeechLikeError = isNoSpeechLikeReason(err.message);
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd,
+                });
+
+                if (fallbackTranscript) {
+                    logger.debug('IBM Watson STT finalized using partial transcript after stream timeout');
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+
+                if (timeoutLikeEnd || noSpeechLikeError) {
+                    settleReject(
+                        new TJBotError('IBM Watson STT: No speech could be recognized', {
+                            code: 'stt.no-speech',
+                        })
+                    );
+                    return;
+                }
+
+                settleReject(new TJBotError('IBM Watson STT recognition failed', { cause: err }));
+            };
+
+            const handleEndWithoutTranscript = () => {
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: true,
+                });
+
+                if (fallbackTranscript) {
+                    logger.debug('IBM Watson STT finalized using partial transcript after stream end');
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+
+                settleReject(
+                    new TJBotError('IBM Watson STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    })
+                );
             };
 
             const cleanup = () => {
                 recognizeStream.removeListener('data', handleData);
                 recognizeStream.removeListener('error', handleError);
+                recognizeStream.removeListener('close', handleEndWithoutTranscript);
+                recognizeStream.removeListener('end', handleEndWithoutTranscript);
                 try {
                     this.ensureStream(micStream).unpipe(recognizeStream);
                 } catch (err) {
-                    winston.debug('🎤 mic unpipe failed (likely already closed)', err as Error);
+                    logger.debug('mic unpipe failed (likely already closed)', err as Error);
                 }
                 if (typeof recognizeStream.destroy === 'function') {
                     recognizeStream.destroy();
                 }
             };
 
-            recognizeStream.once('data', handleData);
+            recognizeStream.on('data', handleData);
             recognizeStream.once('error', handleError);
+            recognizeStream.once('close', handleEndWithoutTranscript);
+            recognizeStream.once('end', handleEndWithoutTranscript);
         });
     }
 }

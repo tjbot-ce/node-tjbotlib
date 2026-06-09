@@ -15,50 +15,52 @@
  * limitations under the License.
  */
 
-import winston from 'winston';
-
-import { Hardware } from '../utils/index.js';
-import { ServoPosition } from '../servo/index.js';
-import { RPiBaseHardwareDriver } from './rpi-driver.js';
-import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
-import { PiGPIOServoController } from '../servo/index.js';
 import { ShineConfig, WaveConfig } from '../config/index.js';
+import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
+import { LGPIOServoController, ServoPosition } from '../servo/index.js';
+import { Hardware } from '../utils/index.js';
+import { getLogger } from '../utils/logging.js';
+import { RPiBaseHardwareDriver } from './rpi-driver.js';
+import {
+    FaceDetectionMetadata,
+    ImageClassificationResult,
+    ImageDescriptionResult,
+    ObjectDetectionResult,
+} from '../vision/index.js';
+
+const logger = getLogger(import.meta.url);
 
 class RPi3Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed: LEDCommonAnode | undefined;
     private neopixelLed: LEDNeopixel | undefined;
     private useGRBFormat: boolean;
-    private servo: PiGPIOServoController | undefined;
+    private servo: LGPIOServoController | undefined;
+    private userHasBeenWarned: { [key: string]: boolean } = {};
 
     constructor() {
         super();
-        winston.debug('🥧 initializing RPi3 hardware driver');
-        this.useGRBFormat = false;
+        this.useGRBFormat = true;
     }
 
     setupLEDCommonAnode(config: ShineConfig['commonanode']): void {
         const redPin: number = config?.redPin ?? 19;
         const greenPin: number = config?.greenPin ?? 13;
         const bluePin: number = config?.bluePin ?? 12;
-        winston.verbose(
-            `💡 initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
-        );
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
-        this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
+        this.initializedHardware.add(Hardware.LED);
     }
 
-    setupLEDNeopixel(config: ShineConfig['neopixel']): void {
-        const pin: number = config?.gpioPin ?? 21;
-        winston.verbose(`💡 initializing ${Hardware.LED_NEOPIXEL} on pin ${pin}`);
+    async setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void> {
+        const pin: number = config?.gpioPin ?? 18;
         this.neopixelLed = new LEDNeopixel(pin);
-        this.useGRBFormat = config?.useGRBFormat ?? false;
-        this.initializedHardware.add(Hardware.LED_NEOPIXEL);
+        await this.neopixelLed.initialize();
+        this.useGRBFormat = config?.useGRBFormat ?? true;
+        this.initializedHardware.add(Hardware.LED);
     }
 
     setupServo(config: WaveConfig): void {
         const pin: number = config.servoPin ?? 18;
-        winston.verbose(`🦾 initializing ${Hardware.SERVO} on PIN ${pin}`);
-        this.servo = new PiGPIOServoController(pin);
+        this.servo = new LGPIOServoController(0, pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
 
@@ -66,56 +68,108 @@ class RPi3Driver extends RPiBaseHardwareDriver {
         if (this.commonAnodeLed) {
             this.commonAnodeLed.render(rgbColor);
         } else {
-            winston.warn('attempted to render on an uninitialized Common Anode LED');
+            logger.warn('Attempted to render on an uninitialized Common Anode LED');
         }
     }
 
     async renderLEDNeopixel(hexColor: string): Promise<void> {
         if (this.neopixelLed) {
-            const c: string = hexColor;
+            const c: string = hexColor.startsWith('#') ? hexColor.slice(1) : hexColor;
+
+            if (c.length !== 6) {
+                logger.warn(`Invalid NeoPixel color '${hexColor}'`);
+                return;
+            }
 
             if (this.useGRBFormat) {
-                const grbStr: string = `0x${c[3]}${c[4]}${c[1]}${c[2]}${c[5]}${c[6]}`;
+                const grbStr: string = `0x${c[2]}${c[3]}${c[0]}${c[1]}${c[4]}${c[5]}`;
                 const grb: number = parseInt(grbStr, 16);
-                this.neopixelLed.render(grb);
+                await this.neopixelLed.render(grb);
             } else {
-                const rgbStr: string = `0x${c[1]}${c[2]}${c[3]}${c[4]}${c[5]}${c[6]}`;
+                const rgbStr: string = `0x${c}`;
                 const rgb: number = parseInt(rgbStr, 16);
-                this.neopixelLed.render(rgb);
+                await this.neopixelLed.render(rgb);
             }
         } else {
-            winston.warn('attempted to render on an uninitialized Neopixel LED');
+            logger.warn('Attempted to render on an uninitialized Neopixel LED');
         }
+    }
+
+    async cleanup(): Promise<void> {
+        if (this.neopixelLed) {
+            await this.neopixelLed.cleanup();
+        }
+        await super.cleanup();
     }
 
     renderServoPosition(position: ServoPosition): void {
         if (this.servo) {
             this.servo.setPosition(position);
         } else {
-            winston.warn('attempted to render on an uninitialized servo');
+            logger.warn('Attempted to render on an uninitialized servo');
         }
     }
 
-    async listenForTranscript(): Promise<string> {
-        // Warn about performance on RPi3 when using local STT
-        const backend = this.listenConfig.backend?.type ?? 'local';
-        if (backend === 'local') {
-            winston.warn(
-                '⚠️  Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.'
-            );
+    private warnIfUsingLocalAI(aiType: 'stt' | 'tts' | 'vision'): void {
+        if (this.userHasBeenWarned[aiType]) {
+            return;
         }
+
+        switch (aiType) {
+            case 'stt':
+                if (this.listenConfig.backend?.type === 'local') {
+                    logger.warn(
+                        'Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.'
+                    );
+                }
+                break;
+            case 'tts':
+                if (this.speakConfig.backend?.type === 'local') {
+                    logger.warn(
+                        'Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.'
+                    );
+                }
+                break;
+            case 'vision':
+                if (this.seeConfig.backend?.type === 'local') {
+                    logger.warn(
+                        'Using local Vision on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.'
+                    );
+                }
+                break;
+        }
+
+        this.userHasBeenWarned[aiType] = true;
+    }
+
+    async listenForTranscript(): Promise<string> {
+        this.warnIfUsingLocalAI('stt');
         return super.listenForTranscript();
     }
 
     async speak(message: string): Promise<void> {
-        // Warn about performance on RPi3 when using local TTS
-        const backend = this.speakConfig.backend?.type ?? 'local';
-        if (backend === 'local') {
-            winston.warn(
-                '⚠️  Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.'
-            );
-        }
+        this.warnIfUsingLocalAI('tts');
         return super.speak(message);
+    }
+
+    async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
+        this.warnIfUsingLocalAI('vision');
+        return super.detectObjects(image);
+    }
+
+    async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
+        this.warnIfUsingLocalAI('vision');
+        return super.classifyImage(image);
+    }
+
+    async describeImage(image: Buffer | string): Promise<ImageDescriptionResult> {
+        this.warnIfUsingLocalAI('vision');
+        return super.describeImage(image);
+    }
+
+    async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
+        this.warnIfUsingLocalAI('vision');
+        return super.detectFaces(image);
     }
 }
 

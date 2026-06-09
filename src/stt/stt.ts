@@ -15,24 +15,44 @@
  * limitations under the License.
  */
 
-import { STTEngine, createSTTEngine } from './stt-engine.js';
 import { ListenConfig } from '../config/index.js';
 import { MicrophoneController } from '../microphone/index.js';
+import { TJBotError } from '../utils/errors.js';
+import { getLogger } from '../utils/logging.js';
+import { STTEngine, createSTTEngine } from './stt-engine.js';
+
+const logger = getLogger(import.meta.url);
 
 /**
- * STT Controller for TJBot
- * Manages speech-to-text synthesis and engine lifecycle.
- * Lazy-initializes the STT engine on first transcribe call and caches it for reuse.
+ * STT controller manages speech-to-text synthesis and engine lifecycle.
+ * STT engine is eagerly initialized during setupMicrophone() and cached for reuse.
  */
 export class STTController {
-    private sttEngine: STTEngine | undefined;
+    private sttEngine?: STTEngine;
     private microphoneController: MicrophoneController;
-    private listenConfig: ListenConfig;
+    private listenConfig?: ListenConfig;
 
-    constructor(microphoneController: MicrophoneController, listenConfig: ListenConfig) {
+    constructor(microphoneController: MicrophoneController) {
         this.sttEngine = undefined;
         this.microphoneController = microphoneController;
-        this.listenConfig = listenConfig;
+    }
+
+    /**
+     * Initialize the STT backend
+     * Called during setupMicrophone to eagerly load STT engine
+     * @param config Configuration object with backend, IBM settings, and Sherpa settings
+     */
+    async initialize(config: ListenConfig): Promise<void> {
+        this.listenConfig = config;
+        this.sttEngine = await createSTTEngine(this.listenConfig);
+
+        const microphoneRate = this.listenConfig.microphoneRate as number;
+        const microphoneChannels = this.listenConfig.microphoneChannels as number;
+
+        logger.debug(
+            `Initializing STT engine with microphone settings: rate=${microphoneRate}, channels=${microphoneChannels}`
+        );
+        await this.sttEngine.initialize(microphoneRate, microphoneChannels);
     }
 
     /**
@@ -47,27 +67,53 @@ export class STTController {
         onFinalResult?: (text: string) => void;
         abortSignal?: AbortSignal;
     }): Promise<string> {
-        // Initialize STT engine lazily on first call
-        if (this.sttEngine === undefined) {
-            this.sttEngine = await createSTTEngine(this.listenConfig);
-            await this.sttEngine.initialize();
+        if (this.listenConfig === undefined) {
+            throw new TJBotError('STT engine not initialized. Call initialize() before transcribing.');
         }
 
-        // Start microphone
-        this.microphoneController.start();
+        if (this.sttEngine === undefined) {
+            throw new TJBotError('STT engine not initialized. Call initialize() before transcribing.');
+        }
 
-        try {
-            const micStream = this.microphoneController.getInputStream();
-            const transcript = await this.sttEngine.transcribe(micStream, {
-                listenConfig: this.listenConfig,
-                onPartialResult: options?.onPartialResult,
-                onFinalResult: options?.onFinalResult,
-                abortSignal: options?.abortSignal,
-            });
-            return transcript;
-        } finally {
-            // Always stop microphone to avoid speaker feedback
-            this.microphoneController.stop();
+        while (true) {
+            // Start microphone
+            this.microphoneController.start();
+
+            try {
+                const micStream = this.microphoneController.getInputStream();
+                const transcript = await this.sttEngine.transcribe(micStream, {
+                    onPartialResult: options?.onPartialResult,
+                    onFinalResult: options?.onFinalResult,
+                    abortSignal: options?.abortSignal,
+                });
+
+                logger.debug(`Transcript: ${transcript}`);
+                return transcript;
+            } catch (error) {
+                if (this.isNoSpeechError(error)) {
+                    logger.verbose('No speech detected; continuing to listen');
+                    continue;
+                }
+                throw error;
+            } finally {
+                // Pause between utterances so repeated listen() calls can reuse the live stream.
+                this.microphoneController.pause();
+            }
+        }
+    }
+
+    private isNoSpeechError(error: unknown): boolean {
+        return error instanceof TJBotError && error.code === 'stt.no-speech';
+    }
+
+    /**
+     * Clean up STT resources.
+     */
+    async cleanup(): Promise<void> {
+        if (this.sttEngine) {
+            logger.debug('STTController cleanup');
+            await this.sttEngine.cleanup?.();
+            this.sttEngine = undefined;
         }
     }
 }

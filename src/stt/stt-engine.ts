@@ -15,11 +15,16 @@
  * limitations under the License.
  */
 
-import { ListenConfig, STTBackendType, STTEngineConfig } from '../config/index.js';
+import {
+    ListenConfig,
+    STTBackendConfig,
+    STTBackendType,
+    STTEngineConfig,
+    getSTTBackendConfig,
+} from '../config/index.js';
 import { TJBotError } from '../utils/index.js';
 
 export interface STTRequestOptions {
-    listenConfig: ListenConfig;
     /** Optional callback for streaming partial results */
     onPartialResult?: (text: string) => void;
     /** Optional callback for final result */
@@ -42,10 +47,19 @@ export abstract class STTEngine {
 
     /**
      * Initialize the STT engine. Must be called before transcribe().
+     * @param microphoneRate Sample rate of the microphone audio (e.g., 44100)
+     * @param microphoneChannels Number of audio channels from the microphone (e.g., 2 for stereo)
      * @throws {TJBotError} if initialization fails
      * @public
      */
-    abstract initialize(): Promise<void>;
+    abstract initialize(microphoneRate: number, microphoneChannels: number): Promise<void>;
+
+    /**
+     * Clean up resources used by the STT engine.
+     * Optional method for backends that need to release resources.
+     * @public
+     */
+    cleanup?(): Promise<void>;
 
     /**
      * Transcribe audio from a microphone stream.
@@ -74,15 +88,33 @@ export abstract class STTEngine {
  * @public
  */
 export async function createSTTEngine(listenConfig: ListenConfig): Promise<STTEngine> {
-    const backend = (listenConfig.backend?.type as STTBackendType) ?? 'local';
+    const backend = (listenConfig.backend?.type ?? 'local') as STTBackendType;
 
     try {
+        if (backend === 'none') {
+            // Return a stub engine that throws on all method calls
+            class NoneSTTEngine extends STTEngine {
+                async initialize(): Promise<void> {
+                    // No-op for 'none' backend
+                }
+
+                async transcribe(): Promise<string> {
+                    throw new TJBotError(
+                        'STT is disabled. Configure a speech-to-text backend (local, ibm-watson-stt, google-cloud-stt, or azure-stt) to use speech recognition.'
+                    );
+                }
+            }
+
+            return new NoneSTTEngine();
+        }
+
         if (backend === 'local') {
-            const module = await import('./backends/sherpa-onnx.js');
+            const module = await import('./backends/sherpa-onnx-stt.js');
             if (!module?.SherpaONNXSTTEngine) {
                 throw new TJBotError('STT backend "local" is unavailable (missing SherpaONNXSTTEngine export).');
             }
-            return new module.SherpaONNXSTTEngine(listenConfig.backend?.local);
+            const config = getSTTBackendConfig(listenConfig.backend as STTBackendConfig | undefined, backend);
+            return new module.SherpaONNXSTTEngine(config);
         }
 
         if (backend === 'ibm-watson-stt') {
@@ -92,7 +124,8 @@ export async function createSTTEngine(listenConfig: ListenConfig): Promise<STTEn
                     'STT backend "ibm-watson-stt" is unavailable (missing IBMWatsonSTTEngine export).'
                 );
             }
-            return new module.IBMWatsonSTTEngine(listenConfig.backend?.['ibm-watson-stt']);
+            const config = getSTTBackendConfig(listenConfig.backend as STTBackendConfig | undefined, backend);
+            return new module.IBMWatsonSTTEngine(config);
         }
 
         if (backend === 'google-cloud-stt') {
@@ -102,7 +135,8 @@ export async function createSTTEngine(listenConfig: ListenConfig): Promise<STTEn
                     'STT backend "google-cloud-stt" is unavailable (missing GoogleCloudSTTEngine export).'
                 );
             }
-            return new module.GoogleCloudSTTEngine(listenConfig.backend?.['google-cloud-stt']);
+            const config = getSTTBackendConfig(listenConfig.backend as STTBackendConfig | undefined, backend);
+            return new module.GoogleCloudSTTEngine(config);
         }
 
         if (backend === 'azure-stt') {
@@ -110,14 +144,12 @@ export async function createSTTEngine(listenConfig: ListenConfig): Promise<STTEn
             if (!module?.AzureSTTEngine) {
                 throw new TJBotError('STT backend "azure-stt" is unavailable (missing AzureSTTEngine export).');
             }
-            return new module.AzureSTTEngine(listenConfig.backend?.['azure-stt']);
+            const config = getSTTBackendConfig(listenConfig.backend as STTBackendConfig | undefined, backend);
+            return new module.AzureSTTEngine(config);
         }
 
         throw new TJBotError(`Unknown STT backend type: ${backend}`);
     } catch (error) {
-        if (error instanceof TJBotError) {
-            throw error;
-        }
         throw new TJBotError(`Failed to load STT backend "${backend}". Ensure dependencies are installed.`, {
             cause: error as Error,
         });

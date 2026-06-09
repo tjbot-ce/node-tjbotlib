@@ -27,3 +27,4 @@ export declare class AudioPlayer extends EventEmitter {
      */
     play(audioPath: string, device?: string): void;
 }
+//# sourceMappingURL=audio-player.d.ts.map

@@ -22,7 +22,7 @@
  */
 export enum Capability {
     LISTEN = 'listen',
-    LOOK = 'look',
+    SEE = 'see',
     SHINE = 'shine',
     SPEAK = 'speak',
     WAVE = 'wave',
@@ -35,8 +35,7 @@ export enum Capability {
  */
 export enum Hardware {
     CAMERA = 'camera',
-    LED_COMMON_ANODE = 'common_anode_led',
-    LED_NEOPIXEL = 'neopixel_led',
+    LED = 'led',
     MICROPHONE = 'microphone',
     SERVO = 'servo',
     SPEAKER = 'speaker',

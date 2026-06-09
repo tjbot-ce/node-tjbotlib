@@ -14,200 +14,162 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { z } from 'zod';
-/**
- * Logging configuration
- */
-const logConfigSchema = z
-    .object({
-    level: z.string().optional(),
-})
-    .passthrough();
-/**
- * STT Backend configuration
- */
-export const sttBackendTypeSchema = z.enum(['local', 'ibm-watson-stt', 'google-cloud-stt', 'azure-stt']);
-export const vadConfigSchema = z
-    .object({
-    enabled: z.boolean().optional(),
-    /** Optional model filename (e.g., silero_vad.onnx) */
-    model: z.string().optional(),
-    /** Optional URL for the VAD model download */
-    modelUrl: z.string().optional(),
-})
-    .passthrough();
-export const sttBackendLocalConfigSchema = z
-    .object({
-    model: z.string().optional(),
-    modelUrl: z.string().optional(),
-    vad: vadConfigSchema.optional(),
-})
-    .passthrough();
-export const sttBackendIBMWatsonConfigSchema = z
-    .object({
-    model: z.string().optional(),
-    inactivityTimeout: z.number().optional(),
-    backgroundAudioSuppression: z.number().optional(),
-    interimResults: z.boolean().optional(),
-    credentialsPath: z.string().optional(),
-})
-    .passthrough();
-export const sttBackendGoogleCloudConfigSchema = z
-    .object({
-    model: z.string().optional(),
-    languageCode: z.string().optional(),
-    credentialsPath: z.string().optional(),
-    encoding: z.string().optional(),
-    sampleRateHertz: z.number().optional(),
-    audioChannelCount: z.number().optional(),
-    enableAutomaticPunctuation: z.boolean().optional(),
-    interimResults: z.boolean().optional(),
-})
-    .passthrough();
-export const sttBackendAzureConfigSchema = z
-    .object({
-    language: z.string().optional(),
-    credentialsPath: z.string().optional(),
-})
-    .passthrough();
-export const sttBackendConfigSchema = z
-    .object({
-    type: sttBackendTypeSchema.optional(),
-    local: sttBackendLocalConfigSchema.optional(),
-    'ibm-watson-stt': sttBackendIBMWatsonConfigSchema.optional(),
-    'google-cloud-stt': sttBackendGoogleCloudConfigSchema.optional(),
-    'azure-stt': sttBackendAzureConfigSchema.optional(),
-})
-    .passthrough();
-/**
- * Speech-to-text (Listen) configuration
- */
-export const listenConfigSchema = z
-    .object({
-    device: z.string().optional(),
-    microphoneRate: z.number().optional(),
-    microphoneChannels: z.number().optional(),
-    model: z.string().optional(),
-    /** Optional URL for the STT model download */
-    backend: sttBackendConfigSchema.optional(),
-})
-    .passthrough();
-/**
- * Camera (See) configuration
- */
-export const seeConfigSchema = z
-    .object({
-    cameraResolution: z.tuple([z.number(), z.number()]).optional(),
-    verticalFlip: z.boolean().optional(),
-    horizontalFlip: z.boolean().optional(),
-})
-    .passthrough();
-/**
- * LED configuration
- */
-export const ledNeopixelConfigSchema = z
-    .object({
-    gpioPin: z.number().optional(),
-    spiInterface: z.string().optional(),
-    useGRBFormat: z.boolean().optional(),
-})
-    .passthrough();
-export const ledCommonAnodeConfigSchema = z
-    .object({
-    redPin: z.number().optional(),
-    greenPin: z.number().optional(),
-    bluePin: z.number().optional(),
-})
-    .passthrough();
-export const shineConfigSchema = z
-    .object({
-    neopixel: ledNeopixelConfigSchema.optional(),
-    commonanode: ledCommonAnodeConfigSchema.optional(),
-})
-    .passthrough();
-/**
- * TTS Backend configuration
- */
-export const ttsBackendTypeSchema = z.enum(['local', 'ibm-watson-tts', 'google-cloud-tts', 'azure-tts']);
-export const ttsBackendLocalConfigSchema = z
-    .object({
-    model: z.string().optional(),
-    modelUrl: z.string().optional(),
-})
-    .passthrough();
-export const ttsBackendIBMWatsonConfigSchema = z
-    .object({
-    voice: z.string().optional(),
-    credentialsPath: z.string().optional(),
-})
-    .passthrough();
-export const ttsBackendGoogleCloudConfigSchema = z
-    .object({
-    voice: z.string().optional(),
-    languageCode: z.string().optional(),
-    credentialsPath: z.string().optional(),
-})
-    .passthrough();
-export const ttsBackendAzureConfigSchema = z
-    .object({
-    voice: z.string().optional(),
-    credentialsPath: z.string().optional(),
-})
-    .passthrough();
-export const ttsBackendConfigSchema = z
-    .object({
-    type: ttsBackendTypeSchema.optional(),
-    local: ttsBackendLocalConfigSchema.optional(),
-    'ibm-watson-tts': ttsBackendIBMWatsonConfigSchema.optional(),
-    'google-cloud-tts': ttsBackendGoogleCloudConfigSchema.optional(),
-    'azure-tts': ttsBackendAzureConfigSchema.optional(),
-})
-    .passthrough();
-/**
- * Text-to-speech (Speak) configuration
- */
-export const speakConfigSchema = z
-    .object({
-    device: z.string().optional(),
-    backend: ttsBackendConfigSchema.optional(),
-})
-    .passthrough();
-/**
- * Servo/Arm (Wave) configuration
- */
-export const waveConfigSchema = z
-    .object({
-    gpioChip: z.number().optional(),
-    servoPin: z.number().optional(),
-})
-    .passthrough();
-/**
- * Hardware configuration
- */
-export const hardwareConfigSchema = z
-    .object({
-    speaker: z.boolean().optional(),
-    microphone: z.boolean().optional(),
-    led_common_anode: z.boolean().optional(),
-    led_neopixel: z.boolean().optional(),
-    servo: z.boolean().optional(),
-    camera: z.boolean().optional(),
-})
-    .passthrough();
-/**
- * Complete TJBot configuration
- */
-export const tjbotConfigSchema = z
-    .object({
-    log: logConfigSchema.optional(),
-    hardware: hardwareConfigSchema.optional(),
-    listen: listenConfigSchema.optional(),
-    see: seeConfigSchema.optional(),
-    shine: shineConfigSchema.optional(),
-    speak: speakConfigSchema.optional(),
-    wave: waveConfigSchema.optional(),
-    // Use explicit key schema to satisfy TS signature for z.record
-    recipe: z.record(z.string(), z.any()).optional(),
-})
-    .passthrough();
+import fs from 'fs';
+import { createRequire } from 'module';
+import yaml from 'js-yaml';
+export const STT_BACKEND_TYPES = Object.freeze([
+    'none',
+    'local',
+    'ibm-watson-stt',
+    'google-cloud-stt',
+    'azure-stt',
+]);
+export const TTS_BACKEND_TYPES = Object.freeze([
+    'none',
+    'local',
+    'ibm-watson-tts',
+    'google-cloud-tts',
+    'azure-tts',
+]);
+export const SEE_BACKEND_TYPES = Object.freeze([
+    'none',
+    'local',
+    'google-cloud-vision',
+    'azure-vision',
+]);
+function loadConfigSchema() {
+    const schemaUrl = new URL('./vendor/tjbot-config.schema.yaml', import.meta.url);
+    const schemaSource = fs.readFileSync(schemaUrl, 'utf8');
+    const loadedSchema = yaml.load(schemaSource);
+    if (!loadedSchema || typeof loadedSchema !== 'object' || Array.isArray(loadedSchema)) {
+        throw new Error('TJBot config schema is invalid or empty');
+    }
+    return loadedSchema;
+}
+const configSchema = loadConfigSchema();
+const require = createRequire(import.meta.url);
+const Ajv = require('ajv').default;
+const addFormats = require('ajv-formats').default;
+const ajv = new Ajv({
+    allErrors: true,
+    allowUnionTypes: true,
+    strict: false,
+});
+addFormats(ajv);
+const compiledTJBotConfigValidator = ajv.compile(configSchema);
+function formatValidationErrors(errors) {
+    return ajv.errorsText(errors, { separator: '; ' });
+}
+function createEnumParser(values, label) {
+    return {
+        parse(value) {
+            const result = this.safeParse(value);
+            if (!result.success) {
+                throw result.error;
+            }
+            return result.data;
+        },
+        safeParse(value) {
+            if (typeof value === 'string' && values.includes(value)) {
+                return { success: true, data: value };
+            }
+            return {
+                success: false,
+                error: new Error(`Invalid ${label}. Expected one of: ${values.join(', ')}`),
+            };
+        },
+    };
+}
+function createValidatorParser(validate, label) {
+    return {
+        parse(value) {
+            const result = this.safeParse(value);
+            if (!result.success) {
+                throw result.error;
+            }
+            return result.data;
+        },
+        safeParse(value) {
+            if (validate(value)) {
+                return { success: true, data: value };
+            }
+            return {
+                success: false,
+                error: new Error(`Invalid ${label}: ${formatValidationErrors(validate.errors)}`),
+            };
+        },
+    };
+}
+export function getConfigSchema() {
+    return configSchema;
+}
+export function isSTTBackendType(value) {
+    return typeof value === 'string' && STT_BACKEND_TYPES.includes(value);
+}
+export function isTTSBackendType(value) {
+    return typeof value === 'string' && TTS_BACKEND_TYPES.includes(value);
+}
+export function isSeeBackendType(value) {
+    return typeof value === 'string' && SEE_BACKEND_TYPES.includes(value);
+}
+export const sttBackendTypeSchema = createEnumParser(STT_BACKEND_TYPES, 'STT backend type');
+export const ttsBackendTypeSchema = createEnumParser(TTS_BACKEND_TYPES, 'TTS backend type');
+export const seeBackendTypeSchema = createEnumParser(SEE_BACKEND_TYPES, 'vision backend type');
+export const tjbotConfigSchema = createValidatorParser(compiledTJBotConfigValidator, 'TJBot configuration');
+export const validateTJBotConfig = compiledTJBotConfigValidator;
+export function getSTTBackendConfig(backendConfig, backendType) {
+    if (!backendConfig) {
+        return {};
+    }
+    switch (backendType) {
+        case 'none':
+            return {};
+        case 'local':
+            return (backendConfig.local ?? {});
+        case 'ibm-watson-stt':
+            return (backendConfig['ibm-watson-stt'] ?? {});
+        case 'google-cloud-stt':
+            return (backendConfig['google-cloud-stt'] ?? {});
+        case 'azure-stt':
+            return (backendConfig['azure-stt'] ?? {});
+        default:
+            return {};
+    }
+}
+export function getTTSBackendConfig(backendConfig, backendType) {
+    if (!backendConfig) {
+        return {};
+    }
+    switch (backendType) {
+        case 'none':
+            return {};
+        case 'local':
+            return (backendConfig.local ?? {});
+        case 'ibm-watson-tts':
+            return (backendConfig['ibm-watson-tts'] ?? {});
+        case 'google-cloud-tts':
+            return (backendConfig['google-cloud-tts'] ?? {});
+        case 'azure-tts':
+            return (backendConfig['azure-tts'] ?? {});
+        default:
+            return {};
+    }
+}
+export function getSeeBackendConfig(backendConfig, backendType) {
+    if (!backendConfig) {
+        return {};
+    }
+    switch (backendType) {
+        case 'none':
+            return {};
+        case 'local':
+            return (backendConfig.local ?? {});
+        case 'google-cloud-vision':
+            return (backendConfig['google-cloud-vision'] ?? {});
+        case 'azure-vision':
+            return (backendConfig['azure-vision'] ?? {});
+        default:
+            return {};
+    }
+}
 //# sourceMappingURL=config-types.js.map

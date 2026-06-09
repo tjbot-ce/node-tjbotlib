@@ -16,7 +16,6 @@
  */
 import { ListenConfig, STTEngineConfig } from '../config/index.js';
 export interface STTRequestOptions {
-    listenConfig: ListenConfig;
     /** Optional callback for streaming partial results */
     onPartialResult?: (text: string) => void;
     /** Optional callback for final result */
@@ -34,10 +33,18 @@ export declare abstract class STTEngine {
     constructor(config?: STTEngineConfig);
     /**
      * Initialize the STT engine. Must be called before transcribe().
+     * @param microphoneRate Sample rate of the microphone audio (e.g., 44100)
+     * @param microphoneChannels Number of audio channels from the microphone (e.g., 2 for stereo)
      * @throws {TJBotError} if initialization fails
      * @public
      */
-    abstract initialize(): Promise<void>;
+    abstract initialize(microphoneRate: number, microphoneChannels: number): Promise<void>;
+    /**
+     * Clean up resources used by the STT engine.
+     * Optional method for backends that need to release resources.
+     * @public
+     */
+    cleanup?(): Promise<void>;
     /**
      * Transcribe audio from a microphone stream.
      * @param micStream - The readable stream from the microphone
@@ -58,3 +65,4 @@ export declare abstract class STTEngine {
  * @public
  */
 export declare function createSTTEngine(listenConfig: ListenConfig): Promise<STTEngine>;
+//# sourceMappingURL=stt-engine.d.ts.map

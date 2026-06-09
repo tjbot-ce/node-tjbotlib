@@ -13,13 +13,64 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { SpeechClient, protos as speechProtos } from '@google-cloud/speech';
-import winston from 'winston';
-import { STTEngine } from '../stt-engine.js';
+import { protos as speechProtos, v2 as speechV2 } from '@google-cloud/speech';
+import { isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
+import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
+import { getLogger } from '../../utils/logging.js';
+import { STTEngine } from '../stt-engine.js';
+const logger = getLogger(import.meta.url);
+const SUPPORTED_GOOGLE_STT_MODEL_REGIONS = {
+    chirp_3: ['us', 'eu'],
+    chirp_2: ['us-central1', 'europe-west4', 'asia-southeast1'],
+};
+const MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES = 25600;
+function assertSupportedGoogleSTTModelAndRegion(model, region) {
+    if (!(model in SUPPORTED_GOOGLE_STT_MODEL_REGIONS)) {
+        throw new TJBotError(`Google Cloud STT model "${model}" is not supported. Supported models: ${Object.keys(SUPPORTED_GOOGLE_STT_MODEL_REGIONS).join(', ')}`);
+    }
+    const supportedRegions = [...SUPPORTED_GOOGLE_STT_MODEL_REGIONS[model]];
+    if (!supportedRegions.includes(region)) {
+        throw new TJBotError(`Google Cloud STT region "${region}" is not supported for model "${model}". Supported regions: ${supportedRegions.join(', ')}`);
+    }
+}
+function toGoogleCloudRecognitionError(error, recognizerPath) {
+    const googleError = error;
+    const permission = googleError.errorInfoMetadata?.permission;
+    const details = googleError.details ?? googleError.message;
+    const isPermissionDenied = googleError.code === 7 ||
+        googleError.reason === 'IAM_PERMISSION_DENIED' ||
+        permission === 'speech.recognizers.recognize';
+    const isAudioChunkTooLarge = googleError.code === 3 && /maximum of 25600 bytes/i.test(details);
+    if (isAudioChunkTooLarge) {
+        return new TJBotError(`Google Cloud STT rejected an audio chunk over ${MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES} bytes. Audio must be streamed in smaller chunks.`, {
+            code: 'stt.google-cloud.chunk-too-large',
+            cause: error,
+            context: {
+                recognizer: recognizerPath,
+                details,
+            },
+        });
+    }
+    if (isPermissionDenied) {
+        return new TJBotError(`Google Cloud STT permission denied for recognizer ${recognizerPath}. Ensure the credentials have the permission speech.recognizers.recognize on that recognizer resource and that the selected region matches the recognizer location.`, {
+            code: 'stt.google-cloud.permission-denied',
+            cause: error,
+            context: {
+                recognizer: recognizerPath,
+                permission: permission ?? 'speech.recognizers.recognize',
+                details,
+            },
+        });
+    }
+    return new TJBotError('Google Cloud STT recognition failed', {
+        cause: error,
+        context: {
+            recognizer: recognizerPath,
+            details,
+        },
+    });
+}
 /**
  * Google Cloud Speech-to-Text Engine
  *
@@ -28,130 +79,292 @@ import { TJBotError } from '../../utils/index.js';
  * @public
  */
 export class GoogleCloudSTTEngine extends STTEngine {
-    constructor(config) {
-        super(config);
-    }
-    async initialize() {
-        try {
-            const config = this.config;
-            const credentialsPath = this.resolveCredentialsPath(config?.credentialsPath);
-            // Set credentials path in environment variable
-            if (credentialsPath) {
-                process.env.GOOGLE_APPLICATION_CREDENTIALS = credentialsPath;
-                winston.debug(`🗣️ Using Google Cloud credentials from: ${credentialsPath}`);
-            }
-            this.client = new SpeechClient();
-            winston.debug('🗣️ Google Cloud STT engine initialized');
+    microphoneRate = 44100;
+    microphoneChannels = 2;
+    client;
+    async initialize(microphoneRate, microphoneChannels) {
+        const config = this.config;
+        const credentials = loadGoogleCloudCredentials(config?.credentialsPath);
+        const model = config?.model?.trim();
+        const languageCode = config?.languageCode?.trim();
+        const region = config?.region?.trim();
+        const endpoint = `${region}-speech.googleapis.com`;
+        const enableAutomaticPunctuation = config?.enableAutomaticPunctuation ?? true;
+        const profanityFilter = config?.profanityFilter ?? true;
+        const interimResults = config?.interimResults ?? true;
+        if (!model) {
+            throw new TJBotError('Google Cloud STT model not specified. Provide model in listen.backend.google-cloud-stt config.');
         }
-        catch (err) {
-            winston.error('Failed to initialize Google Cloud STT:', err);
-            throw new TJBotError('Failed to initialize Google Cloud STT engine', { cause: err });
+        if (!languageCode) {
+            throw new TJBotError('Google Cloud STT languageCode not specified. Provide languageCode in listen.backend.google-cloud-stt config.');
         }
-    }
-    resolveCredentialsPath(providedPath) {
-        // If path is explicitly provided, use it
-        if (providedPath) {
-            if (!fs.existsSync(providedPath)) {
-                throw new TJBotError(`Google Cloud credentials file not found at: ${providedPath}`);
-            }
-            return providedPath;
+        if (!region) {
+            throw new TJBotError('Google Cloud STT region not specified. Provide region in listen.backend.google-cloud-stt config.');
         }
-        // If GOOGLE_APPLICATION_CREDENTIALS is already set, use it
-        if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-            const envPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-            if (fs.existsSync(envPath)) {
-                return envPath;
-            }
-        }
-        // Check default locations
-        const defaultPaths = [
-            path.join(process.cwd(), 'google-credentials.json'),
-            path.join(os.homedir(), '.tjbot', 'google-credentials.json'),
-        ];
-        for (const defaultPath of defaultPaths) {
-            if (fs.existsSync(defaultPath)) {
-                return defaultPath;
-            }
-        }
-        throw new TJBotError('Google Cloud credentials not found. Set GOOGLE_APPLICATION_CREDENTIALS environment variable or place credentials at: ./google-credentials.json or ~/.tjbot/google-credentials.json');
+        assertSupportedGoogleSTTModelAndRegion(model, region);
+        this.microphoneRate = microphoneRate;
+        this.microphoneChannels = microphoneChannels;
+        this.client = new speechV2.SpeechClient({ apiEndpoint: endpoint });
+        logger.info('Google Cloud STT engine initialized');
+        logger.debug(`Initialized GoogleCloudSTTEngine with config:
+            model: ${model},
+            languageCode: ${languageCode},
+            region: ${region},
+            endpoint: ${endpoint},
+            enableAutomaticPunctuation: ${enableAutomaticPunctuation},
+            profanityFilter: ${profanityFilter},
+            interimResults: ${interimResults},
+            microphoneRate: ${this.microphoneRate},
+            microphoneChannels: ${this.microphoneChannels},
+            credentialsPath: ${credentials.credentialsPath}`);
     }
     async transcribe(micStream, options) {
+        const config = this.config;
+        const model = config?.model?.trim();
+        const languageCode = config?.languageCode?.trim();
+        const region = config?.region?.trim();
+        const enableAutomaticPunctuation = config?.enableAutomaticPunctuation ?? true;
+        const profanityFilter = config?.profanityFilter ?? true;
+        const interimResults = config?.interimResults ?? true;
         if (!this.client) {
             throw new TJBotError('Google Cloud STT client not initialized. Call initialize() first.');
         }
-        const listenConfig = options.listenConfig ?? {};
-        const backendConfig = (listenConfig.backend?.['google-cloud-stt'] ?? {});
-        const sampleRateHertz = backendConfig.sampleRateHertz ?? listenConfig.microphoneRate ?? 44100;
-        const audioChannelCount = backendConfig.audioChannelCount ?? listenConfig.microphoneChannels ?? 2;
-        const languageCode = backendConfig.languageCode;
-        if (!languageCode) {
-            throw new TJBotError('Google Cloud STT languageCode not specified. Provide languageCode in listen config.');
-        }
-        const model = backendConfig.model;
+        const client = this.client;
         if (!model) {
-            throw new TJBotError('Google Cloud STT model not specified. Provide model in listen config.');
+            throw new TJBotError('Google Cloud STT model not specified. Provide model in listen.backend.google-cloud-stt config.');
         }
-        const enableAutomaticPunctuation = backendConfig.enableAutomaticPunctuation ?? true;
-        const interimResults = backendConfig.interimResults ?? true;
+        if (!languageCode) {
+            throw new TJBotError('Google Cloud STT languageCode not specified. Provide languageCode in listen.backend.google-cloud-stt config.');
+        }
+        if (!region) {
+            throw new TJBotError('Google Cloud STT region not specified. Provide region in listen.backend.google-cloud-stt config.');
+        }
+        assertSupportedGoogleSTTModelAndRegion(model, region);
+        const projectId = await client.getProjectId();
+        const recognizerPath = `projects/${projectId}/locations/${region}/recognizers/_`;
+        logger.verbose(`Transcribing speech with Google Cloud STT v2 (model=${model}, languageCode=${languageCode}, recognizer=${recognizerPath})`);
         const request = {
             config: {
-                encoding: speechProtos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.LINEAR16,
-                sampleRateHertz,
-                audioChannelCount,
-                languageCode,
+                explicitDecodingConfig: {
+                    encoding: speechProtos.google.cloud.speech.v2.ExplicitDecodingConfig.AudioEncoding.LINEAR16,
+                    sampleRateHertz: this.microphoneRate,
+                    audioChannelCount: this.microphoneChannels,
+                },
                 model,
-                enableAutomaticPunctuation,
+                languageCodes: [languageCode],
+                features: {
+                    profanityFilter,
+                    enableAutomaticPunctuation,
+                },
             },
-            interimResults,
+            streamingFeatures: {
+                interimResults,
+            },
         };
-        winston.debug(`🎤 Google Cloud STT params: ${JSON.stringify(request)}`);
-        // Create a recognize stream
-        const recognizeStream = this.client
-            .streamingRecognize(request)
-            .on('error', (err) => {
-            winston.error('Google Cloud STT stream error:', err);
-        })
-            .on('data', (data) => {
-            if (data.results && data.results.length > 0) {
-                const result = data.results[0];
-                if (result.alternatives && result.alternatives.length > 0) {
-                    const transcript = result.alternatives[0].transcript;
-                    if (result.isFinal && transcript) {
-                        winston.debug(`🎤 Final transcript: ${transcript}`);
-                    }
-                }
-            }
-        });
-        // Pipe microphone to recognition stream
-        this.ensureStream(micStream).pipe(recognizeStream);
+        logger.silly('Google Cloud STT params:', JSON.stringify(request, null, 2));
+        const sourceStream = this.ensureStream(micStream);
         return new Promise((resolve, reject) => {
-            let finalTranscript = '';
-            recognizeStream.on('data', (data) => {
+            const recognizeStream = client._streamingRecognize();
+            let settled = false;
+            let timeoutLikeStreamEnd = false;
+            let latestPartialTranscript = '';
+            let latestFinalTranscript = '';
+            const settleResolve = (transcript) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                resolve(transcript);
+            };
+            const settleReject = (error) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                cleanup();
+                reject(error);
+            };
+            const handleData = (data) => {
                 if (data.results && data.results.length > 0) {
                     const result = data.results[0];
-                    if (result.isFinal && result.alternatives && result.alternatives.length > 0) {
-                        const transcript = result.alternatives[0].transcript;
-                        if (transcript) {
-                            finalTranscript = transcript;
-                            cleanup();
-                            resolve(finalTranscript.trim());
+                    if (!result.alternatives || result.alternatives.length === 0) {
+                        return;
+                    }
+                    const transcript = result.alternatives[0].transcript?.trim();
+                    if (!transcript) {
+                        return;
+                    }
+                    if (!result.isFinal) {
+                        // Always retain latest non-final transcript so timeout endings can still return best effort text.
+                        latestPartialTranscript = transcript;
+                    }
+                    if (interimResults && !result.isFinal) {
+                        options.onPartialResult?.(transcript);
+                        return;
+                    }
+                    if (result.isFinal) {
+                        latestFinalTranscript = transcript;
+                        logger.debug(`Google Cloud STT recognized: ${transcript}`);
+                        if (interimResults) {
+                            options.onFinalResult?.(transcript);
                         }
+                        settleResolve(transcript);
                     }
                 }
-            });
-            recognizeStream.on('error', (err) => {
-                cleanup();
-                reject(new TJBotError('Google Cloud STT recognition failed', { cause: err }));
-            });
-            const cleanup = () => {
+            };
+            const handleMicData = (chunk) => {
+                if (settled) {
+                    return;
+                }
+                let audioChunk;
+                if (typeof chunk === 'string') {
+                    audioChunk = Buffer.from(chunk);
+                }
+                else if (Buffer.isBuffer(chunk)) {
+                    audioChunk = chunk;
+                }
+                else {
+                    audioChunk = Buffer.from(chunk);
+                }
                 try {
-                    this.ensureStream(micStream).unpipe(recognizeStream);
+                    for (let offset = 0; offset < audioChunk.length; offset += MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES) {
+                        const chunkSlice = audioChunk.subarray(offset, offset + MAX_GOOGLE_STT_AUDIO_CHUNK_BYTES);
+                        recognizeStream.write({
+                            audio: chunkSlice,
+                        });
+                    }
                 }
                 catch (err) {
-                    winston.debug('🎤 mic unpipe failed (likely already closed)', err);
+                    const error = err instanceof Error ? err : new Error(String(err));
+                    settleReject(toGoogleCloudRecognitionError(error, recognizerPath));
+                }
+            };
+            const handleMicEnd = () => {
+                if (!settled) {
+                    recognizeStream.end();
+                }
+            };
+            const handleMicError = (err) => {
+                logger.error('Google Cloud STT microphone stream error:', err);
+                settleReject(new TJBotError('Google Cloud STT microphone stream failed', { cause: err }));
+            };
+            const handleError = (err) => {
+                const timeoutLikeReason = isTimeoutLikeStreamEndReason(err.message);
+                timeoutLikeStreamEnd = timeoutLikeStreamEnd || timeoutLikeReason;
+                if (timeoutLikeReason) {
+                    logger.warn(`Google Cloud STT stream reached timeout-like ending: ${err.message}`);
+                }
+                else {
+                    logger.error('Google Cloud STT stream error:', err);
+                }
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: timeoutLikeStreamEnd,
+                });
+                if (fallbackTranscript) {
+                    logger.debug('Google Cloud STT finalized using partial transcript after stream timeout');
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+                if (timeoutLikeStreamEnd) {
+                    settleReject(new TJBotError('Google Cloud STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    }));
+                    return;
+                }
+                settleReject(toGoogleCloudRecognitionError(err, recognizerPath));
+            };
+            const handleEndWithoutTranscript = () => {
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: timeoutLikeStreamEnd,
+                });
+                if (fallbackTranscript) {
+                    logger.debug('Google Cloud STT finalized using partial transcript after stream end');
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+                settleReject(new TJBotError('Google Cloud STT: No speech could be recognized', {
+                    code: 'stt.no-speech',
+                }));
+            };
+            const handleStatus = (status) => {
+                if (status.code === 0 || status.code === undefined) {
+                    return;
+                }
+                timeoutLikeStreamEnd = timeoutLikeStreamEnd || isTimeoutLikeStreamEndReason(status.details);
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: timeoutLikeStreamEnd,
+                });
+                if (fallbackTranscript) {
+                    logger.debug('Google Cloud STT finalized using partial transcript from gRPC status');
+                    if (interimResults) {
+                        options.onFinalResult?.(fallbackTranscript);
+                    }
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+                if (timeoutLikeStreamEnd) {
+                    settleReject(new TJBotError('Google Cloud STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    }));
+                    return;
+                }
+                settleReject(new TJBotError(`Google Cloud STT recognition failed: ${status.details || 'unknown error'}`, {
+                    cause: new Error(`gRPC status ${String(status.code)}: ${status.details || 'unknown error'}`),
+                }));
+            };
+            const cleanup = () => {
+                sourceStream.removeListener('data', handleMicData);
+                sourceStream.removeListener('end', handleMicEnd);
+                sourceStream.removeListener('error', handleMicError);
+                recognizeStream.removeListener('data', handleData);
+                recognizeStream.removeListener('close', handleEndWithoutTranscript);
+                recognizeStream.removeListener('end', handleEndWithoutTranscript);
+                recognizeStream.removeListener('status', handleStatus);
+                try {
+                    if (!recognizeStream.destroyed) {
+                        recognizeStream.end();
+                    }
+                }
+                catch (err) {
+                    logger.debug('recognize stream end failed (likely already closed)', err);
                 }
                 recognizeStream.destroy();
             };
+            recognizeStream.on('data', handleData);
+            recognizeStream.on('error', handleError);
+            recognizeStream.once('close', handleEndWithoutTranscript);
+            recognizeStream.once('end', handleEndWithoutTranscript);
+            recognizeStream.on('status', handleStatus);
+            try {
+                recognizeStream.write({
+                    recognizer: recognizerPath,
+                    streamingConfig: request,
+                });
+            }
+            catch (err) {
+                const error = err instanceof Error ? err : new Error(String(err));
+                settleReject(toGoogleCloudRecognitionError(error, recognizerPath));
+                return;
+            }
+            sourceStream.on('data', handleMicData);
+            sourceStream.once('end', handleMicEnd);
+            sourceStream.once('error', handleMicError);
         });
     }
 }

@@ -1,0 +1,255 @@
+/**
+ * Copyright 2026-present TJBot Contributors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import { ImageAnnotatorClient } from '@google-cloud/vision';
+import fs from 'fs';
+import type { SeeBackendGoogleCloudConfig } from '../../config/config-types.js';
+import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
+import { TJBotError } from '../../utils/errors.js';
+import { getLogger } from '../../utils/logging.js';
+import {
+    VisionEngine,
+    type FaceDetectionMetadata,
+    type ImageClassificationResult,
+    type ImageDescriptionResult,
+    type Landmark,
+    type ObjectDetectionResult,
+} from '../vision-engine.js';
+
+const logger = getLogger(import.meta.url);
+
+export class GoogleCloudVisionEngine extends VisionEngine {
+    private client?: ImageAnnotatorClient;
+
+    async initialize(): Promise<void> {
+        const config = this.config as SeeBackendGoogleCloudConfig;
+        loadGoogleCloudCredentials(config?.credentialsPath);
+
+        // Create client using Application Default Credentials (ADC)
+        // which reads GOOGLE_APPLICATION_CREDENTIALS environment variable
+        this.client = new ImageAnnotatorClient();
+
+        logger.info('Google Cloud Vision engine initialized');
+        logger.debug(`Initialized GoogleCloudVisionEngine with config:
+            credentialsPath: ${config.credentialsPath}`);
+    }
+
+    private readImageBuffer(image: Buffer | string): Buffer {
+        if (typeof image === 'string') {
+            return fs.readFileSync(image);
+        }
+
+        return image;
+    }
+
+    private getObjectDetectionConfidenceThreshold(): number {
+        const config = this.config as SeeBackendGoogleCloudConfig;
+        if (config.objectDetectionConfidence === undefined) {
+            throw new TJBotError(
+                'Object detection confidence threshold is not configured for Google Cloud Vision engine'
+            );
+        }
+        return config.objectDetectionConfidence;
+    }
+
+    private getImageClassificationConfidenceThreshold(): number {
+        const config = this.config as SeeBackendGoogleCloudConfig;
+        if (config.imageClassificationConfidence === undefined) {
+            throw new TJBotError(
+                'Image classification confidence threshold is not configured for Google Cloud Vision engine'
+            );
+        }
+        return config.imageClassificationConfidence;
+    }
+
+    private getFaceDetectionConfidenceThreshold(): number {
+        const config = this.config as SeeBackendGoogleCloudConfig;
+        if (config.faceDetectionConfidence === undefined) {
+            throw new TJBotError(
+                'Face detection confidence threshold is not configured for Google Cloud Vision engine'
+            );
+        }
+        return config.faceDetectionConfidence;
+    }
+
+    async detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]> {
+        if (!this.client) {
+            throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
+        }
+
+        const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
+        logger.verbose('Running object detection using Google Cloud Vision API');
+
+        const imageBuffer = this.readImageBuffer(image);
+
+        try {
+            const request = {
+                image: { content: imageBuffer },
+                features: [{ type: 'OBJECT_LOCALIZATION' as const }],
+            };
+
+            const [result] = await this.client.annotateImage(request);
+            const objects = result.localizedObjectAnnotations ?? [];
+
+            return objects
+                .map((obj) => {
+                    // Convert normalized vertices to bounding box [x, y, width, height]
+                    const vertices = obj.boundingPoly?.normalizedVertices ?? [];
+                    if (vertices.length < 2) {
+                        return null;
+                    }
+
+                    const x = vertices[0]?.x ?? 0;
+                    const y = vertices[0]?.y ?? 0;
+                    const w = (vertices[2]?.x ?? 0) - x;
+                    const h = (vertices[2]?.y ?? 0) - y;
+
+                    return {
+                        label: obj.name ?? 'unknown',
+                        confidence: obj.score ?? 0,
+                        bbox: [x, y, w, h] as [number, number, number, number],
+                    };
+                })
+                .filter((obj): obj is ObjectDetectionResult => obj !== null)
+                .filter((obj) => obj.confidence >= resolvedConfidenceThreshold)
+                .sort((a, b) => b.confidence - a.confidence);
+        } catch (error) {
+            throw new TJBotError(
+                `Google Cloud Vision API error during object detection: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
+    }
+
+    async classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]> {
+        if (!this.client) {
+            throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
+        }
+
+        const resolvedConfidenceThreshold = this.getImageClassificationConfidenceThreshold();
+        logger.verbose('Classifying image with Google Cloud Vision API');
+
+        const imageBuffer = this.readImageBuffer(image);
+
+        try {
+            const request = {
+                image: { content: imageBuffer },
+                features: [{ type: 'LABEL_DETECTION' as const }],
+            };
+
+            const [result] = await this.client.annotateImage(request);
+            const labels = result.labelAnnotations ?? [];
+
+            return labels
+                .filter((label) => (label.score ?? 0) >= resolvedConfidenceThreshold)
+                .map((label) => ({
+                    label: label.description ?? 'unknown',
+                    confidence: label.score ?? 0,
+                }))
+                .sort((a, b) => b.confidence - a.confidence);
+        } catch (error) {
+            throw new TJBotError(
+                `Google Cloud Vision API error during classification: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
+    }
+
+    async detectFaces(image: Buffer | string): Promise<{ isFaceDetected: boolean; metadata: FaceDetectionMetadata[] }> {
+        if (!this.client) {
+            throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
+        }
+
+        const confidenceThreshold = this.getFaceDetectionConfidenceThreshold();
+        logger.verbose('Detecting faces in image with Google Cloud Vision API');
+
+        const imageBuffer = this.readImageBuffer(image);
+
+        try {
+            const request = {
+                image: { content: imageBuffer },
+                features: [{ type: 'FACE_DETECTION' as const }],
+            };
+
+            const [result] = await this.client.annotateImage(request);
+            const faces = result.faceAnnotations ?? [];
+
+            const metadata = faces
+                .map((face): FaceDetectionMetadata | null => {
+                    // Extract bounding box from vertices
+                    const vertices = face.boundingPoly?.vertices ?? [];
+                    if (vertices.length === 0) {
+                        return null;
+                    }
+
+                    let minX = Infinity,
+                        minY = Infinity,
+                        maxX = -Infinity,
+                        maxY = -Infinity;
+
+                    for (const vertex of vertices) {
+                        minX = Math.min(minX, vertex.x ?? 0);
+                        minY = Math.min(minY, vertex.y ?? 0);
+                        maxX = Math.max(maxX, vertex.x ?? 0);
+                        maxY = Math.max(maxY, vertex.y ?? 0);
+                    }
+
+                    const w = maxX - minX;
+                    const h = maxY - minY;
+
+                    // Extract landmarks
+                    const landmarks: Landmark[] = (face.landmarks ?? []).map((landmark) => ({
+                        x: landmark.position?.x ?? 0,
+                        y: landmark.position?.y ?? 0,
+                        type: String(landmark.type ?? '') || undefined,
+                    }));
+
+                    // Map head pose angles (cast to any to access extended properties)
+                    const faceWithHeadPose = face as unknown as {
+                        headPose?: { rollAngle?: number; panAngle?: number; tiltAngle?: number };
+                    };
+                    const ryp = {
+                        roll: faceWithHeadPose?.headPose?.rollAngle ?? 0,
+                        yaw: faceWithHeadPose?.headPose?.panAngle ?? 0,
+                        pitch: faceWithHeadPose?.headPose?.tiltAngle ?? 0,
+                    };
+                    const headPose = faceWithHeadPose.headPose ? ryp : undefined;
+
+                    return {
+                        boundingBox: [minX, minY, w, h] as [number, number, number, number],
+                        confidence: face.detectionConfidence ?? 0,
+                        landmarks,
+                        headPose,
+                    };
+                })
+                .filter((meta): meta is FaceDetectionMetadata => meta !== null)
+                .filter((meta) => meta.confidence >= confidenceThreshold);
+
+            return {
+                isFaceDetected: metadata.length > 0,
+                metadata,
+            };
+        } catch (error) {
+            throw new TJBotError(
+                `Google Cloud Vision API error during face detection: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
+    }
+
+    async describeImage(_image: Buffer | string): Promise<ImageDescriptionResult> {
+        throw new TJBotError(
+            'Image description is only available with Azure Vision backend. Configure see.backend.type to "azure-vision".'
+        );
+    }
+}

@@ -23,10 +23,25 @@ import SPI from 'pi-spi';
 export declare class LEDNeopixelSPI {
     spi: SPI.SPI;
     useGRBFormat: boolean;
-    static readonly HIGH: number;
-    static readonly LOW: number;
-    static readonly FREQ: number;
+    private isPrimed;
+    private static readonly HIGH;
+    private static readonly LOW;
+    private static readonly FREQ;
+    private static readonly RESET_BYTES;
+    private static readonly FRAME_REPEATS;
+    private static readonly PRIME_OFF_FRAMES;
+    private static readonly INTER_FRAME_DELAY_MS;
+    private static readonly PRIME_DELAY_MS;
+    private static isSPIEnabledFromConfig;
+    private static assertSPIEnabled;
+    private static isSPIEnabledInFirmwareConfig;
+    private static isGpio10MuxedForSPI;
+    private static assertSPIPreconditions;
     constructor(spiInterface: string, useGRB?: boolean);
+    private static sleep;
+    private primeLink;
+    private transferFrame;
+    private buildFramedBitstream;
     static bitMask(byte: number, index: number): boolean;
     static byteToBitstream(byte: number): number[];
     static rgbToSpiBitstream(red: number, green: number, blue: number, useGRB: boolean): Buffer;
@@ -42,3 +57,4 @@ export declare class LEDNeopixelSPI {
      */
     cleanup(): void;
 }
+//# sourceMappingURL=led-neopixel-spi.d.ts.map

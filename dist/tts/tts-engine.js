@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { getTTSBackendConfig, } from '../config/index.js';
 import { TJBotError } from '../utils/index.js';
 /**
  * Abstract Text-to-Speech Engine Base Class
@@ -22,8 +23,8 @@ import { TJBotError } from '../utils/index.js';
  * @public
  */
 export class TTSEngine {
+    config;
     constructor(config) {
-        // Uses global winston instance
         this.config = config ?? {};
     }
     /**
@@ -42,42 +43,57 @@ export class TTSEngine {
 /**
  * Create a TTS engine instance based on the configuration.
  * Uses dynamic imports to lazily load backend implementations only when needed.
- * @param config - Configuration for the TTS engine with backend settings
+ * @param speakConfig - Configuration for the TTS engine with backend settings
  * @returns {Promise<TTSEngine>} Initialized TTS engine instance
  * @throws {TJBotError} if backend type is unknown or dependencies are not installed
  * @public
  */
-export async function createTTSEngine(config) {
-    const backendConfig = config.backend;
-    const backend = backendConfig?.type ?? 'local';
+export async function createTTSEngine(speakConfig) {
+    const backend = (speakConfig.backend?.type ?? 'local');
     try {
+        if (backend === 'none') {
+            // Return a stub engine that throws on all synthesize calls
+            class NoneTTSEngine extends TTSEngine {
+                async initialize() {
+                    // No-op for 'none' backend
+                }
+                async synthesize() {
+                    throw new TJBotError('TTS is disabled. Configure a text-to-speech backend (local, ibm-watson-tts, google-cloud-tts, or azure-tts) to use speech synthesis.');
+                }
+            }
+            return new NoneTTSEngine();
+        }
         if (backend === 'local') {
-            const module = await import('./backends/sherpa-onnx.js');
+            const module = await import('./backends/sherpa-onnx-tts.js');
             if (!module?.SherpaONNXTTSEngine) {
                 throw new TJBotError('TTS backend "local" is unavailable (missing SherpaONNXTTSEngine export).');
             }
-            return new module.SherpaONNXTTSEngine(backendConfig?.local ?? {});
+            const config = getTTSBackendConfig(speakConfig.backend, backend);
+            return new module.SherpaONNXTTSEngine(config);
         }
         if (backend === 'ibm-watson-tts') {
             const module = await import('./backends/ibm-watson-tts.js');
             if (!module?.IBMTTSEngine) {
                 throw new TJBotError('TTS backend "ibm-watson-tts" is unavailable (missing IBMTTSEngine export).');
             }
-            return new module.IBMTTSEngine(backendConfig?.['ibm-watson-tts'] ?? {});
+            const config = getTTSBackendConfig(speakConfig.backend, backend);
+            return new module.IBMTTSEngine(config);
         }
         if (backend === 'google-cloud-tts') {
             const module = await import('./backends/google-cloud-tts.js');
             if (!module?.GoogleCloudTTSEngine) {
                 throw new TJBotError('TTS backend "google-cloud-tts" is unavailable (missing GoogleCloudTTSEngine export).');
             }
-            return new module.GoogleCloudTTSEngine(backendConfig?.['google-cloud-tts'] ?? {});
+            const config = getTTSBackendConfig(speakConfig.backend, backend);
+            return new module.GoogleCloudTTSEngine(config);
         }
         if (backend === 'azure-tts') {
             const module = await import('./backends/azure-tts.js');
             if (!module?.AzureTTSEngine) {
                 throw new TJBotError('TTS backend "azure-tts" is unavailable (missing AzureTTSEngine export).');
             }
-            return new module.AzureTTSEngine(backendConfig?.['azure-tts'] ?? {});
+            const config = getTTSBackendConfig(speakConfig.backend, backend);
+            return new module.AzureTTSEngine(config);
         }
         throw new TJBotError(`Unknown TTS backend type: ${backend}`);
     }

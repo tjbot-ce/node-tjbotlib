@@ -14,17 +14,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { TJBotError } from '../utils/errors.js';
+import { getLogger } from '../utils/logging.js';
 import { createSTTEngine } from './stt-engine.js';
+const logger = getLogger(import.meta.url);
 /**
- * STT Controller for TJBot
- * Manages speech-to-text synthesis and engine lifecycle.
- * Lazy-initializes the STT engine on first transcribe call and caches it for reuse.
+ * STT controller manages speech-to-text synthesis and engine lifecycle.
+ * STT engine is eagerly initialized during setupMicrophone() and cached for reuse.
  */
 export class STTController {
-    constructor(microphoneController, listenConfig) {
+    sttEngine;
+    microphoneController;
+    listenConfig;
+    constructor(microphoneController) {
         this.sttEngine = undefined;
         this.microphoneController = microphoneController;
-        this.listenConfig = listenConfig;
+    }
+    /**
+     * Initialize the STT backend
+     * Called during setupMicrophone to eagerly load STT engine
+     * @param config Configuration object with backend, IBM settings, and Sherpa settings
+     */
+    async initialize(config) {
+        this.listenConfig = config;
+        this.sttEngine = await createSTTEngine(this.listenConfig);
+        const microphoneRate = this.listenConfig.microphoneRate;
+        const microphoneChannels = this.listenConfig.microphoneChannels;
+        logger.debug(`Initializing STT engine with microphone settings: rate=${microphoneRate}, channels=${microphoneChannels}`);
+        await this.sttEngine.initialize(microphoneRate, microphoneChannels);
     }
     /**
      * Transcribe audio from a microphone stream.
@@ -34,26 +51,49 @@ export class STTController {
      * @returns The transcribed text
      */
     async transcribe(options) {
-        // Initialize STT engine lazily on first call
+        if (this.listenConfig === undefined) {
+            throw new TJBotError('STT engine not initialized. Call initialize() before transcribing.');
+        }
         if (this.sttEngine === undefined) {
-            this.sttEngine = await createSTTEngine(this.listenConfig);
-            await this.sttEngine.initialize();
+            throw new TJBotError('STT engine not initialized. Call initialize() before transcribing.');
         }
-        // Start microphone
-        this.microphoneController.start();
-        try {
-            const micStream = this.microphoneController.getInputStream();
-            const transcript = await this.sttEngine.transcribe(micStream, {
-                listenConfig: this.listenConfig,
-                onPartialResult: options?.onPartialResult,
-                onFinalResult: options?.onFinalResult,
-                abortSignal: options?.abortSignal,
-            });
-            return transcript;
+        while (true) {
+            // Start microphone
+            this.microphoneController.start();
+            try {
+                const micStream = this.microphoneController.getInputStream();
+                const transcript = await this.sttEngine.transcribe(micStream, {
+                    onPartialResult: options?.onPartialResult,
+                    onFinalResult: options?.onFinalResult,
+                    abortSignal: options?.abortSignal,
+                });
+                logger.debug(`Transcript: ${transcript}`);
+                return transcript;
+            }
+            catch (error) {
+                if (this.isNoSpeechError(error)) {
+                    logger.verbose('No speech detected; continuing to listen');
+                    continue;
+                }
+                throw error;
+            }
+            finally {
+                // Pause between utterances so repeated listen() calls can reuse the live stream.
+                this.microphoneController.pause();
+            }
         }
-        finally {
-            // Always stop microphone to avoid speaker feedback
-            this.microphoneController.stop();
+    }
+    isNoSpeechError(error) {
+        return error instanceof TJBotError && error.code === 'stt.no-speech';
+    }
+    /**
+     * Clean up STT resources.
+     */
+    async cleanup() {
+        if (this.sttEngine) {
+            logger.debug('STTController cleanup');
+            await this.sttEngine.cleanup?.();
+            this.sttEngine = undefined;
         }
     }
 }

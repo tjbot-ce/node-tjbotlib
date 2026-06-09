@@ -14,5 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { LEDCommonAnodeConfig, LEDNeopixelConfig, ListenConfig, LogConfig, SeeConfig, ShineConfig, SpeakConfig, STTBackendConfig, STTBackendIBMWatsonConfig, STTBackendLocalConfig, STTBackendType, STTEngineConfig, TJBotConfigSchema, TTSBackendConfig, TTSBackendIBMWatsonConfig, TTSBackendLocalConfig, TTSBackendType, TTSEngineConfig, WaveConfig, } from './config-types.js';
+export type { HardwareConfig, LEDCommonAnodeConfig, LEDNeopixelConfig, ListenConfig, LogConfig, ModelEntryType, ModelEntry, ModelsConfig, NoneBackendConfig, SeeBackendAzureConfig, SeeBackendConfig, SeeBackendGoogleCloudConfig, SeeBackendLocalConfig, SeeBackendType, SeeConfig, ShineConfig, SpeakConfig, STTBackendConfig, STTBackendAzureConfig, STTBackendGoogleCloudConfig, STTBackendIBMWatsonConfig, STTBackendLocalConfig, STTBackendType, STTEngineConfig, TJBotConfigSchema, TTSBackendConfig, TTSBackendAzureConfig, TTSBackendGoogleCloudConfig, TTSBackendIBMWatsonConfig, TTSBackendLocalConfig, TTSBackendType, TTSEngineConfig, VADConfig, VisionEngineConfig, WaveConfig, LogLevel, } from './config-types.js';
+export { getConfigSchema, getSTTBackendConfig, getTTSBackendConfig, getSeeBackendConfig, isSTTBackendType, isTTSBackendType, isSeeBackendType, seeBackendTypeSchema, sttBackendTypeSchema, tjbotConfigSchema, ttsBackendTypeSchema, validateTJBotConfig, } from './config-types.js';
 export { TJBotConfig } from './tjbot-config.js';
+//# sourceMappingURL=index.d.ts.map

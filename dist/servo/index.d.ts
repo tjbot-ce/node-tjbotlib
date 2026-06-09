@@ -14,6 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-export { PiGPIOServoController } from './servo-pigpio.js';
-export { LibGPIOServoController } from './servo-libgpio.js';
-export { ServoPosition } from './servo-constants.js';
+export { LGPIOServoController } from './servo-lgpio.js';
+export { MAX_PULSE_MS, MID_PULSE_MS, MIN_PULSE_MS, ServoPosition } from './servo-constants.js';
+//# sourceMappingURL=index.d.ts.map

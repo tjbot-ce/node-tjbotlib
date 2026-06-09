@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 import { Transform } from 'stream';
-import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 /**
  * Microphone controller for TJBot
  * Handles microphone initialization and audio stream management
@@ -23,6 +22,8 @@ import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 export declare class MicrophoneController {
     private mic;
     private micInputStream;
+    private isStarted;
+    private isPaused;
     constructor();
     /**
      * Auto-detect the first available audio recording device
@@ -36,12 +37,6 @@ export declare class MicrophoneController {
      * @param device Optional specific audio device to use (auto-detected if not specified)
      */
     initialize(rate: number, channels: number, device?: string, exitOnSilenceSeconds?: number): void;
-    /**
-     * Connect microphone stream to STT stream for speech-to-text
-     * @param sttStream IBM Watson STT recognize stream
-     * @returns The connected stream
-     */
-    connectToSTT(sttStream: RecognizeStream): RecognizeStream;
     /**
      * Start microphone recording
      */
@@ -67,3 +62,4 @@ export declare class MicrophoneController {
      */
     cleanup(): void;
 }
+//# sourceMappingURL=microphone.d.ts.map

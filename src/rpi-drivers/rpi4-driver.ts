@@ -15,50 +15,52 @@
  * limitations under the License.
  */
 
-import winston from 'winston';
+import { getLogger } from '../utils/logging.js';
 
-import { Hardware } from '../utils/index.js';
-import { ServoPosition } from '../servo/index.js';
-import { RPiBaseHardwareDriver } from './rpi-driver.js';
-import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
-import { PiGPIOServoController } from '../servo/index.js';
 import { ShineConfig, WaveConfig } from '../config/index.js';
+import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
+import { LGPIOServoController, ServoPosition } from '../servo/index.js';
+import { Hardware } from '../utils/index.js';
+import { RPiBaseHardwareDriver } from './rpi-driver.js';
+
+const logger = getLogger(import.meta.url);
 
 class RPi4Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed: LEDCommonAnode | undefined;
     private neopixelLed: LEDNeopixel | undefined;
     private useGRBFormat: boolean;
-    private servo: PiGPIOServoController | undefined;
+    private servo: LGPIOServoController | undefined;
 
     constructor() {
         super();
-        winston.debug('🥧 initializing RPi4 hardware driver');
-        this.useGRBFormat = false;
+        logger.debug('initializing RPi4 hardware driver');
+        this.useGRBFormat = true;
     }
 
     setupLEDCommonAnode(config: ShineConfig['commonanode']): void {
         const redPin: number = config?.redPin ?? 19;
         const greenPin: number = config?.greenPin ?? 13;
         const bluePin: number = config?.bluePin ?? 12;
-        winston.verbose(
-            `💡 initializing ${Hardware.LED_COMMON_ANODE} on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
+        logger.verbose(
+            `initializing Common Anode LED on RED PIN ${redPin}, GREEN PIN ${greenPin}, and BLUE PIN ${bluePin}`
         );
         this.commonAnodeLed = new LEDCommonAnode(redPin, greenPin, bluePin);
-        this.initializedHardware.add(Hardware.LED_COMMON_ANODE);
+        this.initializedHardware.add(Hardware.LED);
     }
 
-    setupLEDNeopixel(config: ShineConfig['neopixel']): void {
-        const pin: number = config?.gpioPin ?? 21;
-        winston.verbose(`💡 initializing ${Hardware.LED_NEOPIXEL} on pin ${pin}`);
+    async setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void> {
+        const pin: number = config?.gpioPin ?? 18;
+        logger.verbose(`initializing NeoPixel LED on pin ${pin}`);
         this.neopixelLed = new LEDNeopixel(pin);
-        this.useGRBFormat = config?.useGRBFormat ?? false;
-        this.initializedHardware.add(Hardware.LED_NEOPIXEL);
+        await this.neopixelLed.initialize();
+        this.useGRBFormat = config?.useGRBFormat ?? true;
+        this.initializedHardware.add(Hardware.LED);
     }
 
     setupServo(config: WaveConfig): void {
         const pin: number = config.servoPin ?? 18;
-        winston.verbose(`🦾 initializing ${Hardware.SERVO} on PIN ${pin}`);
-        this.servo = new PiGPIOServoController(pin);
+        logger.verbose(`initializing ${Hardware.SERVO} on PIN ${pin}`);
+        this.servo = new LGPIOServoController(0, pin);
         this.initializedHardware.add(Hardware.SERVO);
     }
 
@@ -66,33 +68,45 @@ class RPi4Driver extends RPiBaseHardwareDriver {
         if (this.commonAnodeLed) {
             this.commonAnodeLed.render(rgbColor);
         } else {
-            winston.warn('attempted to render on an uninitialized Common Anode LED');
+            logger.warn('attempted to render on an uninitialized Common Anode LED');
         }
     }
 
     async renderLEDNeopixel(hexColor: string): Promise<void> {
         if (this.neopixelLed) {
-            const c: string = hexColor;
+            const c: string = hexColor.startsWith('#') ? hexColor.slice(1) : hexColor;
+
+            if (c.length !== 6) {
+                logger.warn(`Invalid NeoPixel color '${hexColor}'`);
+                return;
+            }
 
             if (this.useGRBFormat) {
-                const grbStr: string = `0x${c[3]}${c[4]}${c[1]}${c[2]}${c[5]}${c[6]}`;
+                const grbStr: string = `0x${c[2]}${c[3]}${c[0]}${c[1]}${c[4]}${c[5]}`;
                 const grb: number = parseInt(grbStr, 16);
-                this.neopixelLed.render(grb);
+                await this.neopixelLed.render(grb);
             } else {
-                const rgbStr: string = `0x${c[1]}${c[2]}${c[3]}${c[4]}${c[5]}${c[6]}`;
+                const rgbStr: string = `0x${c}`;
                 const rgb: number = parseInt(rgbStr, 16);
-                this.neopixelLed.render(rgb);
+                await this.neopixelLed.render(rgb);
             }
         } else {
-            winston.warn('attempted to render on an uninitialized Neopixel LED');
+            logger.warn('attempted to render on an uninitialized Neopixel LED');
         }
+    }
+
+    async cleanup(): Promise<void> {
+        if (this.neopixelLed) {
+            await this.neopixelLed.cleanup();
+        }
+        await super.cleanup();
     }
 
     renderServoPosition(position: ServoPosition): void {
         if (this.servo) {
             this.servo.setPosition(position);
         } else {
-            winston.warn('attempted to render on an uninitialized servo');
+            logger.warn('attempted to render on an uninitialized servo');
         }
     }
 }

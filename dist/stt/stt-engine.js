@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { getSTTBackendConfig, } from '../config/index.js';
 import { TJBotError } from '../utils/index.js';
 /**
  * Abstract base class for speech-to-text engines.
@@ -21,6 +22,7 @@ import { TJBotError } from '../utils/index.js';
  * @public
  */
 export class STTEngine {
+    config;
     constructor(config) {
         this.config = config ?? {};
     }
@@ -40,42 +42,55 @@ export class STTEngine {
  * @public
  */
 export async function createSTTEngine(listenConfig) {
-    const backend = listenConfig.backend?.type ?? 'local';
+    const backend = (listenConfig.backend?.type ?? 'local');
     try {
+        if (backend === 'none') {
+            // Return a stub engine that throws on all method calls
+            class NoneSTTEngine extends STTEngine {
+                async initialize() {
+                    // No-op for 'none' backend
+                }
+                async transcribe() {
+                    throw new TJBotError('STT is disabled. Configure a speech-to-text backend (local, ibm-watson-stt, google-cloud-stt, or azure-stt) to use speech recognition.');
+                }
+            }
+            return new NoneSTTEngine();
+        }
         if (backend === 'local') {
-            const module = await import('./backends/sherpa-onnx.js');
+            const module = await import('./backends/sherpa-onnx-stt.js');
             if (!module?.SherpaONNXSTTEngine) {
                 throw new TJBotError('STT backend "local" is unavailable (missing SherpaONNXSTTEngine export).');
             }
-            return new module.SherpaONNXSTTEngine(listenConfig.backend?.local);
+            const config = getSTTBackendConfig(listenConfig.backend, backend);
+            return new module.SherpaONNXSTTEngine(config);
         }
         if (backend === 'ibm-watson-stt') {
             const module = await import('./backends/ibm-watson-stt.js');
             if (!module?.IBMWatsonSTTEngine) {
                 throw new TJBotError('STT backend "ibm-watson-stt" is unavailable (missing IBMWatsonSTTEngine export).');
             }
-            return new module.IBMWatsonSTTEngine(listenConfig.backend?.['ibm-watson-stt']);
+            const config = getSTTBackendConfig(listenConfig.backend, backend);
+            return new module.IBMWatsonSTTEngine(config);
         }
         if (backend === 'google-cloud-stt') {
             const module = await import('./backends/google-cloud-stt.js');
             if (!module?.GoogleCloudSTTEngine) {
                 throw new TJBotError('STT backend "google-cloud-stt" is unavailable (missing GoogleCloudSTTEngine export).');
             }
-            return new module.GoogleCloudSTTEngine(listenConfig.backend?.['google-cloud-stt']);
+            const config = getSTTBackendConfig(listenConfig.backend, backend);
+            return new module.GoogleCloudSTTEngine(config);
         }
         if (backend === 'azure-stt') {
             const module = await import('./backends/azure-stt.js');
             if (!module?.AzureSTTEngine) {
                 throw new TJBotError('STT backend "azure-stt" is unavailable (missing AzureSTTEngine export).');
             }
-            return new module.AzureSTTEngine(listenConfig.backend?.['azure-stt']);
+            const config = getSTTBackendConfig(listenConfig.backend, backend);
+            return new module.AzureSTTEngine(config);
         }
         throw new TJBotError(`Unknown STT backend type: ${backend}`);
     }
     catch (error) {
-        if (error instanceof TJBotError) {
-            throw error;
-        }
         throw new TJBotError(`Failed to load STT backend "${backend}". Ensure dependencies are installed.`, {
             cause: error,
         });

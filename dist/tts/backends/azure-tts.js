@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
-import winston from 'winston';
-import { TTSEngine } from '../tts-engine.js';
+import { loadAzureCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
+import { getLogger } from '../../utils/logging.js';
+import { TTSEngine } from '../tts-engine.js';
+const logger = getLogger(import.meta.url);
 /**
  * Azure Cognitive Services Text-to-Speech Engine
  *
@@ -28,89 +27,36 @@ import { TJBotError } from '../../utils/index.js';
  * @public
  */
 export class AzureTTSEngine extends TTSEngine {
-    constructor(config) {
-        super(config);
-    }
+    subscriptionKey;
+    region;
     async initialize() {
-        try {
-            this.loadCredentials();
-            if (!this.subscriptionKey || !this.region) {
-                throw new TJBotError('Azure Speech subscription key and region are required');
-            }
-            winston.info(`🔈 Azure TTS engine initialized with region: ${this.region}`);
-        }
-        catch (error) {
-            winston.error('Failed to initialize Azure TTS:', error);
-            throw new TJBotError('Failed to initialize Azure TTS engine', { cause: error });
-        }
-    }
-    loadCredentials() {
         const config = this.config;
-        // First try environment variables
-        if (process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION) {
-            this.subscriptionKey = process.env.AZURE_SPEECH_KEY;
-            this.region = process.env.AZURE_SPEECH_REGION;
-            return;
+        const credentials = loadAzureCredentials(config?.credentialsPath);
+        this.subscriptionKey = credentials.speechKey;
+        this.region = credentials.speechRegion;
+        if (!config?.voice) {
+            throw new TJBotError('Azure TTS voice not specified. Provide voice in speak.backend.azure-tts config.');
         }
-        // Then try credentials file
-        const credentialsPath = this.resolveCredentialsPath(config?.credentialsPath);
-        if (credentialsPath) {
-            this.loadCredentialsFromFile(credentialsPath);
-            return;
+        if (!this.subscriptionKey || !this.region) {
+            throw new TJBotError('Azure Speech subscription key and region are required.');
         }
-        throw new TJBotError('Azure Speech credentials not found. Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION environment variables, or place credentials at: ./azure-credentials.env or ~/.tjbot/azure-credentials.env');
-    }
-    resolveCredentialsPath(providedPath) {
-        if (providedPath) {
-            if (!fs.existsSync(providedPath)) {
-                throw new TJBotError(`Azure credentials file not found at: ${providedPath}`);
-            }
-            return providedPath;
-        }
-        // Check default locations
-        const defaultPaths = [
-            path.join(process.cwd(), 'azure-credentials.env'),
-            path.join(os.homedir(), '.tjbot', 'azure-credentials.env'),
-        ];
-        for (const defaultPath of defaultPaths) {
-            if (fs.existsSync(defaultPath)) {
-                return defaultPath;
-            }
-        }
-        return undefined;
-    }
-    loadCredentialsFromFile(credentialsPath) {
-        try {
-            const credentialsContent = fs.readFileSync(credentialsPath, 'utf-8');
-            const credentials = {};
-            credentialsContent.split('\n').forEach((line) => {
-                line = line.trim();
-                if (line && !line.startsWith('#')) {
-                    const [key, ...valueParts] = line.split('=');
-                    if (key) {
-                        credentials[key.trim()] = valueParts.join('=').trim();
-                    }
-                }
-            });
-            this.subscriptionKey = credentials.AZURE_SPEECH_KEY;
-            this.region = credentials.AZURE_SPEECH_REGION;
-            winston.debug(`🔈 Loaded Azure credentials from: ${credentialsPath}`);
-        }
-        catch (err) {
-            throw new TJBotError(`Failed to load Azure credentials from ${credentialsPath}`, { cause: err });
-        }
+        logger.info('Azure TTS engine initialized');
+        logger.debug(`Initialized AzureTTSEngine with config:
+            voice: ${config?.voice},
+            region: ${this.region},
+            subscriptionKey: ${this.subscriptionKey ? '***' : 'not set'}`);
     }
     async synthesize(text) {
-        this.validateText(text);
         if (!this.subscriptionKey || !this.region) {
             throw new TJBotError('Azure TTS not initialized. Call initialize() first.');
         }
+        this.validateText(text);
         try {
             const voiceName = this.config?.voice;
             if (!voiceName) {
                 throw new TJBotError('Azure TTS voice not specified. Provide voice in speak config.');
             }
-            winston.debug(`🔈 Synthesizing with Azure TTS: voice=${voiceName}`);
+            logger.verbose(`Synthesizing speech with Azure TTS (voice=${voiceName})`);
             // Create speech config
             const speechConfig = sdk.SpeechConfig.fromSubscription(this.subscriptionKey, this.region);
             speechConfig.speechSynthesisVoiceName = voiceName;
@@ -122,7 +68,7 @@ export class AzureTTSEngine extends TTSEngine {
                     synthesizer.close();
                     if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
                         const audioData = Buffer.from(result.audioData);
-                        winston.debug(`🔈 Azure TTS synthesis complete: ${audioData.length} bytes`);
+                        logger.debug(`Azure TTS synthesis complete: ${audioData.length} bytes`);
                         resolve(audioData);
                     }
                     else if (result.reason === sdk.ResultReason.Canceled) {
@@ -134,12 +80,11 @@ export class AzureTTSEngine extends TTSEngine {
                     }
                 }, (error) => {
                     synthesizer.close();
-                    reject(new TJBotError('Azure TTS synthesis error', { cause: new Error(error) }));
+                    reject(new TJBotError(`Azure TTS synthesis error: ${error}`));
                 });
             });
         }
         catch (error) {
-            winston.error('Azure TTS synthesis failed:', error);
             throw new TJBotError('Azure TTS synthesis failed', { cause: error });
         }
     }

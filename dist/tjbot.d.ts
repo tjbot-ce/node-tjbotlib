@@ -14,10 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { Capability, Hardware } from './utils/index.js';
-import { RPiHardwareDriver } from './rpi-drivers/index.js';
-import { TJBotConfig } from './config/tjbot-config.js';
 import type { TJBotConfigSchema } from './config/config-types.js';
+import { TJBotConfig } from './config/tjbot-config.js';
+import { RPiHardwareDriver } from './rpi-drivers/index.js';
+import { Hardware } from './utils/index.js';
+import { ModelType } from './utils/model-registry.js';
+import { FaceDetectionMetadata, ImageClassificationResult, ImageDescriptionResult, ObjectDetectionResult } from './vision/index.js';
 /**
  * Class representing a TJBot
  */
@@ -27,6 +29,11 @@ declare class TJBot {
      * @readonly
      */
     static VERSION: string;
+    /**
+     * Singleton instance
+     * @private
+     */
+    private static instance;
     /**
      * Hardware list
      * @readonly
@@ -48,24 +55,74 @@ declare class TJBot {
     /**
      * Cache of the colors recognized by TJBot
      */
-    _shineColors: string[];
+    private _shineColors;
     /**
-     * TJBot constructor. Loads configuration in the following order:
-     * 1. Base config from tjbot.default.toml
-     * 2. Local tjbot.toml (if it exists)
-     * 3. Override config (if provided)
-     * Hardware is automatically initialized based on the [hardware] configuration section.
-     * @constructor
-     * @param  {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
-     * @throws {TJBotError} if configuration file cannot be loaded or is invalid
-     * @public
+     * Flag to track if TJBot has been initialized
      */
-    constructor(overrideConfig?: Partial<TJBotConfigSchema>);
+    private _initialized;
     /**
-     * Auto-initialize hardware devices based on configuration
+     * Promise for in-flight cleanup operation, if any.
+     */
+    private _cleanupPromise;
+    /**
+     * Guard to ensure process lifecycle hooks are installed only once.
+     */
+    private _processHooksInstalled;
+    /**
+     * Private constructor.
      * @private
      */
-    private _initializeHardwareFromConfig;
+    private constructor();
+    /**
+     * Get the singleton instance of TJBot.
+     * @returns {TJBot} The singleton TJBot instance
+     * @public
+     */
+    static getInstance(): TJBot;
+    /**
+     * Get recipe-specific configuration. This method can be used before calling `TJBot.getInstance().initialize()`
+     * in case a recipe needs to dynamically determine which hardware components should be configured.
+     * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
+     * @return {Record<string, unknown>} The recipe configuration as a key-value object. If no recipe configuration file is found, returns an empty object.
+     *
+     */
+    static getRecipeConfig(recipeConfigPath?: string): Record<string, unknown>;
+    /**
+     * Initialize TJBot with configuration. Can be called multiple times to reconfigure.
+     * Performs cleanup of previous initialization, loads configuration, detects hardware,
+     * initializes all configured hardware and AI models eagerly.
+     * @param {Partial<TJBotConfigSchema>=} overrideConfig (optional) Configuration object to overlay on top of loaded config.
+     * @param {string=} recipeConfigPath (optional) Path to recipe configuration file (default: recipe.toml in current working directory)
+     * @throws {TJBotError} if configuration file cannot be loaded, is invalid, or cleanup fails
+     * @public
+     */
+    initialize(overrideConfig?: Partial<TJBotConfigSchema>, recipeConfigPath?: string): Promise<TJBot>;
+    /**
+     * Initialize hardware devices
+     * @private
+     */
+    private initializeHardware;
+    /**
+     * Eagerly initialize local AI models (STT, TTS, Vision) if configured
+     * @private
+     */
+    private initializeAIModels;
+    /**
+     * Clean up all resources. Called automatically before re-initialization.
+     * @throws {TJBotError} if cleanup fails
+     * @private
+     */
+    private cleanup;
+    /**
+     * Install process lifecycle hooks so TJBot hardware resources are cleaned up
+     * automatically when a recipe exits or is interrupted.
+     */
+    private installProcessCleanupHooks;
+    /**
+     * Best-effort automatic cleanup path used by process lifecycle hooks.
+     * Uses a timeout in fatal/signal scenarios so process termination does not hang.
+     */
+    private runLifecycleCleanup;
     /**
      * Change the level of TJBot's logging.
      * @param {string} level Logging level (see Winston's [list of logging levels](https://github.com/winstonjs/winston?tab=readme-ov-file#using-logging-levels))
@@ -77,31 +134,85 @@ declare class TJBot {
      * @private
      * @param {string} capability The capability assert (see TJBot.prototype.capabilities).
      */
-    _assertCapability(capability: Capability): void;
+    private assertCapability;
+    /**
+     * Sleep for the specified number of seconds.
+     * @param sec Number of seconds to sleep
+     */
+    sleep(sec: number): Promise<void>;
+    /** ------------------------------------------------------------------------ */
+    /** LOCAL AI/ML MODELS                                                       */
+    /** ------------------------------------------------------------------------ */
+    /**
+     * List the AI/ML models on this device.
+     * @returns {string[]} Array of installed model keys
+     */
+    getLocalModels(modelType?: ModelType, installedOnly?: boolean): string[];
     /** ------------------------------------------------------------------------ */
     /** LISTEN                                                                   */
     /** ------------------------------------------------------------------------ */
     /**
-     * Listen for a spoken utterance.
+     * Listen for a spoken utterance (offline mode - returns transcript).
      * @returns {Promise<string>} The transcribed text
      * @throws {TJBotError} if the microphone hardware is not initialized
-     * @async
      * @public
      */
-    listen(callback?: (text: string) => void): Promise<string | void>;
+    listen(): Promise<string>;
+    /**
+     * Listen for a spoken utterance (streaming mode - uses callbacks).
+     * @param onPartialResult Callback for partial transcription results
+     * @param onFinalResult Callback for final transcription result
+     * @returns {Promise<void>} Promise that resolves when transcription completes
+     * @throws {TJBotError} if the microphone hardware is not initialized
+     * @public
+     */
+    listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void): Promise<void>;
     /** ------------------------------------------------------------------------ */
-    /** LOOK                                                                      */
+    /** SEE                                                                      */
     /** ------------------------------------------------------------------------ */
+    /**
+     * Capture an image and return it as a buffer.
+     * @return {Promise<Buffer>} The captured image as a buffer.
+     * @throws {TJBotError} if the camera hardware is not initialized
+     * @public
+     */
+    see(): Promise<Buffer>;
     /**
      * Capture an image and save it in the given path.
      * @param  {string=} filePath (optional) Path at which to save the photo file. If not
      * specified, photo will be saved in a temp location.
      * @return {string} Path at which the photo was saved.
      * @throws {TJBotError} if the camera hardware is not initialized
-     * @async
      * @public
      */
     look(filePath?: string): Promise<string>;
+    /**
+     * Detect objects in an image using the configured vision engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ObjectDetectionResult[]>}
+     */
+    detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    /**
+     * Classify an image using the configured vision engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageClassificationResult[]>}
+     */
+    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    /**
+     * Detect faces in an image using the configured vision engine.
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<{isFaceDetected: boolean, metadata: FaceDetectionMetadata[]}>}
+     */
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
+    /**
+     * Describe an image using the configured vision engine (Azure only).
+     * @param {Buffer|string} image Image buffer or file path
+     * @returns {Promise<ImageDescriptionResult>}
+     */
+    describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
     /** ------------------------------------------------------------------------ */
     /** SHINE                                                                    */
     /** ------------------------------------------------------------------------ */
@@ -150,14 +261,12 @@ declare class TJBot {
      * Speak a message.
      * @param {string} message The message to speak.
      * @throws {TJBotError} if the speaker hardware is not initialized
-     * @async
      * @public
      */
     speak(message: string): Promise<void>;
     /**
      * Play a sound at the specified path.
      * @param {string} soundFile The path to the sound file to be played.
-     * @async
      * @public
      */
     play(soundFile: string): Promise<void>;
@@ -167,30 +276,35 @@ declare class TJBot {
     /**
      * Moves TJBot's arm all the way back. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_BACK may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully back.
      * @example tj.armBack()
      * @public
      */
-    armBack(): void;
+    armBack(): Promise<void>;
     /**
      * Raises TJBot's arm. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_UP may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully raised.
      * @example tj.raiseArm()
      * @public
      */
-    raiseArm(): void;
+    raiseArm(): Promise<void>;
     /**
      * Lowers TJBot's arm. If this method doesn't move the arm all the way back, the servo motor stop point defined in TJBot.Servo.ARM_DOWN may need to be overridden. Valid servo values are in the range [500, 2300].
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the arm is fully lowered.
      * @example tj.lowerArm()
      * @public
      */
-    lowerArm(): void;
+    lowerArm(): Promise<void>;
     /**
      * Waves TJBots's arm once.
      * @throws {TJBotError} if the servo hardware is not initialized
+     * @returns {Promise<void>} Resolves when the wave is complete.
+     * @example tj.wave()
      * @public
      */
-    wave(): void;
+    wave(): Promise<void>;
 }
 /** ------------------------------------------------------------------------ */
 /** MODULE EXPORTS                                                           */
@@ -200,3 +314,4 @@ declare class TJBot {
  */
 export { TJBot };
 export default TJBot;
+//# sourceMappingURL=tjbot.d.ts.map

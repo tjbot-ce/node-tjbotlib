@@ -1,0 +1,116 @@
+/**
+ * Copyright 2026-present TJBot Contributors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import { FaceDetectionMetadata, ImageClassificationResult, ImageDescriptionResult, ObjectDetectionResult, VisionEngine } from '../vision-engine.js';
+export declare class ONNXVisionEngine extends VisionEngine {
+    private manager;
+    private models;
+    /**
+     * Initialize the ONNX vision engine.
+     */
+    initialize(): Promise<void>;
+    /**
+     * Load a model
+     */
+    private loadModel;
+    /**
+     * Load label file for a model
+     */
+    private loadLabels;
+    /**
+     * Get a model, loading it if necessary
+     */
+    private getOrLoadModel;
+    private getObjectDetectionConfidenceThreshold;
+    private getImageClassificationConfidenceThreshold;
+    private getFaceDetectionConfidenceThreshold;
+    /**
+     * Detect objects in an image.
+     */
+    detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    /**
+     * Classify an image.
+     */
+    classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    /**
+     * Detect faces in an image.
+     */
+    detectFaces(image: Buffer | string): Promise<{
+        isFaceDetected: boolean;
+        metadata: FaceDetectionMetadata[];
+    }>;
+    /**
+     * Describe an image - not supported by ONNX backend.
+     */
+    describeImage(_image: Buffer | string): Promise<ImageDescriptionResult>;
+    /**
+     * Sigmoid function to normalize logits to 0-1 range
+     */
+    private sigmoid;
+    private postprocessDetection;
+    /**
+     * Decode SSD MobileNet v2 raw predictor outputs into object detections.
+     */
+    private postprocessSSDMobileNetV2;
+    /**
+     * Generate normalized anchors for SSD MobileNet v2 with input size 300x300.
+     */
+    private generateSSDMobileNetV2Anchors;
+    private softmax;
+    /**
+     * Apply Non-Maximum Suppression to remove overlapping detections
+     */
+    private nonMaxSuppression;
+    /**
+     * Calculate Intersection over Union (IoU) between two bounding boxes
+     * bbox format: [x, y, w, h]
+     */
+    private calculateIoU;
+    /**
+     * Postprocess classification output
+     */
+    private postprocessClassification;
+    /**
+     * Postprocess face detection output.
+     */
+    private postprocessFaceDetection;
+    /**
+     * Postprocess face detection output from SCRFD-2.5G.
+     */
+    private postprocessSCRFDFaceDetection;
+    /**
+     * Preprocess face image for SCRFD input requirements.
+     */
+    private preprocessFaceImage;
+    /**
+     * Apply Non-Maximum Suppression to remove overlapping face detections
+     * @param faces Array of detected faces
+     * @param iouThreshold IoU threshold for suppression (default 0.5)
+     * @returns Filtered array of non-overlapping faces
+     */
+    private applyNMS;
+    /**
+     * Compute Intersection over Union (IoU) between two bounding boxes
+     * @param box1 [x, y, w, h]
+     * @param box2 [x, y, w, h]
+     * @returns IoU value between 0 and 1
+     */
+    private computeIoU;
+    /**
+     * Preprocess image to Float32 tensor for ONNX model
+     */
+    private preprocessImage;
+}
+//# sourceMappingURL=onnx.d.ts.map

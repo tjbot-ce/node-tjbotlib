@@ -14,23 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import winston from 'winston';
 import { CameraController } from '../camera/index.js';
 import { MicrophoneController } from '../microphone/index.js';
 import { SpeakerController } from '../speaker/index.js';
 import { STTController } from '../stt/stt.js';
 import { TTSController } from '../tts/tts.js';
-import { Capability, Hardware, convertHexToRgbColor, isCommandAvailable, TJBotError } from '../utils/index.js';
+import { Capability, convertHexToRgbColor, Hardware, isCommandAvailable, TJBotError } from '../utils/index.js';
+import { VisionController } from '../vision/vision.js';
 export class RPiHardwareDriver {
 }
 export class RPiBaseHardwareDriver extends RPiHardwareDriver {
+    // initialized hardware
+    initializedHardware;
+    // controllers for hardware components
+    cameraController;
+    microphoneController;
+    speakerController;
+    // controllers for STT, TTS, CV
+    sttController;
+    ttsController;
+    visionController;
+    // cached configuration for listen
+    listenConfig = {};
+    // cached configuration for shine
+    shineConfig = {};
+    // cached configuration for see
+    seeConfig = {};
+    // cached configuration for speak
+    speakConfig = {};
     constructor() {
         super();
-        // cached configuration for speak
-        this.speakConfig = {};
-        // cached configuration for listen
-        this.listenConfig = {};
         this.initializedHardware = new Set();
+    }
+    getHardware() {
+        return new Set(this.initializedHardware);
     }
     hasHardware(hardware) {
         return this.initializedHardware.has(hardware);
@@ -39,10 +56,10 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         switch (capability) {
             case Capability.LISTEN:
                 return this.hasHardware(Hardware.MICROPHONE);
-            case Capability.LOOK:
+            case Capability.SEE:
                 return this.hasHardware(Hardware.CAMERA);
             case Capability.SHINE:
-                return this.hasHardware(Hardware.LED_COMMON_ANODE) || this.hasHardware(Hardware.LED_NEOPIXEL);
+                return this.hasHardware(Hardware.LED);
             case Capability.SPEAK:
                 return this.hasHardware(Hardware.SPEAKER);
             case Capability.WAVE:
@@ -53,12 +70,24 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
     }
     setupCamera(config) {
         this.cameraController = new CameraController();
+        this.seeConfig = config;
         const width = config.cameraResolution?.[0] ?? 1920;
         const height = config.cameraResolution?.[1] ?? 1080;
         const verticalFlip = config.verticalFlip ?? false;
         const horizontalFlip = config.horizontalFlip ?? false;
-        this.cameraController.initialize([width, height], verticalFlip, horizontalFlip);
+        const captureTimeout = config.captureTimeout ?? 500;
+        const zeroShutterLag = config.zeroShutterLag ?? false;
+        this.cameraController.initialize([width, height], verticalFlip, horizontalFlip, captureTimeout, zeroShutterLag);
         this.initializedHardware.add(Hardware.CAMERA);
+    }
+    async setupLED(config) {
+        this.shineConfig = config;
+        if (config.hasCommonAnodeLED) {
+            this.setupLEDCommonAnode(config.commonanode ?? {});
+        }
+        if (config.hasNeopixelLED) {
+            await this.setupLEDNeopixel(config.neopixel ?? {});
+        }
     }
     setupMicrophone(config) {
         this.microphoneController = new MicrophoneController();
@@ -67,7 +96,6 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         const channels = config.microphoneChannels ?? 2;
         const device = config.device ?? '';
         this.microphoneController.initialize(rate, channels, device);
-        this.sttController = new STTController(this.microphoneController, config);
         this.initializedHardware.add(Hardware.MICROPHONE);
     }
     setupSpeaker(config) {
@@ -82,47 +110,87 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
         this.speakConfig = config;
         this.speakerController.initialize(device);
         this.speakerController.setAudioLifecycleCallbacks(() => this.pauseMic(), () => this.resumeMic());
-        this.ttsController = new TTSController(this.speakerController);
         this.initializedHardware.add(Hardware.SPEAKER);
     }
+    async cleanup() {
+        // Clean up controllers
+        if (this.cameraController) {
+            await this.cameraController.cleanup?.();
+        }
+        if (this.microphoneController) {
+            await this.microphoneController.cleanup?.();
+        }
+        if (this.speakerController) {
+            await this.speakerController.cleanup?.();
+        }
+        if (this.sttController) {
+            await this.sttController.cleanup?.();
+        }
+        if (this.ttsController) {
+            await this.ttsController.cleanup?.();
+        }
+        if (this.visionController) {
+            await this.visionController.cleanup?.();
+        }
+        // Clear hardware state
+        this.initializedHardware.clear();
+        this.cameraController = undefined;
+        this.microphoneController = undefined;
+        this.speakerController = undefined;
+        this.sttController = undefined;
+        this.ttsController = undefined;
+        this.visionController = undefined;
+    }
+    async initializeSTTEngine() {
+        if (this.microphoneController === undefined) {
+            throw new TJBotError('Microphone controllernot initialized. Make sure to call setupMicrophone() before initializing the STT engine.');
+        }
+        this.sttController = new STTController(this.microphoneController);
+        await this.sttController.initialize(this.listenConfig);
+    }
+    async initializeTTSEngine() {
+        if (this.speakerController === undefined) {
+            throw new TJBotError('Speaker controllernot initialized. Make sure to call setupSpeaker() before initializing the TTS engine.');
+        }
+        this.ttsController = new TTSController(this.speakerController);
+        await this.ttsController.initialize(this.speakConfig);
+    }
+    async initializeVisionEngine() {
+        this.visionController = new VisionController();
+        await this.visionController.initialize(this.seeConfig);
+    }
     startMic() {
-        if (!this.microphoneController) {
-            throw new TJBotError('Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.');
+        if (this.microphoneController === undefined) {
+            throw new TJBotError('Microphone controllernot initialized. Make sure to call setupMicrophone() before using the microphone.');
         }
         this.microphoneController.start();
     }
     pauseMic() {
-        if (!this.microphoneController) {
+        if (this.microphoneController === undefined) {
             return;
         }
         this.microphoneController.pause();
     }
     resumeMic() {
-        if (!this.microphoneController) {
+        if (this.microphoneController === undefined) {
             return;
         }
         this.microphoneController.resume();
     }
     stopMic() {
-        if (!this.microphoneController) {
-            throw new TJBotError('Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.');
+        if (this.microphoneController === undefined) {
+            throw new TJBotError('Microphone controllernot initialized. Make sure to call setupMicrophone() before using the microphone.');
         }
         this.microphoneController.stop();
     }
     getMicInputStream() {
-        if (!this.microphoneController) {
-            throw new TJBotError('Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.');
+        if (this.microphoneController === undefined) {
+            throw new TJBotError('Microphone controller not initialized. Make sure to call setupMicrophone() before using the microphone.');
         }
         return this.microphoneController.getInputStream();
     }
-    connectMicStreamToSTTStream(sttStream) {
-        if (!this.microphoneController) {
-            throw new TJBotError('Microphone not initialized. Make sure to call setupMicrophone() before using the microphone.');
-        }
-        return this.microphoneController.connectToSTT(sttStream);
-    }
     async listenForTranscript(options) {
-        if (!this.sttController) {
+        if (this.sttController === undefined) {
             throw new TJBotError('STT controller not initialized. Make sure to call setupMicrophone() before listening.');
         }
         const transcript = await this.sttController.transcribe({
@@ -130,35 +198,64 @@ export class RPiBaseHardwareDriver extends RPiHardwareDriver {
             onFinalResult: options?.onFinalResult,
             abortSignal: options?.abortSignal,
         });
-        winston.verbose(`👂 TJBot heard: "${transcript.trim()}"`);
         return transcript.trim();
     }
     async capturePhoto(atPath) {
-        if (!this.cameraController) {
-            throw new TJBotError('Camera not initialized. Make sure to call setupCamera() before using the camera.');
+        if (this.cameraController === undefined) {
+            throw new TJBotError('Camera controller not initialized. Make sure to call setupCamera() before using the camera.');
         }
         return this.cameraController.capturePhoto(atPath);
     }
+    async capturePhotoBuffer() {
+        if (this.cameraController === undefined) {
+            throw new TJBotError('Camera controller not initialized. Make sure to call setupCamera() before using the camera.');
+        }
+        return this.cameraController.capturePhotoBuffer();
+    }
+    async detectObjects(image) {
+        if (this.visionController === undefined) {
+            throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        }
+        return this.visionController.detectObjects(image);
+    }
+    async classifyImage(image) {
+        if (this.visionController === undefined) {
+            throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        }
+        return this.visionController.classifyImage(image);
+    }
+    async describeImage(image) {
+        if (this.visionController === undefined) {
+            throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        }
+        return this.visionController.describeImage(image);
+    }
+    async detectFaces(image) {
+        if (this.visionController === undefined) {
+            throw new TJBotError('Vision controller is not initialized. Make sure to call setupCamera() before using Vision.');
+        }
+        return this.visionController.detectFaces(image);
+    }
     async renderLED(hexColor) {
-        if (this.hasHardware(Hardware.LED_COMMON_ANODE)) {
+        if (this.shineConfig.hasCommonAnodeLED) {
             const rgb = convertHexToRgbColor(hexColor);
             this.renderLEDCommonAnode(rgb);
         }
-        if (this.hasHardware(Hardware.LED_NEOPIXEL)) {
+        if (this.shineConfig.hasNeopixelLED) {
             await this.renderLEDNeopixel(hexColor);
         }
     }
     async playAudio(audioPath) {
-        if (!this.speakerController) {
-            throw new TJBotError('Speaker not initialized. Make sure to call setupSpeaker() before playing audio.');
+        if (this.speakerController === undefined) {
+            throw new TJBotError('Speaker controller not initialized. Make sure to call setupSpeaker() before playing audio.');
         }
         return this.speakerController.playAudio(audioPath);
     }
     async speak(message) {
-        if (!this.ttsController) {
+        if (this.ttsController === undefined) {
             throw new TJBotError('TTS controller not initialized. Make sure to call setupSpeaker() before speaking.');
         }
-        return this.ttsController.speak(message, this.speakConfig);
+        return this.ttsController.speak(message);
     }
 }
 //# sourceMappingURL=rpi-driver.js.map

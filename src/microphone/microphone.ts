@@ -16,24 +16,38 @@
  */
 
 import Mic from 'mic';
-import winston from 'winston';
 import { Transform } from 'stream';
-import RecognizeStream from 'ibm-watson/lib/recognize-stream.js';
 import { execSync } from 'child_process';
+import { getLogger } from '../utils/logging.js';
+
+const logger = getLogger(import.meta.url);
+
+interface MicInstance {
+    start(): void;
+    stop(): void;
+    pause(): void;
+    resume(): void;
+    getAudioStream(): Transform;
+}
+
+type MicParams = Record<string, string | number | boolean>;
 
 /**
  * Microphone controller for TJBot
  * Handles microphone initialization and audio stream management
  */
 export class MicrophoneController {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private mic: any;
+    private mic: MicInstance;
     private micInputStream: Transform;
+    private isStarted: boolean;
+    private isPaused: boolean;
 
     constructor() {
-        const params = {};
-        this.mic = Mic(params);
-        this.micInputStream = this.mic.getAudioStream() as unknown as Transform;
+        const params: MicParams = {};
+        this.mic = Mic(params) as unknown as MicInstance;
+        this.micInputStream = this.mic.getAudioStream();
+        this.isStarted = false;
+        this.isPaused = false;
     }
 
     /**
@@ -53,14 +67,14 @@ export class MicrophoneController {
                 const card = match[1];
                 const device = match[2];
                 const deviceString = `plughw:${card},${device}`;
-                winston.verbose(`🎤 auto-detected microphone device: ${deviceString}`);
+                logger.debug(`auto-detected microphone device: ${deviceString}`);
                 return deviceString;
             }
 
-            winston.warn('🎤 no audio capture devices found');
+            logger.warn('no audio capture devices found');
             return '';
         } catch (error) {
-            winston.error('🎤 error detecting microphone device:', error);
+            logger.error('error detecting microphone device:', error);
             return '';
         }
     }
@@ -72,15 +86,7 @@ export class MicrophoneController {
      * @param device Optional specific audio device to use (auto-detected if not specified)
      */
     initialize(rate: number, channels: number, device?: string, exitOnSilenceSeconds?: number): void {
-        winston.verbose('🎤 initializing microphone');
-
-        // Auto-detect device if not specified
-        let selectedDevice = device || '';
-        if (!selectedDevice || selectedDevice === '') {
-            selectedDevice = this.detectMicrophoneDevice();
-        }
-
-        const params: Record<string, unknown> = {
+        const params: MicParams = {
             rate: String(rate),
             channels: String(channels),
             bitwidth: '16',
@@ -94,64 +100,65 @@ export class MicrophoneController {
             params['exitOnSilence'] = exitOnSilenceSeconds;
         }
 
-        if (selectedDevice && selectedDevice !== '') {
-            winston.verbose('🎤 listening through user-defined audio device: ' + selectedDevice);
-            params['device'] = selectedDevice;
+        if (device && device !== '') {
+            params['device'] = device;
+            logger.verbose(`Initializing microphone with user-defined audio device: ${device}`);
         } else {
-            winston.verbose('🎤 listening through default audio device');
+            const selectedDevice = this.detectMicrophoneDevice();
+            params['device'] = selectedDevice;
+            logger.verbose(`Initializing microphone with auto-detected audio device: ${selectedDevice}`);
         }
 
         // create the microphone
         this.mic = Mic(params);
 
         // save the input stream so we can pipe it to STT
-        // the weird typecasting is because we're using super legacy js code :)
-        this.micInputStream = this.mic.getAudioStream() as unknown as Transform;
+        this.micInputStream = this.mic.getAudioStream();
 
         // event handlers
         this.micInputStream.on('startComplete', () => {
-            winston.verbose('🎤 microphone started');
+            logger.verbose('Microphone started');
         });
 
         this.micInputStream.on('pauseComplete', () => {
-            winston.verbose('🎤 microphone paused');
+            logger.verbose('Microphone paused');
         });
 
-        this.micInputStream.on('data', () => {
-            // turn this on for serious debugging, otherwise it's very noisy :)
-            // winston.verbose('🎤 microphone received data: ' + data.length + ' bytes');
+        this.micInputStream.on('data', (data) => {
+            logger.silly(`microphone received ${data.length} bytes`);
         });
 
         // log errors in the mic input stream
         this.micInputStream.on('error', (err) => {
-            winston.error('🎤 microphone input stream experienced an error', err);
+            logger.error('Microphone input stream experienced an error', err);
         });
 
         this.micInputStream.on('processExitComplete', () => {
-            winston.verbose('🎤 microphone recording process exited');
+            logger.verbose('Microphone recording process exited');
         });
 
         // ignore silence
         this.micInputStream.on('silence', () => {
-            winston.verbose('🎤 microphone silence');
+            logger.verbose('Microphone silence');
         });
-    }
 
-    /**
-     * Connect microphone stream to STT stream for speech-to-text
-     * @param sttStream IBM Watson STT recognize stream
-     * @returns The connected stream
-     */
-    connectToSTT(sttStream: RecognizeStream): RecognizeStream {
-        return this.micInputStream.pipe(sttStream);
+        logger.debug(`initialized microphone with config:
+            rate: ${rate}
+            channels: ${channels}
+            device: ${device}
+            exitOnSilenceSeconds: ${exitOnSilenceSeconds}`);
     }
 
     /**
      * Start microphone recording
      */
     start(): void {
-        if (this.mic !== undefined) {
+        if (this.mic !== undefined && !this.isStarted) {
             this.mic.start();
+            this.isStarted = true;
+            this.isPaused = false;
+        } else if (this.mic !== undefined && this.isPaused) {
+            this.resume();
         }
     }
 
@@ -159,9 +166,9 @@ export class MicrophoneController {
      * Pause microphone recording
      */
     pause(): void {
-        if (this.mic !== undefined) {
-            winston.verbose('🎤 listening paused');
+        if (this.mic !== undefined && this.isStarted && !this.isPaused) {
             this.mic.pause();
+            this.isPaused = true;
         }
     }
 
@@ -169,9 +176,12 @@ export class MicrophoneController {
      * Resume microphone recording
      */
     resume(): void {
-        if (this.mic !== undefined) {
-            winston.verbose('🎤 listening resumed');
+        if (this.mic !== undefined && this.isStarted && this.isPaused) {
             this.mic.resume();
+            this.isPaused = false;
+
+            // there is no resume event, so log it here
+            logger.verbose('Microphone resumed');
         }
     }
 
@@ -181,6 +191,8 @@ export class MicrophoneController {
     stop(): void {
         if (this.mic !== undefined) {
             this.mic.stop();
+            this.isStarted = false;
+            this.isPaused = false;
         }
     }
 
@@ -195,6 +207,7 @@ export class MicrophoneController {
      * Clean up resources
      */
     cleanup(): void {
+        logger.debug('MicrophoneController cleanup');
         this.stop();
     }
 }

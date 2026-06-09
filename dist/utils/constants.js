@@ -22,7 +22,7 @@
 export var Capability;
 (function (Capability) {
     Capability["LISTEN"] = "listen";
-    Capability["LOOK"] = "look";
+    Capability["SEE"] = "see";
     Capability["SHINE"] = "shine";
     Capability["SPEAK"] = "speak";
     Capability["WAVE"] = "wave";
@@ -35,20 +35,9 @@ export var Capability;
 export var Hardware;
 (function (Hardware) {
     Hardware["CAMERA"] = "camera";
-    Hardware["LED_COMMON_ANODE"] = "common_anode_led";
-    Hardware["LED_NEOPIXEL"] = "neopixel_led";
+    Hardware["LED"] = "led";
     Hardware["MICROPHONE"] = "microphone";
     Hardware["SERVO"] = "servo";
     Hardware["SPEAKER"] = "speaker";
 })(Hardware || (Hardware = {}));
-/**
- * IBM Watson AI services
- * @readonly
- * @enum {string}
- */
-export var WatsonService;
-(function (WatsonService) {
-    WatsonService["SPEECH_TO_TEXT"] = "speech_to_text";
-    WatsonService["TEXT_TO_SPEECH"] = "text_to_speech";
-})(WatsonService || (WatsonService = {}));
 //# sourceMappingURL=constants.js.map

@@ -14,9 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import { ShineConfig, WaveConfig } from '../config/index.js';
 import { ServoPosition } from '../servo/index.js';
 import { RPiBaseHardwareDriver } from './rpi-driver.js';
-import { ShineConfig, WaveConfig } from '../config/index.js';
 declare class RPi4Driver extends RPiBaseHardwareDriver {
     private commonAnodeLed;
     private neopixelLed;
@@ -24,10 +24,12 @@ declare class RPi4Driver extends RPiBaseHardwareDriver {
     private servo;
     constructor();
     setupLEDCommonAnode(config: ShineConfig['commonanode']): void;
-    setupLEDNeopixel(config: ShineConfig['neopixel']): void;
+    setupLEDNeopixel(config: ShineConfig['neopixel']): Promise<void>;
     setupServo(config: WaveConfig): void;
     renderLEDCommonAnode(rgbColor: [number, number, number]): void;
     renderLEDNeopixel(hexColor: string): Promise<void>;
+    cleanup(): Promise<void>;
     renderServoPosition(position: ServoPosition): void;
 }
 export default RPi4Driver;
+//# sourceMappingURL=rpi4-driver.d.ts.map

@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
-import winston from 'winston';
-import { STTEngine, STTRequestOptions } from '../stt-engine.js';
-import { ListenConfig } from '../../config/index.js';
+import type { STTBackendAzureConfig } from '../../config/config-types.js';
+import { loadAzureCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
+import { getLogger } from '../../utils/logging.js';
+import { STTEngine, STTRequestOptions } from '../stt-engine.js';
+import { isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
 
-interface AzureSTTConfig {
-    language?: string;
-    credentialsPath?: string;
-}
+const logger = getLogger(import.meta.url);
 
 /**
  * Azure Cognitive Services Speech-to-Text Engine
@@ -36,118 +32,56 @@ interface AzureSTTConfig {
  * @public
  */
 export class AzureSTTEngine extends STTEngine {
-    private subscriptionKey: string | undefined;
-    private region: string | undefined;
+    private microphoneRate: number = 44100;
+    private microphoneChannels: number = 2;
+    private subscriptionKey?: string;
+    private region?: string;
 
-    constructor(config?: Record<string, unknown>) {
-        super(config);
-    }
+    async initialize(microphoneRate: number, microphoneChannels: number): Promise<void> {
+        const config = this.config as STTBackendAzureConfig;
+        const credentials = loadAzureCredentials(config?.credentialsPath as string | undefined);
+        this.subscriptionKey = credentials.speechKey;
+        this.region = credentials.speechRegion;
 
-    async initialize(): Promise<void> {
-        try {
-            const config = this.config as AzureSTTConfig | undefined;
-            this.loadCredentials(config);
-
-            if (!this.subscriptionKey || !this.region) {
-                throw new TJBotError('Azure Speech subscription key and region are required');
-            }
-
-            winston.debug(`🗣️ Azure STT engine initialized with region: ${this.region}`);
-        } catch (err) {
-            winston.error('Failed to initialize Azure STT:', err);
-            throw new TJBotError('Failed to initialize Azure STT engine', { cause: err as Error });
+        if (!config?.language) {
+            throw new TJBotError(
+                'Azure STT language not specified. Provide language in listen.backend.azure-stt config.'
+            );
         }
-    }
-
-    private loadCredentials(config?: AzureSTTConfig): void {
-        // First try environment variables
-        if (process.env.AZURE_SPEECH_KEY && process.env.AZURE_SPEECH_REGION) {
-            this.subscriptionKey = process.env.AZURE_SPEECH_KEY;
-            this.region = process.env.AZURE_SPEECH_REGION;
-            return;
+        if (!this.subscriptionKey || !this.region) {
+            throw new TJBotError('Azure Speech subscription key and region are required.');
         }
 
-        // Then try credentials file
-        const credentialsPath = this.resolveCredentialsPath(config?.credentialsPath);
-        if (credentialsPath) {
-            this.loadCredentialsFromFile(credentialsPath);
-            return;
-        }
+        this.microphoneRate = microphoneRate;
+        this.microphoneChannels = microphoneChannels;
 
-        throw new TJBotError(
-            'Azure Speech credentials not found. Set AZURE_SPEECH_KEY and AZURE_SPEECH_REGION environment variables, or place credentials at: ./azure-credentials.env or ~/.tjbot/azure-credentials.env'
-        );
-    }
-
-    private resolveCredentialsPath(providedPath?: string): string | undefined {
-        if (providedPath) {
-            if (!fs.existsSync(providedPath)) {
-                throw new TJBotError(`Azure credentials file not found at: ${providedPath}`);
-            }
-            return providedPath;
-        }
-
-        // Check default locations
-        const defaultPaths = [
-            path.join(process.cwd(), 'azure-credentials.env'),
-            path.join(os.homedir(), '.tjbot', 'azure-credentials.env'),
-        ];
-
-        for (const defaultPath of defaultPaths) {
-            if (fs.existsSync(defaultPath)) {
-                return defaultPath;
-            }
-        }
-
-        return undefined;
-    }
-
-    private loadCredentialsFromFile(credentialsPath: string): void {
-        try {
-            const credentialsContent = fs.readFileSync(credentialsPath, 'utf-8');
-            const credentials: Record<string, string> = {};
-
-            credentialsContent.split('\n').forEach((line) => {
-                line = line.trim();
-                if (line && !line.startsWith('#')) {
-                    const [key, ...valueParts] = line.split('=');
-                    if (key) {
-                        credentials[key.trim()] = valueParts.join('=').trim();
-                    }
-                }
-            });
-
-            this.subscriptionKey = credentials.AZURE_SPEECH_KEY;
-            this.region = credentials.AZURE_SPEECH_REGION;
-
-            winston.debug(`🗣️ Loaded Azure credentials from: ${credentialsPath}`);
-        } catch (err) {
-            throw new TJBotError(`Failed to load Azure credentials from ${credentialsPath}`, { cause: err as Error });
-        }
+        logger.info('Azure STT engine initialized');
+        logger.debug(`Initialized AzureSTTEngine with config:
+            language: ${config?.language},
+            region: ${config?.region},
+            microphoneRate: ${this.microphoneRate},
+            microphoneChannels: ${this.microphoneChannels},
+            subscriptionKey: ${this.subscriptionKey ? '***' : 'not set'}
+        `);
     }
 
     async transcribe(micStream: NodeJS.ReadableStream, options: STTRequestOptions): Promise<string> {
+        const config = this.config as STTBackendAzureConfig;
+
         if (!this.subscriptionKey || !this.region) {
             throw new TJBotError('Azure STT not initialized. Call initialize() first.');
         }
 
-        const listenConfig: ListenConfig = options.listenConfig ?? {};
-        const backendConfig = (listenConfig.backend?.['azure-stt'] ?? {}) as AzureSTTConfig;
+        const interimResults = config?.interimResults ?? false;
 
-        const language = backendConfig.language;
-        if (!language) {
-            throw new TJBotError('Azure STT language not specified. Provide language in listen config.');
-        }
-        const sampleRate: number = (listenConfig.microphoneRate as number) ?? 44100;
+        logger.verbose(`Transcribing speech with Azure STT (language=${config?.language})`);
 
         // Create speech config
         const speechConfig = sdk.SpeechConfig.fromSubscription(this.subscriptionKey, this.region);
-        speechConfig.speechRecognitionLanguage = language;
-
-        winston.debug(`🎤 Azure STT params: language=${language}, sampleRate=${sampleRate}`);
+        speechConfig.speechRecognitionLanguage = config?.language as string;
 
         // Create audio config from stream
-        const audioFormat = sdk.AudioStreamFormat.getWaveFormatPCM(sampleRate, 16, 1);
+        const audioFormat = sdk.AudioStreamFormat.getWaveFormatPCM(this.microphoneRate, 16, this.microphoneChannels);
         const pushStream = sdk.AudioInputStream.createPushStream(audioFormat);
 
         // Pipe microphone data to push stream
@@ -155,10 +89,12 @@ export class AzureSTTEngine extends STTEngine {
             // Azure SDK expects an ArrayBuffer, convert Buffer while preserving view
             const arrayBuffer = chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength);
             pushStream.write(arrayBuffer as ArrayBuffer);
+            logger.silly(`piped ${chunk.length} bytes from microphone to Azure STT push stream`);
         });
 
         this.ensureStream(micStream).on('end', () => {
             pushStream.close();
+            logger.silly('microphone stream ended, closed Azure STT push stream');
         });
 
         const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
@@ -166,28 +102,181 @@ export class AzureSTTEngine extends STTEngine {
         // Create recognizer
         const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
 
-        return new Promise<string>((resolve, reject) => {
-            recognizer.recognizeOnceAsync(
-                (result: sdk.SpeechRecognitionResult) => {
-                    recognizer.close();
+        if (!interimResults) {
+            return new Promise<string>((resolve, reject) => {
+                recognizer.recognizeOnceAsync(
+                    (result: sdk.SpeechRecognitionResult) => {
+                        recognizer.close();
 
-                    if (result.reason === sdk.ResultReason.RecognizedSpeech) {
-                        winston.debug(`🎤 Azure STT recognized: ${result.text}`);
-                        resolve(result.text.trim());
-                    } else if (result.reason === sdk.ResultReason.NoMatch) {
-                        reject(new TJBotError('Azure STT: No speech could be recognized'));
-                    } else if (result.reason === sdk.ResultReason.Canceled) {
-                        const cancellation = sdk.CancellationDetails.fromResult(result);
-                        reject(
-                            new TJBotError(`Azure STT canceled: ${cancellation.reason} - ${cancellation.errorDetails}`)
-                        );
-                    } else {
-                        reject(new TJBotError(`Azure STT recognition failed with reason: ${result.reason}`));
+                        if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+                            logger.debug(`Azure STT recognized: ${result.text}`);
+                            resolve(result.text.trim());
+                        } else if (result.reason === sdk.ResultReason.NoMatch) {
+                            reject(
+                                new TJBotError('Azure STT: No speech could be recognized', {
+                                    code: 'stt.no-speech',
+                                })
+                            );
+                        } else if (result.reason === sdk.ResultReason.Canceled) {
+                            const cancellation = sdk.CancellationDetails.fromResult(result);
+                            reject(
+                                new TJBotError(
+                                    `Azure STT canceled: ${cancellation.reason} - ${cancellation.errorDetails}`
+                                )
+                            );
+                        } else {
+                            reject(new TJBotError(`Azure STT recognition failed with reason: ${result.reason}`));
+                        }
+                    },
+                    (error: string) => {
+                        recognizer.close();
+                        reject(new TJBotError('Azure STT recognition error', { cause: new Error(error) }));
                     }
+                );
+            });
+        }
+
+        return new Promise<string>((resolve, reject) => {
+            let settled = false;
+            let latestPartialTranscript = '';
+            let latestFinalTranscript = '';
+
+            const cleanup = () => {
+                recognizer.recognizing = () => {
+                    // no-op after cleanup
+                };
+                recognizer.recognized = () => {
+                    // no-op after cleanup
+                };
+                recognizer.canceled = () => {
+                    // no-op after cleanup
+                };
+                recognizer.sessionStopped = () => {
+                    // no-op after cleanup
+                };
+                recognizer.close();
+            };
+
+            const settleResolve = (text: string) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                recognizer.stopContinuousRecognitionAsync(
+                    () => {
+                        cleanup();
+                        resolve(text);
+                    },
+                    (error: string) => {
+                        cleanup();
+                        reject(new TJBotError('Azure STT stop recognition error', { cause: new Error(error) }));
+                    }
+                );
+            };
+
+            const settleReject = (error: TJBotError) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                recognizer.stopContinuousRecognitionAsync(
+                    () => {
+                        cleanup();
+                        reject(error);
+                    },
+                    () => {
+                        cleanup();
+                        reject(error);
+                    }
+                );
+            };
+
+            recognizer.recognizing = (_sender: sdk.Recognizer, event: sdk.SpeechRecognitionEventArgs) => {
+                const text = event.result?.text?.trim();
+                if (text) {
+                    latestPartialTranscript = text;
+                    options.onPartialResult?.(text);
+                }
+            };
+
+            recognizer.recognized = (_sender: sdk.Recognizer, event: sdk.SpeechRecognitionEventArgs) => {
+                if (event.result.reason === sdk.ResultReason.RecognizedSpeech) {
+                    const text = event.result.text?.trim();
+                    if (text) {
+                        latestFinalTranscript = text;
+                        logger.debug(`Azure STT recognized: ${text}`);
+                        options.onFinalResult?.(text);
+                        settleResolve(text);
+                    }
+                    return;
+                }
+
+                if (event.result.reason === sdk.ResultReason.NoMatch) {
+                    settleReject(
+                        new TJBotError('Azure STT: No speech could be recognized', {
+                            code: 'stt.no-speech',
+                        })
+                    );
+                }
+            };
+
+            recognizer.canceled = (_sender: sdk.Recognizer, event: sdk.SpeechRecognitionCanceledEventArgs) => {
+                const cancelReason = `${event.reason} - ${event.errorDetails || ''}`;
+                const timeoutLikeEnd = isTimeoutLikeStreamEndReason(cancelReason);
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd,
+                });
+
+                if (fallbackTranscript) {
+                    logger.debug('Azure STT finalized using partial transcript after cancel event');
+                    options.onFinalResult?.(fallbackTranscript);
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+
+                if (timeoutLikeEnd) {
+                    settleReject(
+                        new TJBotError('Azure STT: No speech could be recognized', {
+                            code: 'stt.no-speech',
+                        })
+                    );
+                    return;
+                }
+
+                settleReject(new TJBotError(`Azure STT canceled: ${event.reason} - ${event.errorDetails}`));
+            };
+
+            recognizer.sessionStopped = () => {
+                const fallbackTranscript = resolveTranscriptForStreamEnd({
+                    finalTranscript: latestFinalTranscript,
+                    partialTranscript: latestPartialTranscript,
+                    allowPartialOnTimeoutLikeEnd: true,
+                    timeoutLikeEnd: true,
+                });
+
+                if (fallbackTranscript) {
+                    logger.debug('Azure STT finalized using partial transcript after session stop');
+                    options.onFinalResult?.(fallbackTranscript);
+                    settleResolve(fallbackTranscript);
+                    return;
+                }
+
+                settleReject(
+                    new TJBotError('Azure STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    })
+                );
+            };
+
+            recognizer.startContinuousRecognitionAsync(
+                () => {
+                    logger.silly('Azure STT continuous recognition started');
                 },
                 (error: string) => {
-                    recognizer.close();
-                    reject(new TJBotError('Azure STT recognition error', { cause: new Error(error) }));
+                    settleReject(new TJBotError('Azure STT start recognition error', { cause: new Error(error) }));
                 }
             );
         });

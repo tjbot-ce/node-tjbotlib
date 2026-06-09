@@ -15,18 +15,26 @@
  * limitations under the License.
  */
 
-import colorToHex from 'colornames';
-import winston from 'winston';
 import { execSync } from 'child_process';
-import { TJBotError } from './errors.js';
 
 /**
  * Put TJBot to sleep.
  * @param {number} sec Number of seconds to sleep for.
  */
-export function sleep(sec: number) {
+export function sleepSync(sec: number): void {
     const msec = sec * 1000;
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, msec);
+}
+
+/**
+ * Put TJBot to sleep asynchronously.
+ * @param {number} sec Number of seconds to sleep for.
+ */
+export function sleep(sec: number): Promise<void> {
+    const msec = sec * 1000;
+    return new Promise((resolve) => {
+        setTimeout(resolve, msec);
+    });
 }
 
 /**
@@ -41,88 +49,4 @@ export function isCommandAvailable(command: string): boolean {
     } catch {
         return false;
     }
-}
-
-/**
- * Convert hex color to RGB value.
- * @param {string} hexColor Hex color (e.g. FF8888)
- * @return {array} RGB color (e.g. (255, 128, 128))
- * @private
- */
-export function convertHexToRgbColor(hexColor: string): [number, number, number] {
-    const rgbHex: RegExpMatchArray | null = hexColor
-        .replace(
-            /^#?([a-f\d])([a-f\d])([a-f\d])$/i,
-            (_m: string, r: string, g: string, b: string) => `#${r}${r}${g}${g}${b}${b}`
-        )
-        .substring(1)
-        .match(/.{2}/g);
-
-    if (rgbHex !== null) {
-        const rgb: number[] = rgbHex.map((x: string) => parseInt(x, 16));
-        return [rgb[0], rgb[1], rgb[2]];
-    } else {
-        winston.warn(`an error occurred converting hex color ${hexColor} to RGB, returning [0, 0, 0]`);
-        return [0, 0, 0];
-    }
-}
-
-/**
- * Normalize the given color to #RRGGBB.
- * @param {string} color The color to shine the LED. May be specified in a number of
- * formats, including: hexadecimal, (e.g. "0xF12AC4", "11FF22", "#AABB24"), "on", "off",
- * or may be a named color in the `colornames` package. Hexadecimal colors
- * follow an #RRGGBB format.
- * @return {string} Hex string corresponding to the given color (e.g. "#RRGGBB")
- * @private
- */
-export function normalizeColor(color: string): string {
-    let normColor = color;
-
-    // assume undefined == "off"
-    if (normColor === undefined) {
-        normColor = 'off';
-    }
-
-    // is this "on" or "off"?
-    if (normColor === 'on') {
-        normColor = 'FFFFFF';
-    } else if (normColor === 'off') {
-        normColor = '000000';
-    }
-
-    // strip prefixes if they are present
-    if (normColor.startsWith('0x')) {
-        normColor = normColor.slice(2);
-    }
-
-    if (normColor.startsWith('#')) {
-        normColor = normColor.slice(1);
-    }
-
-    // is this a hex number or a named color?
-    const isHex = /(^[0-9A-F]{6}$)|(^[0-9A-F]{3}$)/i;
-    let rgb;
-    if (!isHex.test(normColor)) {
-        rgb = colorToHex(normColor);
-    } else {
-        rgb = normColor;
-    }
-
-    // did we get something back?
-    if (rgb === undefined) {
-        throw new TJBotError(`TJBot did not understand the specified color "${color}"`);
-    }
-
-    // prefix rgb with # in case it's not
-    if (!rgb.startsWith('#')) {
-        rgb = `#${rgb}`;
-    }
-
-    // throw an error if we didn't understand this color
-    if (rgb.length !== 7) {
-        throw new TJBotError(`TJBot did not understand the specified color "${color}"`);
-    }
-
-    return rgb;
 }

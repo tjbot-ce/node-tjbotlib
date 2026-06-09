@@ -14,21 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import winston from 'winston';
-import temp from 'temp';
 import fs from 'fs';
+import temp from 'temp';
+import { TJBotError } from '../utils/errors.js';
+import { getLogger } from '../utils/logging.js';
 import { createTTSEngine } from './tts-engine.js';
+const logger = getLogger(import.meta.url);
 /**
- * TTS Controller for TJBot
- * Manages text-to-speech synthesis and engine lifecycle.
+ * TTS controller manages text-to-speech synthesis and engine lifecycle.
  * TTS engine is eagerly initialized during setupSpeaker() and cached for reuse.
- * Delegates audio playback to SpeakerController.
+
  */
 export class TTSController {
+    ttsEngine;
+    speakerController;
+    speakConfig;
     constructor(speakerController) {
         this.ttsEngine = undefined;
-        this.ttsBackend = 'local';
-        this.speakConfig = {};
         this.speakerController = speakerController;
     }
     /**
@@ -37,48 +39,30 @@ export class TTSController {
      * @param config Configuration object with backend, IBM settings, and Sherpa settings
      */
     async initialize(config) {
-        try {
-            // Cache the config for later use
-            this.speakConfig = config;
-            const backendConfig = config.backend;
-            const backend = backendConfig?.type ?? 'local';
-            this.ttsBackend = backend;
-            // Use factory to create engine
-            this.ttsEngine = await createTTSEngine(config);
-            await this.ttsEngine.initialize();
-        }
-        catch (error) {
-            winston.error('Failed to initialize TTS backend:', error);
-            throw error;
-        }
+        this.speakConfig = config;
+        this.ttsEngine = await createTTSEngine(config);
+        await this.ttsEngine.initialize();
     }
     /**
      * Synthesize text to speech and play the audio.
      * Lazily initializes the TTS engine on first call.
      *
      * @param text The text to speak
-     * @param config The speak configuration with TTS backend settings
      */
-    async speak(text, config) {
-        // Initialize TTS engine lazily on first call
+    async speak(text) {
         if (this.ttsEngine === undefined) {
-            winston.verbose('💬 Initializing TTS engine...');
-            await this.initialize(config);
+            throw new TJBotError('TTS engine not initialized. Call initialize() before speaking.');
         }
         if (!text || text.trim().length === 0) {
-            winston.error('🔈 TJBot tried to speak an empty message.');
-            return;
+            throw new TJBotError('Text to speak cannot be empty');
         }
         try {
             // Synthesize audio - voice is configured at engine initialization time
-            if (!this.ttsEngine) {
-                throw new Error('TTS engine is not initialized');
-            }
-            winston.verbose('💬 Synthesizing speech...');
+            logger.verbose('Synthesizing speech...');
             const audioBuffer = await this.ttsEngine.synthesize(text);
             // Write to temporary file
             const info = temp.openSync('tjbot');
-            winston.debug(`🔈 writing audio buffer to temp file: ${info.path}`);
+            logger.debug(`writing audio buffer to temp file: ${info.path}`);
             const fd = fs.createWriteStream(info.path);
             fd.write(audioBuffer);
             // Wait for file to be written
@@ -95,12 +79,22 @@ export class TTSController {
                 fs.unlinkSync(info.path);
             }
             catch (err) {
-                winston.debug('🔈 Could not delete temp audio file:', err);
+                logger.error('Could not delete temp audio file:', err);
             }
         }
         catch (error) {
-            winston.error('🔈 Error during speech synthesis:', error);
+            logger.error('Error during speech synthesis:', error);
             throw error;
+        }
+    }
+    /**
+     * Clean up TTS resources.
+     */
+    async cleanup() {
+        if (this.ttsEngine) {
+            logger.debug('TTSController cleanup');
+            await this.ttsEngine.cleanup?.();
+            this.ttsEngine = undefined;
         }
     }
 }

@@ -21,7 +21,7 @@
  */
 export declare enum Capability {
     LISTEN = "listen",
-    LOOK = "look",
+    SEE = "see",
     SHINE = "shine",
     SPEAK = "speak",
     WAVE = "wave"
@@ -33,18 +33,9 @@ export declare enum Capability {
  */
 export declare enum Hardware {
     CAMERA = "camera",
-    LED_COMMON_ANODE = "common_anode_led",
-    LED_NEOPIXEL = "neopixel_led",
+    LED = "led",
     MICROPHONE = "microphone",
     SERVO = "servo",
     SPEAKER = "speaker"
 }
-/**
- * IBM Watson AI services
- * @readonly
- * @enum {string}
- */
-export declare enum WatsonService {
-    SPEECH_TO_TEXT = "speech_to_text",
-    TEXT_TO_SPEECH = "text_to_speech"
-}
+//# sourceMappingURL=constants.d.ts.map

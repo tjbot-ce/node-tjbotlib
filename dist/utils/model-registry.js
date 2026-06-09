@@ -1,0 +1,391 @@
+/**
+ * Copyright 2026-present TJBot Contributors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import { execFile } from 'child_process';
+import cliProgress from 'cli-progress';
+import fs from 'fs';
+import yaml from 'js-yaml';
+import os from 'os';
+import path from 'path';
+import { Readable } from 'stream';
+import { fileURLToPath } from 'url';
+import { promisify } from 'util';
+import { TJBotError } from './errors.js';
+import { getLogger } from './logging.js';
+const logger = getLogger(import.meta.url);
+const execFileAsync = promisify(execFile);
+/**
+ * Unified singleton registry for all TJBot models (STT, TTS, VAD, Vision)
+ * Handles model metadata, registration, downloading, extraction, and caching
+ */
+export class ModelRegistry {
+    static instance;
+    registeredModels = new Map();
+    metadataLoaded = false;
+    constructor() {
+        this.loadMetadata();
+    }
+    /**
+     * Get singleton instance
+     */
+    static getInstance() {
+        if (!this.instance) {
+            this.instance = new ModelRegistry();
+        }
+        return this.instance;
+    }
+    /**
+     * Load model metadata from unified YAML file
+     * If no path provided, uses default model-registry.yaml in config directory
+     * @private
+     */
+    loadMetadata(yamlPath) {
+        if (this.metadataLoaded) {
+            logger.debug('loadMetadata() called but model metadata already loaded');
+            return;
+        }
+        try {
+            // Default to model-registry.yaml in config directory
+            if (!yamlPath) {
+                const __filename = fileURLToPath(import.meta.url);
+                const __dirname = path.dirname(__filename);
+                yamlPath = path.join(__dirname, '..', 'config', 'vendor', 'model-registry.yaml');
+            }
+            logger.verbose(`Loading model metadata from: ${yamlPath}`);
+            const fileContents = fs.readFileSync(yamlPath, 'utf8');
+            const data = yaml.load(fileContents);
+            const models = (data.models || []).map((m) => {
+                const key = m.key;
+                if (!key) {
+                    throw new TJBotError('Model entry missing key');
+                }
+                return {
+                    ...m,
+                    key,
+                    folder: m.folder ?? key,
+                    required: m.required ?? [],
+                };
+            });
+            // Register all loaded models
+            for (const model of models) {
+                this.registerModel(model);
+            }
+            this.metadataLoaded = true;
+            logger.info(`Loaded metadata for ${this.registeredModels.size} ML models`);
+        }
+        catch (error) {
+            logger.error('Failed to load ML model metadata:', error);
+            throw new TJBotError('Failed to load ML model metadata', { cause: error });
+        }
+    }
+    // ============================================================================
+    // Cache Directory Paths
+    // ============================================================================
+    /**
+     * Get model cache directory
+     */
+    getModelCacheDir() {
+        return path.join(os.homedir(), '.tjbot', 'models');
+    }
+    /**
+     * Get model cache directory for a specific type
+     * @param modelType The model type (stt, tts, vad, vision.*)
+     * @returns The cache directory path for the specified model type
+     */
+    getModelCacheDirForType(modelType) {
+        // For vision subtypes, use 'vision' as the base directory
+        const cacheSubdir = modelType.startsWith('vision.') ? 'vision' : modelType;
+        return path.join(this.getModelCacheDir(), cacheSubdir);
+    }
+    // ============================================================================
+    // Query Methods
+    // ============================================================================
+    /**
+     * Register a model in the registry
+     * @param model The model metadata to register
+     */
+    registerModel(model) {
+        this.registeredModels.set(model.key, model);
+        logger.debug(`registered model: ${model.key} (type: ${model.type})`);
+    }
+    /**
+     * Lookup model metadata by key
+     * @param modelKey The model key
+     * @returns The model metadata
+     * @throws Error if model not found
+     */
+    lookupModel(modelKey) {
+        const model = this.registeredModels.get(modelKey);
+        if (!model) {
+            throw new TJBotError(`Model with key "${modelKey}" not found in registry`);
+        }
+        return model;
+    }
+    /**
+     * Lookup model metadata by type & installation status
+     * @param modelType The model type
+     * @param installedOnly If true, only return models that are downloaded
+     * @returns List of model metadata of the specified type
+     */
+    lookupModels(modelType, installedOnly = false) {
+        let models;
+        if (installedOnly) {
+            models = Array.from(this.registeredModels.values()).filter((m) => (modelType === undefined || m.type === modelType) && this.isModelDownloaded(m.key));
+        }
+        else {
+            models = Array.from(this.registeredModels.values()).filter((m) => modelType === undefined || m.type === modelType);
+        }
+        return models;
+    }
+    /**
+     * Ensure a model is downloaded and return its path
+     * @param modelKey The model key
+     * @returns The model metadata
+     * @throws TJBotError if model not found or download fails
+     */
+    async loadModel(modelKey) {
+        // Verify model exists in metadata
+        const model = this.lookupModel(modelKey);
+        // Download model if not already present
+        if (!this.isModelDownloaded(modelKey)) {
+            await this.downloadModel(modelKey);
+        }
+        // Return the model metadata
+        return model;
+    }
+    // ============================================================================
+    // Download/Extract Models
+    // ============================================================================
+    /**
+     * Check if a model is downloaded in the specified cache directory
+     * @param modelKey The model key
+     * @returns True if the model is downloaded, false otherwise
+     */
+    isModelDownloaded(modelKey) {
+        const model = this.lookupModel(modelKey);
+        const cacheDir = this.getModelCacheDirForType(model.type);
+        const modelPath = path.join(cacheDir, model.folder);
+        if (!fs.existsSync(modelPath)) {
+            return false;
+        }
+        // Check all required files exist
+        return model.required.every((file) => fs.existsSync(path.join(modelPath, file)));
+    }
+    /**
+     * Copy a file from local filesystem
+     * Supports file:// URLs
+     */
+    async copyFile(sourceUrl, destination) {
+        try {
+            // Convert file:// URL to path
+            const sourcePath = sourceUrl.startsWith('file://') ? new URL(sourceUrl).pathname : sourceUrl;
+            logger.debug(`copying file from ${sourcePath} to ${destination}`);
+            // Get file size for progress bar
+            const stats = await fs.promises.stat(sourcePath);
+            const totalSize = stats.size;
+            let copiedSize = 0;
+            // Create progress bar
+            const progressBar = new cliProgress.SingleBar({
+                format: 'Copying [{bar}] {percentage}% | {value}/{total} MB',
+                barCompleteChar: '\u2588',
+                barIncompleteChar: '\u2591',
+                hideCursor: true,
+            });
+            if (totalSize > 0) {
+                progressBar.start(Math.round(totalSize / 1024 / 1024), 0);
+            }
+            // Create destination directory
+            await fs.promises.mkdir(path.dirname(destination), { recursive: true });
+            // Copy file with progress tracking
+            const reader = fs.createReadStream(sourcePath);
+            const writer = fs.createWriteStream(destination);
+            await new Promise((resolve, reject) => {
+                reader.on('data', (chunk) => {
+                    copiedSize += chunk.length;
+                    if (totalSize > 0) {
+                        progressBar.update(Math.round(copiedSize / 1024 / 1024));
+                    }
+                });
+                reader.pipe(writer);
+                writer.on('finish', () => {
+                    if (totalSize > 0) {
+                        progressBar.stop();
+                    }
+                    logger.debug('file copy complete');
+                    resolve();
+                });
+                writer.on('error', (err) => {
+                    if (totalSize > 0) {
+                        progressBar.stop();
+                    }
+                    reject(err);
+                });
+                reader.on('error', (err) => {
+                    if (totalSize > 0) {
+                        progressBar.stop();
+                    }
+                    reject(err);
+                });
+            });
+        }
+        catch (err) {
+            logger.error('File copy failed:', err);
+            throw new TJBotError(`Failed to copy file from ${sourceUrl}`, {
+                cause: err,
+            });
+        }
+    }
+    /**
+     * Download a file from URL with progress bar and exponential backoff retry
+     * Retries up to 3 times with delays: 1s, 2s, 4s
+     * Supports both http/https URLs and file:// URLs
+     */
+    async downloadFile(url, destination, maxRetries = 3) {
+        // Handle file:// URLs (local files)
+        if (url.startsWith('file://')) {
+            return this.copyFile(url, destination);
+        }
+        let attempt = 0;
+        let lastError = null;
+        while (attempt < maxRetries) {
+            try {
+                if (attempt > 0) {
+                    const delay = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+                    logger.info(`Retrying download in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+                    await new Promise((resolve) => setTimeout(resolve, delay));
+                }
+                logger.info(`Downloading from ${url} (attempt ${attempt + 1}/${maxRetries})`);
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const totalSize = parseInt(response.headers.get('content-length') ?? '0', 10);
+                let downloadedSize = 0;
+                // Create progress bar
+                const progressBar = new cliProgress.SingleBar({
+                    format: 'Downloading [{bar}] {percentage}% | {value}/{total} MB',
+                    barCompleteChar: '\u2588',
+                    barIncompleteChar: '\u2591',
+                    hideCursor: true,
+                });
+                if (totalSize > 0) {
+                    progressBar.start(Math.round(totalSize / 1024 / 1024), 0);
+                }
+                await fs.promises.mkdir(path.dirname(destination), { recursive: true });
+                const writer = fs.createWriteStream(destination);
+                const nodeStream = Readable.from(response.body);
+                await new Promise((resolve, reject) => {
+                    nodeStream.on('data', (chunk) => {
+                        downloadedSize += chunk.length;
+                        if (totalSize > 0) {
+                            progressBar.update(Math.round(downloadedSize / 1024 / 1024));
+                        }
+                    });
+                    nodeStream.pipe(writer);
+                    writer.on('finish', () => {
+                        if (totalSize > 0) {
+                            progressBar.stop();
+                        }
+                        logger.info('Download complete');
+                        resolve();
+                    });
+                    writer.on('error', (err) => {
+                        if (totalSize > 0) {
+                            progressBar.stop();
+                        }
+                        reject(err);
+                    });
+                    nodeStream.on('error', (err) => {
+                        if (totalSize > 0) {
+                            progressBar.stop();
+                        }
+                        reject(err);
+                    });
+                });
+                // Success!
+                return;
+            }
+            catch (err) {
+                lastError = err;
+                logger.warn(`Download failed (attempt ${attempt + 1}/${maxRetries}):`, err);
+                attempt++;
+            }
+        }
+        // All retries exhausted
+        logger.error(`Download failed after ${maxRetries} attempts`);
+        throw new TJBotError(`Failed to download file after ${maxRetries} attempts`, {
+            cause: lastError || new Error('Unknown error'),
+        });
+    }
+    /**
+     * Extract tar.bz2 archive using system tar command
+     */
+    async extractTarBz2(archivePath, destinationDir) {
+        logger.info('Extracting archive...');
+        await execFileAsync('tar', ['-xjf', archivePath, '-C', destinationDir]);
+        logger.info('Extraction complete');
+    }
+    /**
+     * Download and extract a model
+     * @param modelKey The model key
+     * @throws Error if download or extraction fails
+     */
+    async downloadModel(modelKey) {
+        const model = this.lookupModel(modelKey);
+        const cacheDir = this.getModelCacheDirForType(model.type);
+        const modelPath = path.join(cacheDir, model.folder);
+        if (this.isModelDownloaded(modelKey)) {
+            return { primaryPath: path.join(modelPath, model.required[0]), cachePath: modelPath };
+        }
+        // Ensure cache directory exists
+        await fs.promises.mkdir(cacheDir, { recursive: true });
+        // Download to temporary file
+        const tempArchivePath = path.join(os.tmpdir(), `${model.key}-download`);
+        await this.downloadFile(model.url, tempArchivePath);
+        // Check if we need to extract based on file extension
+        const isTarBz2 = model.url.endsWith('.tar.bz2');
+        if (isTarBz2) {
+            // Extract tar.bz2 archive
+            await this.extractTarBz2(tempArchivePath, cacheDir);
+            // Remove temporary archive file
+            fs.unlinkSync(tempArchivePath);
+        }
+        else {
+            // Single file model - move directly to model path
+            await fs.promises.mkdir(modelPath, { recursive: true });
+            const fileName = path.basename(model.url).split('?')[0]; // Remove query params
+            const targetPath = path.join(modelPath, fileName);
+            // Use copy + unlink instead of rename to handle cross-filesystem moves (EXDEV error)
+            await fs.promises.copyFile(tempArchivePath, targetPath);
+            await fs.promises.unlink(tempArchivePath);
+        }
+        // Download labels file for vision models
+        if (typeof model.type === 'string' && model.type.startsWith('vision.')) {
+            const visionModel = model;
+            if (visionModel.labelUrl) {
+                const labelsFileName = path.basename(visionModel.labelUrl).split('?')[0]; // Extract filename, remove query params
+                const labelsFilePath = path.join(modelPath, labelsFileName);
+                await this.downloadFile(visionModel.labelUrl, labelsFilePath);
+            }
+        }
+        // Verify all required files exist
+        if (!this.isModelDownloaded(modelKey)) {
+            throw new TJBotError(`Model "${modelKey}" download incomplete: required files missing`);
+        }
+        logger.info(`Model "${modelKey}" downloaded and extracted to ${modelPath}`);
+        return;
+    }
+}
+//# sourceMappingURL=model-registry.js.map

@@ -1,0 +1,236 @@
+/**
+ * Copyright 2026-present TJBot Contributors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import {
+    SeeBackendConfig,
+    SeeBackendType,
+    SeeConfig,
+    VisionEngineConfig,
+    getSeeBackendConfig,
+} from '../config/config-types.js';
+import { TJBotError } from '../utils/index.js';
+
+export interface ObjectDetectionResult {
+    label: string;
+    confidence: number;
+    bbox: [number, number, number, number]; // [x, y, width, height]
+}
+
+export interface ImageClassificationResult {
+    label: string;
+    confidence: number;
+}
+
+export interface ImageDescriptionResult {
+    description: string;
+    confidence: number;
+}
+
+export interface Landmark {
+    x: number;
+    y: number;
+    type?: string; // e.g., 'eye-left', 'eye-right', 'nose', 'mouth-left', 'mouth-right'
+}
+
+export interface FaceDetectionMetadata {
+    // Required fields
+    boundingBox: [number, number, number, number]; // [x, y, width, height]
+    confidence: number;
+    landmarks: Landmark[]; // Array of face landmarks with types
+
+    // Optional fields (populated by cloud backends)
+    headPose?: {
+        roll: number; // -180 to 180 degrees
+        yaw: number; // -180 to 180 degrees (pan angle)
+        pitch: number; // -180 to 180 degrees (tilt angle)
+    };
+    qualityMetrics?: {
+        blurValue?: number; // 0-1
+        exposure?: 'underExposed' | 'goodExposure' | 'overExposed';
+        noise?: number; // 0-1
+    };
+    occlusion?: {
+        eyeOccluded: boolean;
+        foreheadOccluded: boolean;
+        mouthOccluded: boolean;
+    };
+}
+
+export interface FaceDetectionResult {
+    isFaceDetected: boolean; // Boolean indicating if any face was detected
+    metadata: FaceDetectionMetadata[]; // Array of detected faces with metadata
+}
+
+/**
+ * Abstract Vision Engine Base Class
+ *
+ * Defines the interface for Vision backends (ONNX, Google Cloud Vision, Azure Vision, etc.)
+ * All implementations must extend this class and implement the required methods.
+ * @public
+ */
+export abstract class VisionEngine {
+    protected config: VisionEngineConfig;
+
+    constructor(config?: VisionEngineConfig) {
+        this.config = config ?? {};
+    }
+
+    /**
+     * Initialize the Vision engine.
+     * This method may perform setup tasks such as loading models or authenticating with services.
+     * Should be called before the first call to detectObjects(), classifyImage(), or segmentImage().
+     *
+     * @throws {TJBotError} if initialization fails
+     * @public
+     */
+    abstract initialize(): Promise<void>;
+
+    /**
+     * Clean up resources used by the Vision engine.
+     * Optional method for backends that need to release resources.
+     * @public
+     */
+    cleanup?(): Promise<void>;
+
+    /**
+     * Detect objects in an image.
+     *
+     * @param image - Image buffer or file path
+     * @returns Array of detected objects with labels, confidence scores, and bounding boxes
+     * @throws {TJBotError} if detection fails
+     * @public
+     */
+    abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+
+    /**
+     * Classify an image.
+     *
+     * @param image - Image buffer or file path
+     * @returns Array of classification results with labels and confidence scores, sorted by confidence descending
+     * @throws {TJBotError} if classification fails
+     * @public
+     */
+    abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+
+    /**
+     * Detect faces in an image.
+     *
+     * @param image - Image buffer or file path
+     * @returns Response object with boolean flag indicating if faces were detected and array of face metadata
+     * @throws {TJBotError} if detection fails
+     * @public
+     */
+    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult>;
+
+    /**
+     * Describe an image with natural language caption.
+     * Note: This method is only supported by Azure Vision backend.
+     *
+     * @param image - Image buffer or file path
+     * @returns Image description with confidence score
+     * @throws {TJBotError} if description fails or backend does not support this operation
+     * @public
+     */
+    abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
+}
+
+/**
+ * Create a Vision engine instance based on the configuration.
+ * Uses dynamic imports to lazily load backend implementations only when needed.
+ * @param seeConfig - Configuration for the Vision engine with backend settings
+ * @returns {Promise<VisionEngine>} Initialized Vision engine instance
+ * @throws {TJBotError} if backend type is unknown or dependencies are not installed
+ * @public
+ */
+export async function createVisionEngine(seeConfig: SeeConfig): Promise<VisionEngine> {
+    const backend = (seeConfig.backend?.type ?? 'local') as SeeBackendType;
+
+    try {
+        if (backend === 'none') {
+            class NoneVisionEngine extends VisionEngine {
+                async initialize(): Promise<void> {
+                    // No-op for 'none' backend
+                }
+
+                async detectObjects(_image: Buffer | string): Promise<ObjectDetectionResult[]> {
+                    throw new TJBotError(
+                        'Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.'
+                    );
+                }
+
+                async classifyImage(): Promise<ImageClassificationResult[]> {
+                    throw new TJBotError(
+                        'Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.'
+                    );
+                }
+
+                async detectFaces(): Promise<FaceDetectionResult> {
+                    throw new TJBotError(
+                        'Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.'
+                    );
+                }
+
+                async describeImage(): Promise<ImageDescriptionResult> {
+                    throw new TJBotError(
+                        'Vision is disabled. Configure a vision backend (local, google-cloud-vision, or azure-vision) to use image analysis.'
+                    );
+                }
+            }
+
+            return new NoneVisionEngine();
+        }
+
+        if (backend === 'local') {
+            const module = await import('./backends/onnx.js');
+            if (!module?.ONNXVisionEngine) {
+                throw new TJBotError('Vision backend "local" is unavailable (missing ONNXVisionEngine export).');
+            }
+            const engineConfig = getSeeBackendConfig(seeConfig.backend as SeeBackendConfig | undefined, backend);
+            return new module.ONNXVisionEngine(engineConfig);
+        }
+
+        if (backend === 'google-cloud-vision') {
+            const module = await import('./backends/google-cloud-vision.js');
+            if (!module?.GoogleCloudVisionEngine) {
+                throw new TJBotError(
+                    'Vision backend "google-cloud-vision" is unavailable (missing GoogleCloudVisionEngine export).'
+                );
+            }
+            const engineConfig = getSeeBackendConfig(seeConfig.backend as SeeBackendConfig | undefined, backend);
+            return new module.GoogleCloudVisionEngine(engineConfig);
+        }
+
+        if (backend === 'azure-vision') {
+            const module = await import('./backends/azure-vision.js');
+            if (!module?.AzureVisionEngine) {
+                throw new TJBotError(
+                    'Vision backend "azure-vision" is unavailable (missing AzureVisionEngine export).'
+                );
+            }
+            const engineConfig = getSeeBackendConfig(seeConfig.backend as SeeBackendConfig | undefined, backend);
+            return new module.AzureVisionEngine(engineConfig);
+        }
+
+        throw new TJBotError(`Unknown Vision backend type: ${backend}`);
+    } catch (error) {
+        if (error instanceof TJBotError) {
+            throw error;
+        }
+        throw new TJBotError(`Failed to load Vision backend "${backend}". Ensure dependencies are installed.`, {
+            cause: error as Error,
+        });
+    }
+}

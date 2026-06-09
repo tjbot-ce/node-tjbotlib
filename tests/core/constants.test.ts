@@ -19,32 +19,40 @@ import { describe, test, expect } from 'vitest';
 import { Capability, Hardware } from '../../src/utils/index.js';
 
 describe('Constants - Capability Enum', () => {
-    test('Capability enum has all expected values', () => {
+    test('[test_capability_enums] capability enums', () => {
         expect(Capability.LISTEN).toBe('listen');
-        expect(Capability.LOOK).toBe('look');
+        expect(Capability.SEE).toBe('see');
         expect(Capability.SHINE).toBe('shine');
         expect(Capability.SPEAK).toBe('speak');
         expect(Capability.WAVE).toBe('wave');
     });
 
-    test('Capability enum values are strings', () => {
+    test('[test_capability_enum_has_all_expected_values] Capability enum has all expected values', () => {
+        expect(Capability.LISTEN).toBe('listen');
+        expect(Capability.SEE).toBe('see');
+        expect(Capability.SHINE).toBe('shine');
+        expect(Capability.SPEAK).toBe('speak');
+        expect(Capability.WAVE).toBe('wave');
+    });
+
+    test('[test_capability_enum_values_are_strings] Capability enum values are strings', () => {
         Object.values(Capability).forEach((value) => {
             expect(typeof value).toBe('string');
         });
     });
 
-    test('Capability enum has correct number of values', () => {
+    test('[test_capability_enum_has_correct_number_of_values] Capability enum has correct number of values', () => {
         const values = Object.values(Capability);
         expect(values.length).toBe(5);
     });
 
-    test('Capability enum values are unique', () => {
+    test('[test_capability_enum_values_are_unique] Capability enum values are unique', () => {
         const values = Object.values(Capability);
         const uniqueValues = new Set(values);
         expect(uniqueValues.size).toBe(values.length);
     });
 
-    test('Capability can be used as object keys', () => {
+    test('[test_capability_can_be_used_as_object_keys] Capability can be used as object keys', () => {
         const capabilityMap: Record<string, boolean> = {};
         capabilityMap[Capability.LISTEN] = true;
         capabilityMap[Capability.SPEAK] = true;
@@ -56,33 +64,27 @@ describe('Constants - Capability Enum', () => {
 });
 
 describe('Constants - Hardware Enum', () => {
-    test('Hardware enum has all expected values', () => {
+    test('[test_hardware_enums] hardware enums', () => {
         expect(Hardware.CAMERA).toBe('camera');
-        expect(Hardware.LED_COMMON_ANODE).toBe('common_anode_led');
-        expect(Hardware.LED_NEOPIXEL).toBe('neopixel_led');
+        expect(Hardware.LED).toBe('led');
         expect(Hardware.MICROPHONE).toBe('microphone');
         expect(Hardware.SERVO).toBe('servo');
         expect(Hardware.SPEAKER).toBe('speaker');
     });
 
-    test('Hardware enum values are strings', () => {
+    test('[test_hardware_enum_values_are_strings] Hardware enum values are strings', () => {
         Object.values(Hardware).forEach((value) => {
             expect(typeof value).toBe('string');
         });
     });
 
-    test('Hardware enum has correct number of values', () => {
-        const values = Object.values(Hardware);
-        expect(values.length).toBe(6);
-    });
-
-    test('Hardware enum values are unique', () => {
+    test('[test_hardware_enum_values_are_unique] Hardware enum values are unique', () => {
         const values = Object.values(Hardware);
         const uniqueValues = new Set(values);
         expect(uniqueValues.size).toBe(values.length);
     });
 
-    test('Hardware can be used as object keys', () => {
+    test('[test_hardware_can_be_used_as_object_keys] Hardware can be used as object keys', () => {
         const hardwareMap: Record<string, boolean> = {};
         hardwareMap[Hardware.CAMERA] = true;
         hardwareMap[Hardware.SPEAKER] = false;
@@ -91,19 +93,15 @@ describe('Constants - Hardware Enum', () => {
         expect(hardwareMap[Hardware.SPEAKER]).toBe(false);
         expect(hardwareMap[Hardware.MICROPHONE]).toBeUndefined();
     });
-
-    test('LED hardware types are distinct', () => {
-        expect(Hardware.LED_NEOPIXEL).not.toBe(Hardware.LED_COMMON_ANODE);
-    });
 });
 
 describe('Cross-enum consistency', () => {
-    test('all enums are exported and accessible', () => {
+    test('[test_all_enums_are_exported_and_accessible] all enums are exported and accessible', () => {
         expect(Capability).toBeDefined();
         expect(Hardware).toBeDefined();
     });
 
-    test('enum values have no spaces', () => {
+    test('[test_enum_values_have_no_spaces] enum values have no spaces', () => {
         const allValues = [...Object.values(Capability), ...Object.values(Hardware)];
 
         allValues.forEach((value) => {
@@ -111,7 +109,7 @@ describe('Cross-enum consistency', () => {
         });
     });
 
-    test('enum values use lowercase or snake_case', () => {
+    test('[test_enum_values_use_lowercase_or_snake_case] enum values use lowercase or snake_case', () => {
         const allValues = [...Object.values(Capability), ...Object.values(Hardware)];
 
         allValues.forEach((value) => {

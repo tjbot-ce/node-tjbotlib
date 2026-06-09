@@ -1,0 +1,131 @@
+/**
+ * Copyright 2026-present TJBot Contributors. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import { SeeConfig, VisionEngineConfig } from '../config/config-types.js';
+export interface ObjectDetectionResult {
+    label: string;
+    confidence: number;
+    bbox: [number, number, number, number];
+}
+export interface ImageClassificationResult {
+    label: string;
+    confidence: number;
+}
+export interface ImageDescriptionResult {
+    description: string;
+    confidence: number;
+}
+export interface Landmark {
+    x: number;
+    y: number;
+    type?: string;
+}
+export interface FaceDetectionMetadata {
+    boundingBox: [number, number, number, number];
+    confidence: number;
+    landmarks: Landmark[];
+    headPose?: {
+        roll: number;
+        yaw: number;
+        pitch: number;
+    };
+    qualityMetrics?: {
+        blurValue?: number;
+        exposure?: 'underExposed' | 'goodExposure' | 'overExposed';
+        noise?: number;
+    };
+    occlusion?: {
+        eyeOccluded: boolean;
+        foreheadOccluded: boolean;
+        mouthOccluded: boolean;
+    };
+}
+export interface FaceDetectionResult {
+    isFaceDetected: boolean;
+    metadata: FaceDetectionMetadata[];
+}
+/**
+ * Abstract Vision Engine Base Class
+ *
+ * Defines the interface for Vision backends (ONNX, Google Cloud Vision, Azure Vision, etc.)
+ * All implementations must extend this class and implement the required methods.
+ * @public
+ */
+export declare abstract class VisionEngine {
+    protected config: VisionEngineConfig;
+    constructor(config?: VisionEngineConfig);
+    /**
+     * Initialize the Vision engine.
+     * This method may perform setup tasks such as loading models or authenticating with services.
+     * Should be called before the first call to detectObjects(), classifyImage(), or segmentImage().
+     *
+     * @throws {TJBotError} if initialization fails
+     * @public
+     */
+    abstract initialize(): Promise<void>;
+    /**
+     * Clean up resources used by the Vision engine.
+     * Optional method for backends that need to release resources.
+     * @public
+     */
+    cleanup?(): Promise<void>;
+    /**
+     * Detect objects in an image.
+     *
+     * @param image - Image buffer or file path
+     * @returns Array of detected objects with labels, confidence scores, and bounding boxes
+     * @throws {TJBotError} if detection fails
+     * @public
+     */
+    abstract detectObjects(image: Buffer | string): Promise<ObjectDetectionResult[]>;
+    /**
+     * Classify an image.
+     *
+     * @param image - Image buffer or file path
+     * @returns Array of classification results with labels and confidence scores, sorted by confidence descending
+     * @throws {TJBotError} if classification fails
+     * @public
+     */
+    abstract classifyImage(image: Buffer | string): Promise<ImageClassificationResult[]>;
+    /**
+     * Detect faces in an image.
+     *
+     * @param image - Image buffer or file path
+     * @returns Response object with boolean flag indicating if faces were detected and array of face metadata
+     * @throws {TJBotError} if detection fails
+     * @public
+     */
+    abstract detectFaces(image: Buffer | string): Promise<FaceDetectionResult>;
+    /**
+     * Describe an image with natural language caption.
+     * Note: This method is only supported by Azure Vision backend.
+     *
+     * @param image - Image buffer or file path
+     * @returns Image description with confidence score
+     * @throws {TJBotError} if description fails or backend does not support this operation
+     * @public
+     */
+    abstract describeImage(image: Buffer | string): Promise<ImageDescriptionResult>;
+}
+/**
+ * Create a Vision engine instance based on the configuration.
+ * Uses dynamic imports to lazily load backend implementations only when needed.
+ * @param seeConfig - Configuration for the Vision engine with backend settings
+ * @returns {Promise<VisionEngine>} Initialized Vision engine instance
+ * @throws {TJBotError} if backend type is unknown or dependencies are not installed
+ * @public
+ */
+export declare function createVisionEngine(seeConfig: SeeConfig): Promise<VisionEngine>;
+//# sourceMappingURL=vision-engine.d.ts.map

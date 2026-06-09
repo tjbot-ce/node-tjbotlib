@@ -15,20 +15,60 @@
  * limitations under the License.
  */
 
-import { Gpio } from 'pigpio';
+import { createRequire } from 'module';
+import { getLogger } from '../utils/logging.js';
+
+const logger = getLogger(import.meta.url);
+
+const require = createRequire(import.meta.url);
+const lgpio = require('lgpio') as {
+    gpiochipOpen: (chipNumber: number) => number;
+    gpioClaimOutput: (handle: number, pin: number, flags?: number, level?: boolean) => void;
+    txPwm: (
+        handle: number,
+        pin: number,
+        frequency: number,
+        dutyCycle: number,
+        offset?: number,
+        cycles?: number
+    ) => number;
+    gpioFree: (handle: number, pin: number) => void;
+    gpiochipClose: (handle: number) => void;
+};
+
+const GPIO_CHIP = 0;
+const LED_PWM_FREQUENCY = 800;
 
 /**
  * LED controller for Common Anode LEDs using GPIO pins with PWM
  */
 export class LEDCommonAnode {
-    redPin: Gpio;
-    greenPin: Gpio;
-    bluePin: Gpio;
+    private chipHandle: number;
+    private redPin: number;
+    private greenPin: number;
+    private bluePin: number;
 
     constructor(red: number, green: number, blue: number) {
-        this.redPin = new Gpio(red, { mode: Gpio.OUTPUT });
-        this.greenPin = new Gpio(green, { mode: Gpio.OUTPUT });
-        this.bluePin = new Gpio(blue, { mode: Gpio.OUTPUT });
+        this.chipHandle = lgpio.gpiochipOpen(GPIO_CHIP);
+        this.redPin = red;
+        this.greenPin = green;
+        this.bluePin = blue;
+
+        lgpio.gpioClaimOutput(this.chipHandle, this.redPin);
+        lgpio.gpioClaimOutput(this.chipHandle, this.greenPin);
+        lgpio.gpioClaimOutput(this.chipHandle, this.bluePin);
+
+        this.writePin(this.redPin, 0);
+        this.writePin(this.greenPin, 0);
+        this.writePin(this.bluePin, 0);
+
+        logger.verbose(`Initialized LEDCommonAnode on pins R:${red} G:${green} B:${blue}`);
+    }
+
+    private writePin(pin: number, brightness: number): void {
+        const clampedBrightness = Math.max(0, Math.min(255, brightness));
+        const highDutyCycle = ((255 - clampedBrightness) / 255) * 100;
+        lgpio.txPwm(this.chipHandle, pin, LED_PWM_FREQUENCY, highDutyCycle, 0, 0);
     }
 
     /**
@@ -37,17 +77,26 @@ export class LEDCommonAnode {
      * @param rgbColor RGB color as [red, green, blue] where each is 0-255
      */
     render(rgbColor: [number, number, number]): void {
-        this.redPin.pwmWrite(rgbColor[0] === null ? 255 : 255 - rgbColor[0]);
-        this.greenPin.pwmWrite(rgbColor[1] === null ? 255 : 255 - rgbColor[1]);
-        this.bluePin.pwmWrite(rgbColor[2] === null ? 255 : 255 - rgbColor[2]);
+        logger.debug(`rendering Common Anode LED with color RGB(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`);
+        this.writePin(this.redPin, rgbColor[0]);
+        this.writePin(this.greenPin, rgbColor[1]);
+        this.writePin(this.bluePin, rgbColor[2]);
     }
 
     /**
      * Clean up resources
      */
     cleanup(): void {
-        this.redPin.digitalWrite(0);
-        this.greenPin.digitalWrite(0);
-        this.bluePin.digitalWrite(0);
+        logger.debug('LEDCommonAnode cleanup');
+        try {
+            this.writePin(this.redPin, 0);
+            this.writePin(this.greenPin, 0);
+            this.writePin(this.bluePin, 0);
+            lgpio.gpioFree(this.chipHandle, this.redPin);
+            lgpio.gpioFree(this.chipHandle, this.greenPin);
+            lgpio.gpioFree(this.chipHandle, this.bluePin);
+        } finally {
+            lgpio.gpiochipClose(this.chipHandle);
+        }
     }
 }

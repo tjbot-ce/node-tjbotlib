@@ -15,15 +15,14 @@
  */
 import { EventEmitter } from 'events';
 import { spawn } from 'child_process';
+import { getLogger } from '../utils/logging.js';
+const logger = getLogger(import.meta.url);
 /**
  * Native audio player that uses aplay for audio playback on Raspbian/ALSA systems
  * Provides the same API surface as sound-player package
  */
 export class AudioPlayer extends EventEmitter {
-    constructor() {
-        super(...arguments);
-        this.process = null;
-    }
+    process = null;
     /**
      * Play an audio file using aplay
      * @param audioPath Path to the audio file to play
@@ -35,6 +34,8 @@ export class AudioPlayer extends EventEmitter {
         if (device && device !== '') {
             args.unshift('-D', device);
         }
+        // Log the command being executed
+        logger.verbose(`Playing audio with command: aplay ${args.join(' ')}`);
         // Spawn aplay process
         this.process = spawn('aplay', args, {
             stdio: ['ignore', 'ignore', 'pipe'], // Only capture stderr for errors

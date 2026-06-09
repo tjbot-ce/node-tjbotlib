@@ -50,3 +50,4 @@ export declare class SpeakerController {
      */
     cleanup(): void;
 }
+//# sourceMappingURL=speaker.d.ts.map
