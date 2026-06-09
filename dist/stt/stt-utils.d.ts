@@ -31,5 +31,6 @@ export interface StreamEndTranscriptResolutionOptions {
     timeoutLikeEnd: boolean;
 }
 export declare function isTimeoutLikeStreamEndReason(reason: string | undefined | null): boolean;
+export declare function isNoSpeechLikeReason(reason: string | undefined | null): boolean;
 export declare function resolveTranscriptForStreamEnd(options: StreamEndTranscriptResolutionOptions): string | undefined;
 //# sourceMappingURL=stt-utils.d.ts.map

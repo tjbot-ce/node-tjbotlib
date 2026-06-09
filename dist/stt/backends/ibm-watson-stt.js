@@ -20,7 +20,7 @@ import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
 import { LogEmoji } from '../../utils/logging.js';
 import { STTEngine } from '../stt-engine.js';
-import { isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
+import { isNoSpeechLikeReason, isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
 const EMO = LogEmoji.STT;
 /**
  * IBM Watson Speech-to-Text Engine
@@ -124,6 +124,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
             const handleError = (err) => {
                 winston.error(`${EMO} IBM Watson STT stream error:`, err);
                 const timeoutLikeEnd = isTimeoutLikeStreamEndReason(err.message);
+                const noSpeechLikeError = isNoSpeechLikeReason(err.message);
                 const fallbackTranscript = resolveTranscriptForStreamEnd({
                     finalTranscript: latestFinalTranscript,
                     partialTranscript: latestPartialTranscript,
@@ -136,6 +137,12 @@ export class IBMWatsonSTTEngine extends STTEngine {
                         options.onFinalResult?.(fallbackTranscript);
                     }
                     settleResolve(fallbackTranscript);
+                    return;
+                }
+                if (timeoutLikeEnd || noSpeechLikeError) {
+                    settleReject(new TJBotError('IBM Watson STT: No speech could be recognized', {
+                        code: 'stt.no-speech',
+                    }));
                     return;
                 }
                 settleReject(new TJBotError('IBM Watson STT recognition failed', { cause: err }));

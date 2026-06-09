@@ -80,11 +80,23 @@ const TIMEOUT_LIKE_STREAM_END_PATTERNS = [
     /session stopped/i,
     /inactivity timeout/i,
 ];
+const NO_SPEECH_LIKE_REASON_PATTERNS = [
+    /no speech/i,
+    /no audio/i,
+    /speech inactivity/i,
+    /inactivity timeout/i,
+];
 export function isTimeoutLikeStreamEndReason(reason) {
     if (!reason) {
         return false;
     }
     return TIMEOUT_LIKE_STREAM_END_PATTERNS.some((pattern) => pattern.test(reason));
+}
+export function isNoSpeechLikeReason(reason) {
+    if (!reason) {
+        return false;
+    }
+    return NO_SPEECH_LIKE_REASON_PATTERNS.some((pattern) => pattern.test(reason));
 }
 export function resolveTranscriptForStreamEnd(options) {
     const finalTranscript = options.finalTranscript?.trim();

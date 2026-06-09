@@ -23,7 +23,7 @@ import { IBMWatsonSTTEngine } from '../../src/stt/backends/ibm-watson-stt.js';
 import { GoogleCloudSTTEngine } from '../../src/stt/backends/google-cloud-stt.js';
 import { AzureSTTEngine } from '../../src/stt/backends/azure-stt.js';
 import { SherpaONNXSTTEngine } from '../../src/stt/backends/sherpa-onnx-stt.js';
-import { inferLocalModelFlavor, inferSTTMode, toModelType } from '../../src/stt/stt-utils.js';
+import { inferLocalModelFlavor, inferSTTMode, isNoSpeechLikeReason, toModelType } from '../../src/stt/stt-utils.js';
 
 vi.mock('../../src/stt/stt-engine.js', async (importOriginal) => {
     const actual = await importOriginal<typeof import('../../src/stt/stt-engine.js')>();
@@ -616,6 +616,12 @@ describe('Sherpa ONNX STT VAD routing and decoding behavior', () => {
 });
 
 describe('STT utility model flavor and mode inference', () => {
+    test('[test_is_no_speech_like_reason_matches_expected_messages] is no speech-like reason matches expected messages', () => {
+        expect(isNoSpeechLikeReason('No speech detected')).toBe(true);
+        expect(isNoSpeechLikeReason('inactivity timeout')).toBe(true);
+        expect(isNoSpeechLikeReason('permission denied')).toBe(false);
+    });
+
     test('[test_ibm_watson_interim] ibm watson interim', () => {
         const mode = inferSTTMode({
             backend: { type: 'ibm-watson-stt', 'ibm-watson-stt': { interimResults: true } },
@@ -783,6 +789,24 @@ describe('IBM Watson STT backend transcription behavior', () => {
         const result = await transcribePromise;
         expect(result).toBe('final text');
     });
+
+    test('[test_watson_transcribe_maps_no_speech_error_to_stt_no_speech] transcribe maps no speech error to stt.no-speech', async () => {
+        const engine = new IBMWatsonSTTEngine({ model: 'en-US_BroadbandModel' } as never);
+        (engine as unknown as { microphoneRate: number }).microphoneRate = 16000;
+        (engine as unknown as { microphoneChannels: number }).microphoneChannels = 1;
+
+        const recognizeStream = new PassThrough({ objectMode: true });
+        (engine as unknown as { sttService: unknown }).sttService = {
+            recognizeUsingWebSocket: vi.fn(() => recognizeStream),
+        };
+
+        const micStream = Readable.from([Buffer.from('abcd')]);
+        const transcribePromise = engine.transcribe(micStream, {});
+
+        recognizeStream.emit('error', new Error('No speech detected'));
+
+        await expect(transcribePromise).rejects.toMatchObject({ code: 'stt.no-speech' });
+    });
 });
 
 describe('Google Cloud STT backend transcription behavior', () => {
@@ -932,5 +956,63 @@ describe('Azure STT backend transcription behavior', () => {
 
         expect(sdk.AudioConfig.fromStreamInput).toHaveBeenCalledWith(fakePushStream);
         expect(result).toBe('hello azure');
+    });
+
+    test('[test_azure_transcribe_once_does_not_wait_for_stream_exhaustion] transcribe once resolves before delayed stream end', async () => {
+        const sdk = await import('microsoft-cognitiveservices-speech-sdk');
+
+        const fakePushStream = {
+            write: vi.fn(),
+            close: vi.fn(),
+        };
+        vi.mocked(sdk.AudioInputStream.createPushStream).mockReturnValue(fakePushStream as never);
+        vi.mocked(sdk.AudioConfig.fromStreamInput).mockReturnValue({} as never);
+
+        const fakeRecognizer = {
+            recognizeOnceAsync: (
+                resolve: (r: { reason: string; text: string }) => void,
+                _reject: (e: string) => void
+            ) => {
+                resolve({ reason: 'RecognizedSpeech', text: 'hello fast' });
+            },
+            close: vi.fn(),
+        };
+
+        const sdkModule = await import('microsoft-cognitiveservices-speech-sdk');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (sdkModule as any).SpeechRecognizer = function () {
+            return fakeRecognizer;
+        };
+
+        class SlowSecondChunkStream extends Readable {
+            private sentFirst = false;
+            private endScheduled = false;
+
+            _read(): void {
+                if (!this.sentFirst) {
+                    this.sentFirst = true;
+                    this.push(Buffer.from('first'));
+                    return;
+                }
+
+                if (!this.endScheduled) {
+                    this.endScheduled = true;
+                    setTimeout(() => this.push(null), 250);
+                }
+            }
+        }
+
+        const engine = new AzureSTTEngine({ language: 'en-US' } as never);
+        (engine as unknown as { subscriptionKey: string }).subscriptionKey = 'test-key';
+        (engine as unknown as { region: string }).region = 'eastus';
+        (engine as unknown as { microphoneRate: number }).microphoneRate = 16000;
+        (engine as unknown as { microphoneChannels: number }).microphoneChannels = 1;
+
+        const start = Date.now();
+        const result = await engine.transcribe(new SlowSecondChunkStream(), {});
+        const elapsed = Date.now() - start;
+
+        expect(result).toBe('hello fast');
+        expect(elapsed).toBeLessThan(200);
     });
 });

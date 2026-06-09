@@ -95,6 +95,13 @@ const TIMEOUT_LIKE_STREAM_END_PATTERNS: RegExp[] = [
     /inactivity timeout/i,
 ];
 
+const NO_SPEECH_LIKE_REASON_PATTERNS: RegExp[] = [
+    /no speech/i,
+    /no audio/i,
+    /speech inactivity/i,
+    /inactivity timeout/i,
+];
+
 export interface StreamEndTranscriptResolutionOptions {
     finalTranscript?: string;
     partialTranscript?: string;
@@ -108,6 +115,14 @@ export function isTimeoutLikeStreamEndReason(reason: string | undefined | null):
     }
 
     return TIMEOUT_LIKE_STREAM_END_PATTERNS.some((pattern) => pattern.test(reason));
+}
+
+export function isNoSpeechLikeReason(reason: string | undefined | null): boolean {
+    if (!reason) {
+        return false;
+    }
+
+    return NO_SPEECH_LIKE_REASON_PATTERNS.some((pattern) => pattern.test(reason));
 }
 
 export function resolveTranscriptForStreamEnd(options: StreamEndTranscriptResolutionOptions): string | undefined {
