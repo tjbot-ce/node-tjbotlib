@@ -19,12 +19,11 @@ import { spawn, spawnSync, type ChildProcess } from 'child_process';
 import { createInterface, type Interface } from 'readline';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import winston from 'winston';
 
 import { TJBotError } from '../utils/errors.js';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 
-const EMO = LogEmoji.LED;
+const logger = getLogger(import.meta.url);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -95,7 +94,7 @@ export class LEDNeopixel {
             spawnArgs = ['-n', process.execPath, HELPER_PATH];
         }
 
-        winston.verbose(`${EMO} Spawning NeoPixel helper: ${spawnCmd} ${spawnArgs.join(' ')}`);
+        logger.verbose(`Spawning NeoPixel helper: ${spawnCmd} ${spawnArgs.join(' ')}`);
 
         this.helper = spawn(spawnCmd, spawnArgs, {
             stdio: ['pipe', 'pipe', 'pipe'],
@@ -134,14 +133,14 @@ export class LEDNeopixel {
                 pending.reject(this._helperDead);
             }
             this._pendingById.clear();
-            winston.error(`${EMO} NeoPixel helper exited (code=${code}, signal=${signal})`);
+            logger.error(`NeoPixel helper exited (code=${code}, signal=${signal})`);
         });
 
         // Send the init command; store the promise so render() can await readiness.
         this._ready = this._send({ cmd: 'init', pin, numLeds: 1 }, 10_000);
         this._ready
             .then(() => {
-                winston.verbose(`${EMO} NeoPixel helper ready on pin ${pin}`);
+                logger.verbose(`NeoPixel helper ready on pin ${pin}`);
                 this._setHelperHandleRefState(false);
             })
             .catch(() => {
@@ -167,7 +166,7 @@ export class LEDNeopixel {
      * @param color Color as a 32-bit integer in RGB format (0xRRGGBB)
      */
     async render(color: number): Promise<void> {
-        winston.debug(`${EMO} Rendering NeoPixel LED (IPC) with color: ${color}`);
+        logger.debug(`Rendering NeoPixel LED (IPC) with color: ${color}`);
         await this._ready;
         await this._send({ cmd: 'render', color }, 2_000);
     }
@@ -176,7 +175,7 @@ export class LEDNeopixel {
      * Send a reset command and terminate the helper process.
      */
     async cleanup(): Promise<void> {
-        winston.debug(`${EMO} LEDNeopixel cleanup`);
+        logger.debug('LEDNeopixel cleanup');
         if (this._helperDead) return;
         try {
             await this._send({ cmd: 'shutdown' }, 2_000);
@@ -192,13 +191,13 @@ export class LEDNeopixel {
         try {
             msg = JSON.parse(line) as { id: number; ok: boolean; error?: string };
         } catch {
-            winston.warn(`${EMO} NeoPixel helper sent unparseable response: ${line}`);
+            logger.warn(`NeoPixel helper sent unparseable response: ${line}`);
             return;
         }
 
         const pending = this._pendingById.get(msg.id);
         if (!pending) {
-            winston.warn(`${EMO} NeoPixel helper sent response for unknown id: ${msg.id}`);
+            logger.warn(`NeoPixel helper sent response for unknown id: ${msg.id}`);
             return;
         }
 

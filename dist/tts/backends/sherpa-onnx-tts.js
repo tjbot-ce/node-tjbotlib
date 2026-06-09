@@ -15,11 +15,10 @@
  */
 import fs from 'fs';
 import path from 'path';
-import winston from 'winston';
 import { ModelRegistry, TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { TTSEngine } from '../tts-engine.js';
-const EMO = LogEmoji.TTS;
+const logger = getLogger(import.meta.url);
 // Lazy require sherpa-onnx to avoid hard dependency issues
 let sherpa;
 /**
@@ -52,16 +51,16 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             const module = await import('sherpa-onnx-node');
             // CommonJS module imported as ES module has exports in .default
             sherpa = (module.default || module);
-            winston.debug(`${EMO} successfully loaded sherpa-onnx-node module`);
+            logger.debug('successfully loaded sherpa-onnx-node module');
         }
         // Load TTS model from registry
         const modelName = config.model;
-        winston.info(`${EMO} Loading TTS model: ${modelName}`);
+        logger.info(`Loading TTS model: ${modelName}`);
         this.modelInfo = await this.registry.loadModel(modelName);
         this.modelPath = this.pathForModel();
         // Load the TTS synthesizer
         await this.setupSynthesizer();
-        winston.info(`${EMO} Sherpa-ONNX TTS engine initialized`);
+        logger.info('Sherpa-ONNX TTS engine initialized');
     }
     pathForModel() {
         if (!this.modelInfo) {
@@ -77,7 +76,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             throw new TJBotError(`No .onnx file found in model directory: ${modelDir}`);
         }
         const modelFile = path.join(modelDir, files[0]);
-        winston.debug(`${EMO} Found TTS model file: ${modelFile} (vitsDataDir: ${vitsDataDir})`);
+        logger.debug(`Found TTS model file: ${modelFile} (vitsDataDir: ${vitsDataDir})`);
         return modelFile;
     }
     /**
@@ -96,7 +95,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
         const modelFile = this.modelPath;
         const modelDir = path.dirname(modelFile);
         const vitsDataDir = this.resolveVitsDataDir(modelDir);
-        winston.debug(`${EMO} using TTS model file: ${modelFile} (vitsDataDir: ${vitsDataDir})`);
+        logger.debug(`using TTS model file: ${modelFile} (vitsDataDir: ${vitsDataDir})`);
         this.ttsEngine = this.createOfflineTTS(modelFile, vitsDataDir);
     }
     /**
@@ -115,7 +114,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
             throw new TJBotError('TTS engine not initialized. Call initialize() first.');
         }
         this.validateText(text);
-        winston.verbose(`${EMO} Synthesizing speech with Sherpa-ONNX TTS (model=${this.config.model})`);
+        logger.verbose(`Synthesizing speech with Sherpa-ONNX TTS (model=${this.config.model})`);
         // Perform synthesis - pass parameters as object
         const audio = this.ttsEngine.generate({
             text,
@@ -124,7 +123,7 @@ export class SherpaONNXTTSEngine extends TTSEngine {
         });
         // Convert audio data to WAV buffer
         const wavBuffer = this.audioToWav(audio.samples, audio.sampleRate);
-        winston.debug(`${EMO} Sherpa-ONNX TTS synthesis complete: ${wavBuffer.length} bytes`);
+        logger.debug(`Sherpa-ONNX TTS synthesis complete: ${wavBuffer.length} bytes`);
         return wavBuffer;
     }
     /**

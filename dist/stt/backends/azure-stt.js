@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
-import winston from 'winston';
 import { loadAzureCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { STTEngine } from '../stt-engine.js';
 import { isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
-const EMO = LogEmoji.STT;
+const logger = getLogger(import.meta.url);
 /**
  * Azure Cognitive Services Speech-to-Text Engine
  *
@@ -46,8 +45,8 @@ export class AzureSTTEngine extends STTEngine {
         }
         this.microphoneRate = microphoneRate;
         this.microphoneChannels = microphoneChannels;
-        winston.info(`${EMO} Azure STT engine initialized`);
-        winston.debug(`${EMO} Initialized AzureSTTEngine with config:
+        logger.info('Azure STT engine initialized');
+        logger.debug(`Initialized AzureSTTEngine with config:
             language: ${config?.language},
             region: ${config?.region},
             microphoneRate: ${this.microphoneRate},
@@ -61,7 +60,7 @@ export class AzureSTTEngine extends STTEngine {
             throw new TJBotError('Azure STT not initialized. Call initialize() first.');
         }
         const interimResults = config?.interimResults ?? false;
-        winston.verbose(`${EMO} Transcribing speech with Azure STT (language=${config?.language})`);
+        logger.verbose(`Transcribing speech with Azure STT (language=${config?.language})`);
         // Create speech config
         const speechConfig = sdk.SpeechConfig.fromSubscription(this.subscriptionKey, this.region);
         speechConfig.speechRecognitionLanguage = config?.language;
@@ -73,11 +72,11 @@ export class AzureSTTEngine extends STTEngine {
             // Azure SDK expects an ArrayBuffer, convert Buffer while preserving view
             const arrayBuffer = chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength);
             pushStream.write(arrayBuffer);
-            winston.silly(`${EMO} piped ${chunk.length} bytes from microphone to Azure STT push stream`);
+            logger.silly(`piped ${chunk.length} bytes from microphone to Azure STT push stream`);
         });
         this.ensureStream(micStream).on('end', () => {
             pushStream.close();
-            winston.silly(`${EMO} microphone stream ended, closed Azure STT push stream`);
+            logger.silly('microphone stream ended, closed Azure STT push stream');
         });
         const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
         // Create recognizer
@@ -87,7 +86,7 @@ export class AzureSTTEngine extends STTEngine {
                 recognizer.recognizeOnceAsync((result) => {
                     recognizer.close();
                     if (result.reason === sdk.ResultReason.RecognizedSpeech) {
-                        winston.debug(`${EMO} Azure STT recognized: ${result.text}`);
+                        logger.debug(`Azure STT recognized: ${result.text}`);
                         resolve(result.text.trim());
                     }
                     else if (result.reason === sdk.ResultReason.NoMatch) {
@@ -165,7 +164,7 @@ export class AzureSTTEngine extends STTEngine {
                     const text = event.result.text?.trim();
                     if (text) {
                         latestFinalTranscript = text;
-                        winston.debug(`${EMO} Azure STT recognized: ${text}`);
+                        logger.debug(`Azure STT recognized: ${text}`);
                         options.onFinalResult?.(text);
                         settleResolve(text);
                     }
@@ -187,7 +186,7 @@ export class AzureSTTEngine extends STTEngine {
                     timeoutLikeEnd,
                 });
                 if (fallbackTranscript) {
-                    winston.debug(`${EMO} Azure STT finalized using partial transcript after cancel event`);
+                    logger.debug('Azure STT finalized using partial transcript after cancel event');
                     options.onFinalResult?.(fallbackTranscript);
                     settleResolve(fallbackTranscript);
                     return;
@@ -208,7 +207,7 @@ export class AzureSTTEngine extends STTEngine {
                     timeoutLikeEnd: true,
                 });
                 if (fallbackTranscript) {
-                    winston.debug(`${EMO} Azure STT finalized using partial transcript after session stop`);
+                    logger.debug('Azure STT finalized using partial transcript after session stop');
                     options.onFinalResult?.(fallbackTranscript);
                     settleResolve(fallbackTranscript);
                     return;
@@ -218,7 +217,7 @@ export class AzureSTTEngine extends STTEngine {
                 }));
             };
             recognizer.startContinuousRecognitionAsync(() => {
-                winston.silly(`${EMO} Azure STT continuous recognition started`);
+                logger.silly('Azure STT continuous recognition started');
             }, (error) => {
                 settleReject(new TJBotError('Azure STT start recognition error', { cause: new Error(error) }));
             });

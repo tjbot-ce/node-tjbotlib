@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 import path from 'path';
-import winston from 'winston';
 import { ModelRegistry, TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { STTEngine } from '../stt-engine.js';
-const EMO = LogEmoji.STT;
+const logger = getLogger(import.meta.url);
 // Lazy require sherpa-onnx to avoid hard dependency issues
 let sherpa;
 /**
@@ -52,11 +51,11 @@ export class SherpaONNXSTTEngine extends STTEngine {
             const module = await import('sherpa-onnx-node');
             // CommonJS module imported as ES module has exports in .default
             sherpa = (module.default || module);
-            winston.debug(`${EMO} successfully loaded sherpa-onnx-node module`);
+            logger.debug('successfully loaded sherpa-onnx-node module');
         }
         // Load STT model from registry
         const modelName = config.model;
-        winston.info(`${EMO} Loading STT model: ${modelName}`);
+        logger.info(`Loading STT model: ${modelName}`);
         this.modelInfo = await this.registry.loadModel(modelName);
         const modelCacheDir = this.registry.getModelCacheDirForType('stt');
         const modelDir = path.join(modelCacheDir, this.modelInfo.folder);
@@ -65,7 +64,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
         if (vadConfig && this.modelInfo) {
             if (this.modelInfo.kind.startsWith('offline') && vadConfig.enabled) {
                 const vadModelName = vadConfig.model;
-                winston.info(`${EMO} Loading VAD model: ${vadModelName}`);
+                logger.info(`Loading VAD model: ${vadModelName}`);
                 const vadInfo = await this.registry.loadModel(vadModelName);
                 const vadCacheDir = this.registry.getModelCacheDirForType('vad');
                 this.vadPath = path.join(vadCacheDir, vadInfo.folder, vadInfo.required[0]);
@@ -73,7 +72,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
         }
         // Create the STT recognizer and VAD as needed
         await this.setupRecognizer();
-        winston.info(`${EMO} Sherpa-ONNX STT engine initialized`);
+        logger.info('Sherpa-ONNX STT engine initialized');
     }
     async transcribe(micStream, options) {
         const config = this.config;
@@ -83,7 +82,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
         if (!this.modelInfo) {
             throw new TJBotError('Model info not set. Ensure initialize() was called.');
         }
-        winston.verbose(`${EMO} Transcribing speech with Sherpa-ONNX STT (model=${this.modelInfo.key}, kind=${this.modelInfo.kind})`);
+        logger.verbose(`Transcribing speech with Sherpa-ONNX STT (model=${this.modelInfo.key}, kind=${this.modelInfo.kind})`);
         try {
             this.ensureStream(micStream);
             const inputRate = config.microphoneRate ?? 16000;
@@ -137,12 +136,12 @@ export class SherpaONNXSTTEngine extends STTEngine {
             else {
                 this.recognizer = this.createOfflineRecognizer(this.modelPaths);
             }
-            winston.debug(`${EMO} created recognizer for model: ${this.modelInfo.key} (${this.modelInfo.kind})`);
+            logger.debug(`created recognizer for model: ${this.modelInfo.key} (${this.modelInfo.kind})`);
         }
         // Setup VAD if needed
         if (this.vadPath && !this.vad) {
             this.vad = this.createSileroVad(this.vadPath);
-            winston.debug(`${EMO} created Silero VAD instance`);
+            logger.debug('created Silero VAD instance');
         }
     }
     /**
@@ -342,13 +341,13 @@ export class SherpaONNXSTTEngine extends STTEngine {
             },
             decodingMethod: 'greedy_search',
         };
-        winston.debug(`${EMO} creating Moonshine recognizer with config:`, JSON.stringify(config, null, 2));
+        logger.debug('creating Moonshine recognizer with config:', JSON.stringify(config, null, 2));
         try {
             const recognizer = new sherpa.OfflineRecognizer(config);
             return recognizer;
         }
         catch (error) {
-            winston.error(`${EMO} Failed to create Moonshine recognizer:`, error);
+            logger.error('Failed to create Moonshine recognizer:', error);
             throw new TJBotError(`Failed to create Moonshine recognizer: ${error}`, { cause: error });
         }
     }
@@ -375,14 +374,14 @@ export class SherpaONNXSTTEngine extends STTEngine {
             },
             decodingMethod: 'greedy_search',
         };
-        winston.debug(`${EMO} creating Whisper recognizer with config:`, JSON.stringify(config, null, 2));
+        logger.debug('creating Whisper recognizer with config:', JSON.stringify(config, null, 2));
         try {
             const recognizer = new sherpa.OfflineRecognizer(config);
-            winston.debug(`${EMO} Whisper recognizer created successfully`);
+            logger.debug('Whisper recognizer created successfully');
             return recognizer;
         }
         catch (error) {
-            winston.error(`${EMO} Failed to create Whisper recognizer:`, error);
+            logger.error('Failed to create Whisper recognizer:', error);
             throw new TJBotError(`Failed to create Whisper recognizer: ${error}`, { cause: error });
         }
     }
@@ -406,7 +405,7 @@ export class SherpaONNXSTTEngine extends STTEngine {
             numThreads: 1,
         };
         const bufferSizeInSeconds = 60;
-        winston.debug(`${EMO} creating Silero VAD with config:`, JSON.stringify(config, null, 2));
+        logger.debug('creating Silero VAD with config:', JSON.stringify(config, null, 2));
         return new sherpa.Vad(config, bufferSizeInSeconds);
     }
     /**

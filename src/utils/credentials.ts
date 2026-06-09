@@ -18,10 +18,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { TJBotError } from './errors.js';
-import winston from 'winston';
-import { LogEmoji } from './logging.js';
+import { getLogger } from './logging.js';
 
-const EMO = LogEmoji.CONFIG;
+const logger = getLogger(import.meta.url);
 
 export interface AzureCredentials {
     speechKey?: string;
@@ -38,7 +37,7 @@ export interface AzureCredentials {
  */
 export function resolveCredentialsPath(filename: string, providedPath?: string): string {
     if (providedPath) {
-        winston.verbose(`${EMO} Using specified path for credentials: ${providedPath}`);
+        logger.verbose(`Using specified path for credentials: ${providedPath}`);
         if (!fs.existsSync(providedPath)) {
             throw new TJBotError(`Credentials file not found at: ${providedPath}`);
         }
@@ -49,7 +48,7 @@ export function resolveCredentialsPath(filename: string, providedPath?: string):
 
     for (const defaultPath of defaultPaths) {
         if (fs.existsSync(defaultPath)) {
-            winston.verbose(`${EMO} Found credentials file at: ${defaultPath}`);
+            logger.verbose(`Found credentials file at: ${defaultPath}`);
             return defaultPath;
         }
     }
@@ -75,7 +74,7 @@ function parseEnvCredentialsFile(credentialsPath: string): Record<string, string
                 }
             }
         });
-    winston.debug(`${EMO} Parsed ${Object.keys(raw).length} credentials from file: ${credentialsPath}`);
+    logger.debug(`Parsed ${Object.keys(raw).length} credentials from file: ${credentialsPath}`);
     return raw;
 }
 
@@ -86,7 +85,7 @@ function parseEnvCredentialsFile(credentialsPath: string): Record<string, string
 function loadCredentialsIntoEnvironment(credentials: Record<string, string>): void {
     Object.entries(credentials).forEach(([key, value]) => {
         process.env[key] = value;
-        winston.debug(`${EMO} loaded credential into environment: ${key}=***`);
+        logger.debug(`loaded credential into environment: ${key}=***`);
     });
 }
 
@@ -95,13 +94,13 @@ function loadCredentialsIntoEnvironment(credentials: Record<string, string>): vo
  */
 export function loadAzureCredentials(providedPath?: string): AzureCredentials {
     const credentialsPath = resolveCredentialsPath('azure-credentials.env', providedPath);
-    winston.verbose(`${EMO} Loading Azure credentials from file: ${credentialsPath}`);
+    logger.verbose(`Loading Azure credentials from file: ${credentialsPath}`);
     try {
         const raw = parseEnvCredentialsFile(credentialsPath);
 
         loadCredentialsIntoEnvironment(raw);
 
-        winston.debug(`${EMO} Loaded Azure credentials from: ${credentialsPath}`);
+        logger.debug(`Loaded Azure credentials from: ${credentialsPath}`);
         return {
             speechKey: raw.AZURE_SPEECH_KEY,
             speechRegion: raw.AZURE_SPEECH_REGION,
@@ -118,7 +117,7 @@ export function loadAzureCredentials(providedPath?: string): AzureCredentials {
  */
 export function loadGoogleCloudCredentials(providedPath?: string): { credentialsPath: string } {
     const credentialsPath = resolveCredentialsPath('google-credentials.json', providedPath);
-    winston.verbose(`${EMO} Loading Google Cloud credentials from file: ${credentialsPath}`);
+    logger.verbose(`Loading Google Cloud credentials from file: ${credentialsPath}`);
 
     if (!fs.existsSync(credentialsPath)) {
         throw new TJBotError(`Google Cloud credentials file not found at: ${credentialsPath}`);
@@ -134,7 +133,7 @@ export function loadGoogleCloudCredentials(providedPath?: string): { credentials
  */
 export function loadIBMWatsonCloudCredentials(providedPath?: string): void {
     const credentialsPath = resolveCredentialsPath('ibm-credentials.env', providedPath);
-    winston.verbose(`${EMO} Loading IBM Watson credentials from file: ${credentialsPath}`);
+    logger.verbose(`Loading IBM Watson credentials from file: ${credentialsPath}`);
     try {
         const raw = parseEnvCredentialsFile(credentialsPath);
         loadCredentialsIntoEnvironment(raw);

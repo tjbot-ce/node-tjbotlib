@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 import { createRequire } from 'module';
-import winston from 'winston';
-import { LogEmoji } from '../utils/logging.js';
-const EMO = LogEmoji.LED;
+import { getLogger } from '../utils/logging.js';
+const logger = getLogger(import.meta.url);
 const require = createRequire(import.meta.url);
 const lgpio = require('lgpio');
 const GPIO_CHIP = 0;
@@ -41,7 +40,7 @@ export class LEDCommonAnode {
         this.writePin(this.redPin, 0);
         this.writePin(this.greenPin, 0);
         this.writePin(this.bluePin, 0);
-        winston.verbose(`${EMO} Initialized LEDCommonAnode on pins R:${red} G:${green} B:${blue}`);
+        logger.verbose(`Initialized LEDCommonAnode on pins R:${red} G:${green} B:${blue}`);
     }
     writePin(pin, brightness) {
         const clampedBrightness = Math.max(0, Math.min(255, brightness));
@@ -54,7 +53,7 @@ export class LEDCommonAnode {
      * @param rgbColor RGB color as [red, green, blue] where each is 0-255
      */
     render(rgbColor) {
-        winston.debug(`${EMO} rendering Common Anode LED with color RGB(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`);
+        logger.debug(`rendering Common Anode LED with color RGB(${rgbColor[0]}, ${rgbColor[1]}, ${rgbColor[2]})`);
         this.writePin(this.redPin, rgbColor[0]);
         this.writePin(this.greenPin, rgbColor[1]);
         this.writePin(this.bluePin, rgbColor[2]);
@@ -63,7 +62,7 @@ export class LEDCommonAnode {
      * Clean up resources
      */
     cleanup() {
-        winston.debug(`${EMO} LEDCommonAnode cleanup`);
+        logger.debug('LEDCommonAnode cleanup');
         try {
             this.writePin(this.redPin, 0);
             this.writePin(this.greenPin, 0);

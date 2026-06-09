@@ -14,12 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import winston from 'winston';
 import { LEDCommonAnode, LEDNeopixel } from '../led/index.js';
 import { LGPIOServoController } from '../servo/index.js';
 import { Hardware } from '../utils/index.js';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 import { RPiBaseHardwareDriver } from './rpi-driver.js';
+const logger = getLogger(import.meta.url);
 class RPi3Driver extends RPiBaseHardwareDriver {
     commonAnodeLed;
     neopixelLed;
@@ -54,14 +54,14 @@ class RPi3Driver extends RPiBaseHardwareDriver {
             this.commonAnodeLed.render(rgbColor);
         }
         else {
-            winston.warn(`${LogEmoji.LED} Attempted to render on an uninitialized Common Anode LED`);
+            logger.warn('Attempted to render on an uninitialized Common Anode LED');
         }
     }
     async renderLEDNeopixel(hexColor) {
         if (this.neopixelLed) {
             const c = hexColor.startsWith('#') ? hexColor.slice(1) : hexColor;
             if (c.length !== 6) {
-                winston.warn(`${LogEmoji.LED} Invalid NeoPixel color '${hexColor}'`);
+                logger.warn(`Invalid NeoPixel color '${hexColor}'`);
                 return;
             }
             if (this.useGRBFormat) {
@@ -76,7 +76,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
             }
         }
         else {
-            winston.warn(`${LogEmoji.LED} Attempted to render on an uninitialized Neopixel LED`);
+            logger.warn('Attempted to render on an uninitialized Neopixel LED');
         }
     }
     async cleanup() {
@@ -90,7 +90,7 @@ class RPi3Driver extends RPiBaseHardwareDriver {
             this.servo.setPosition(position);
         }
         else {
-            winston.warn(`${LogEmoji.SERVO} Attempted to render on an uninitialized servo`);
+            logger.warn('Attempted to render on an uninitialized servo');
         }
     }
     warnIfUsingLocalAI(aiType) {
@@ -100,17 +100,17 @@ class RPi3Driver extends RPiBaseHardwareDriver {
         switch (aiType) {
             case 'stt':
                 if (this.listenConfig.backend?.type === 'local') {
-                    winston.warn(`${LogEmoji.STT} Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
+                    logger.warn('Using local STT on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
                 }
                 break;
             case 'tts':
                 if (this.speakConfig.backend?.type === 'local') {
-                    winston.warn(`${LogEmoji.TTS} Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
+                    logger.warn('Using local TTS on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
                 }
                 break;
             case 'vision':
                 if (this.seeConfig.backend?.type === 'local') {
-                    winston.warn(`${LogEmoji.VISION} Using local Vision on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.`);
+                    logger.warn('Using local Vision on Raspberry Pi 3 may have poor performance. Consider using a cloud-based backend for better results.');
                 }
                 break;
         }

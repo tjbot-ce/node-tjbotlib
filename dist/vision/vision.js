@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import winston from 'winston';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 import { createVisionEngine } from './vision-engine.js';
-const EMO = LogEmoji.VISION;
+const logger = getLogger(import.meta.url);
 export class VisionController {
     visionEngine;
     visionConfig;
@@ -33,7 +32,7 @@ export class VisionController {
         if (this.visionEngine === undefined) {
             throw new Error('Vision engine not initialized. Call initialize() before detecting objects.');
         }
-        winston.verbose(`${EMO} Detecting objects in image`);
+        logger.verbose('Detecting objects in image');
         return this.visionEngine.detectObjects(image);
     }
     /**
@@ -44,7 +43,7 @@ export class VisionController {
         if (this.visionEngine === undefined) {
             throw new Error('Vision engine not initialized. Call initialize() before classifying images.');
         }
-        winston.verbose(`${EMO} Classifying image`);
+        logger.verbose('Classifying image');
         return this.visionEngine.classifyImage(image);
     }
     /**
@@ -55,7 +54,7 @@ export class VisionController {
         if (this.visionEngine === undefined) {
             throw new Error('Vision engine not initialized. Call initialize() before detecting faces.');
         }
-        winston.verbose(`${EMO} Detecting faces in image`);
+        logger.verbose('Detecting faces in image');
         return this.visionEngine.detectFaces(image);
     }
     /**
@@ -67,7 +66,7 @@ export class VisionController {
         if (this.visionEngine === undefined) {
             throw new Error('Vision engine not initialized. Call initialize() before describing images.');
         }
-        winston.verbose(`${EMO} Describing image`);
+        logger.verbose('Describing image');
         return this.visionEngine.describeImage(image);
     }
     /**
@@ -75,7 +74,7 @@ export class VisionController {
      */
     async cleanup() {
         if (this.visionEngine) {
-            winston.debug(`${EMO} VisionController cleanup`);
+            logger.debug('VisionController cleanup');
             await this.visionEngine.cleanup?.();
             this.visionEngine = undefined;
         }

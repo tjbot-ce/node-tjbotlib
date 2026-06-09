@@ -15,14 +15,13 @@
  * limitations under the License.
  */
 
-import winston from 'winston';
 import { ListenConfig } from '../config/index.js';
 import { MicrophoneController } from '../microphone/index.js';
 import { TJBotError } from '../utils/errors.js';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 import { STTEngine, createSTTEngine } from './stt-engine.js';
 
-const EMO = LogEmoji.STT;
+const logger = getLogger(import.meta.url);
 
 /**
  * STT controller manages speech-to-text synthesis and engine lifecycle.
@@ -50,8 +49,8 @@ export class STTController {
         const microphoneRate = this.listenConfig.microphoneRate as number;
         const microphoneChannels = this.listenConfig.microphoneChannels as number;
 
-        winston.debug(
-            `${EMO} Initializing STT engine with microphone settings: rate=${microphoneRate}, channels=${microphoneChannels}`
+        logger.debug(
+            `Initializing STT engine with microphone settings: rate=${microphoneRate}, channels=${microphoneChannels}`
         );
         await this.sttEngine.initialize(microphoneRate, microphoneChannels);
     }
@@ -88,11 +87,11 @@ export class STTController {
                     abortSignal: options?.abortSignal,
                 });
 
-                winston.debug(`${EMO} Transcript: ${transcript}`);
+                logger.debug(`Transcript: ${transcript}`);
                 return transcript;
             } catch (error) {
                 if (this.isNoSpeechError(error)) {
-                    winston.verbose(`${EMO} No speech detected; continuing to listen`);
+                    logger.verbose('No speech detected; continuing to listen');
                     continue;
                 }
                 throw error;
@@ -112,7 +111,7 @@ export class STTController {
      */
     async cleanup(): Promise<void> {
         if (this.sttEngine) {
-            winston.debug(`${EMO} STTController cleanup`);
+            logger.debug('STTController cleanup');
             await this.sttEngine.cleanup?.();
             this.sttEngine = undefined;
         }

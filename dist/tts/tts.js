@@ -16,11 +16,10 @@
  */
 import fs from 'fs';
 import temp from 'temp';
-import winston from 'winston';
 import { TJBotError } from '../utils/errors.js';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 import { createTTSEngine } from './tts-engine.js';
-const EMO = LogEmoji.TTS;
+const logger = getLogger(import.meta.url);
 /**
  * TTS controller manages text-to-speech synthesis and engine lifecycle.
  * TTS engine is eagerly initialized during setupSpeaker() and cached for reuse.
@@ -59,11 +58,11 @@ export class TTSController {
         }
         try {
             // Synthesize audio - voice is configured at engine initialization time
-            winston.verbose(`${EMO} Synthesizing speech...`);
+            logger.verbose('Synthesizing speech...');
             const audioBuffer = await this.ttsEngine.synthesize(text);
             // Write to temporary file
             const info = temp.openSync('tjbot');
-            winston.debug(`${EMO} writing audio buffer to temp file: ${info.path}`);
+            logger.debug(`writing audio buffer to temp file: ${info.path}`);
             const fd = fs.createWriteStream(info.path);
             fd.write(audioBuffer);
             // Wait for file to be written
@@ -80,11 +79,11 @@ export class TTSController {
                 fs.unlinkSync(info.path);
             }
             catch (err) {
-                winston.error(`${EMO} Could not delete temp audio file:`, err);
+                logger.error('Could not delete temp audio file:', err);
             }
         }
         catch (error) {
-            winston.error(`${EMO} Error during speech synthesis:`, error);
+            logger.error('Error during speech synthesis:', error);
             throw error;
         }
     }
@@ -93,7 +92,7 @@ export class TTSController {
      */
     async cleanup() {
         if (this.ttsEngine) {
-            winston.debug(`${EMO} TTSController cleanup`);
+            logger.debug('TTSController cleanup');
             await this.ttsEngine.cleanup?.();
             this.ttsEngine = undefined;
         }

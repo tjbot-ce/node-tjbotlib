@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 
-import winston from 'winston';
 import { createRequire } from 'module';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 import { TJBotError } from '../utils/errors.js';
 import { MAX_PULSE_MS, MID_PULSE_MS, MIN_PULSE_MS, ServoPosition } from './servo-constants.js';
 
-const EMO = LogEmoji.SERVO;
+const logger = getLogger(import.meta.url);
 
 const require = createRequire(import.meta.url);
 // lgpio is published as CommonJS; createRequire avoids ESM namespace interop issues.
@@ -69,7 +68,7 @@ export class LGPIOServoController {
         this.running = false;
         this.autoStopDelayMs = autoStopDelayMs;
 
-        winston.debug(`${EMO} LGPIOServoController initialized with config:
+        logger.debug(`LGPIOServoController initialized with config:
             chip: ${chipNumber}
             pin: ${pin}
             frequency: ${freq} Hz`);
@@ -81,14 +80,14 @@ export class LGPIOServoController {
      */
     setPosition(position: ServoPosition): void {
         const pulseMs = position / 1000;
-        winston.verbose(`${EMO} setting servo position to ${position} μs (${pulseMs} ms)`);
+        logger.verbose(`setting servo position to ${position} μs (${pulseMs} ms)`);
         this.setPulseWidth(pulseMs);
     }
 
     private ensureStarted(): void {
         if (this.running) return;
 
-        winston.debug(`${EMO} starting LGPIOServoController`);
+        logger.debug('starting LGPIOServoController');
         const handle = lgpio.gpiochipOpen(this.chipNumber);
         lgpio.gpioClaimOutput(handle, this.pin);
         this.chipHandle = handle;
@@ -101,7 +100,7 @@ export class LGPIOServoController {
             throw new TJBotError('Servo GPIO is not initialized');
         }
 
-        winston.debug(`${EMO} setting servo pulse: ${pulseMs.toFixed(2)} ms`);
+        logger.debug(`setting servo pulse: ${pulseMs.toFixed(2)} ms`);
         const periodMs = 1000 / this.freq;
         const dutyCycle = Math.max(0, Math.min(100, (pulseMs / periodMs) * 100));
 
@@ -117,7 +116,7 @@ export class LGPIOServoController {
             this.ensureStarted();
             this.setServoPulse(this.currentPulseMs);
         } catch (err) {
-            winston.error(`${EMO} ServoController failed to start:`, err);
+            logger.error('ServoController failed to start:', err);
             throw err;
         }
     }
@@ -126,7 +125,7 @@ export class LGPIOServoController {
      * Stop the servo controller and clean up resources
      */
     async stop() {
-        winston.debug(`${EMO} stopping LGPIOServoController`);
+        logger.debug('stopping LGPIOServoController');
 
         this.running = false;
         if (this.autoStopTimer) {
@@ -140,7 +139,7 @@ export class LGPIOServoController {
                 lgpio.gpioFree(this.chipHandle, this.pin);
                 lgpio.gpiochipClose(this.chipHandle);
             } catch (err) {
-                winston.warn(`${EMO} ServoController cleanup warning:`, err);
+                logger.warn('ServoController cleanup warning:', err);
             } finally {
                 this.claimed = false;
                 this.chipHandle = undefined;
@@ -163,7 +162,7 @@ export class LGPIOServoController {
             clearTimeout(this.autoStopTimer);
         }
         this.autoStopTimer = setTimeout(() => {
-            winston.debug(`${EMO} ServoController auto-stopping after inactivity`);
+            logger.debug('ServoController auto-stopping after inactivity');
             this.stop();
         }, this.autoStopDelayMs);
     }
@@ -204,7 +203,7 @@ export class LGPIOServoController {
      * Cleanup and stop the controller
      */
     async cleanup() {
-        winston.debug(`${EMO} LGPIOServoController cleanup`);
+        logger.debug('LGPIOServoController cleanup');
         await this.stop();
     }
 }

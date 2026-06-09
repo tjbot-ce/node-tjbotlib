@@ -15,15 +15,14 @@
  */
 
 import { protos as speechProtos, v2 as speechV2 } from '@google-cloud/speech';
-import winston from 'winston';
 import type { STTBackendGoogleCloudConfig } from '../../config/config-types.js';
 import { isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
 import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { STTEngine, STTRequestOptions } from '../stt-engine.js';
 
-const EMO = LogEmoji.STT;
+const logger = getLogger(import.meta.url);
 
 const SUPPORTED_GOOGLE_STT_MODEL_REGIONS = {
     chirp_3: ['us', 'eu'],
@@ -151,8 +150,8 @@ export class GoogleCloudSTTEngine extends STTEngine {
 
         this.client = new speechV2.SpeechClient({ apiEndpoint: endpoint });
 
-        winston.info(`${EMO} Google Cloud STT engine initialized`);
-        winston.debug(`${EMO} Initialized GoogleCloudSTTEngine with config:
+        logger.info('Google Cloud STT engine initialized');
+        logger.debug(`Initialized GoogleCloudSTTEngine with config:
             model: ${model},
             languageCode: ${languageCode},
             region: ${region},
@@ -199,8 +198,8 @@ export class GoogleCloudSTTEngine extends STTEngine {
         const projectId = await client.getProjectId();
         const recognizerPath = `projects/${projectId}/locations/${region}/recognizers/_`;
 
-        winston.verbose(
-            `${EMO} Transcribing speech with Google Cloud STT v2 (model=${model}, languageCode=${languageCode}, recognizer=${recognizerPath})`
+        logger.verbose(
+            `Transcribing speech with Google Cloud STT v2 (model=${model}, languageCode=${languageCode}, recognizer=${recognizerPath})`
         );
 
         const request: speechProtos.google.cloud.speech.v2.IStreamingRecognitionConfig = {
@@ -222,7 +221,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
             },
         };
 
-        winston.silly(`${EMO} Google Cloud STT params:`, JSON.stringify(request, null, 2));
+        logger.silly('Google Cloud STT params:', JSON.stringify(request, null, 2));
 
         const sourceStream = this.ensureStream(micStream);
 
@@ -275,7 +274,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
 
                     if (result.isFinal) {
                         latestFinalTranscript = transcript;
-                        winston.debug(`${EMO} Google Cloud STT recognized: ${transcript}`);
+                        logger.debug(`Google Cloud STT recognized: ${transcript}`);
                         if (interimResults) {
                             options.onFinalResult?.(transcript);
                         }
@@ -318,7 +317,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
             };
 
             const handleMicError = (err: Error) => {
-                winston.error(`${EMO} Google Cloud STT microphone stream error:`, err);
+                logger.error('Google Cloud STT microphone stream error:', err);
                 settleReject(new TJBotError('Google Cloud STT microphone stream failed', { cause: err }));
             };
 
@@ -327,9 +326,9 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 timeoutLikeStreamEnd = timeoutLikeStreamEnd || timeoutLikeReason;
 
                 if (timeoutLikeReason) {
-                    winston.warn(`${EMO} Google Cloud STT stream reached timeout-like ending: ${err.message}`);
+                    logger.warn(`Google Cloud STT stream reached timeout-like ending: ${err.message}`);
                 } else {
-                    winston.error(`${EMO} Google Cloud STT stream error:`, err);
+                    logger.error('Google Cloud STT stream error:', err);
                 }
 
                 const fallbackTranscript = resolveTranscriptForStreamEnd({
@@ -340,7 +339,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 });
 
                 if (fallbackTranscript) {
-                    winston.debug(`${EMO} Google Cloud STT finalized using partial transcript after stream timeout`);
+                    logger.debug('Google Cloud STT finalized using partial transcript after stream timeout');
                     if (interimResults) {
                         options.onFinalResult?.(fallbackTranscript);
                     }
@@ -369,7 +368,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 });
 
                 if (fallbackTranscript) {
-                    winston.debug(`${EMO} Google Cloud STT finalized using partial transcript after stream end`);
+                    logger.debug('Google Cloud STT finalized using partial transcript after stream end');
                     if (interimResults) {
                         options.onFinalResult?.(fallbackTranscript);
                     }
@@ -399,7 +398,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
                 });
 
                 if (fallbackTranscript) {
-                    winston.debug(`${EMO} Google Cloud STT finalized using partial transcript from gRPC status`);
+                    logger.debug('Google Cloud STT finalized using partial transcript from gRPC status');
                     if (interimResults) {
                         options.onFinalResult?.(fallbackTranscript);
                     }
@@ -436,7 +435,7 @@ export class GoogleCloudSTTEngine extends STTEngine {
                         recognizeStream.end();
                     }
                 } catch (err) {
-                    winston.debug(`${EMO} recognize stream end failed (likely already closed)`, err as Error);
+                    logger.debug('recognize stream end failed (likely already closed)', err as Error);
                 }
                 recognizeStream.destroy();
             };

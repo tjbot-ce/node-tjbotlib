@@ -19,11 +19,10 @@ import path from 'path';
 import os from 'os';
 import TOML from '@iarna/toml';
 import { resolve } from 'import-meta-resolve';
-import winston from 'winston';
 import { tjbotConfigSchema, } from './config-types.js';
 import { TJBotError, ModelRegistry } from '../utils/index.js';
-import { LogEmoji } from '../utils/logging.js';
-const EMO = LogEmoji.CONFIG;
+import { getLogger } from '../utils/logging.js';
+const logger = getLogger(import.meta.url);
 /**
  * TJBotConfig manages loading and parsing TJBot configuration from TOML files.
  * It provides access to configuration via structured interfaces.
@@ -75,7 +74,7 @@ export class TJBotConfig {
             const registry = ModelRegistry.getInstance();
             for (const model of this.config.models) {
                 registry.registerModel(model);
-                winston.verbose(`${EMO} Registered custom ML model: ${model.key}`);
+                logger.verbose(`Registered custom ML model: ${model.key}`);
             }
         }
         // Validate vision backend config when configured.
@@ -88,8 +87,8 @@ export class TJBotConfig {
         this.speak = this.config.speak ?? {};
         this.wave = this.config.wave ?? {};
         this.recipe = this.config.recipe ?? {};
-        winston.verbose(`${EMO} TJBot configuration loaded successfully`);
-        winston.silly(`${EMO} TJBot configuration:
+        logger.verbose('TJBot configuration loaded successfully');
+        logger.silly(`TJBot configuration:
             ${JSON.stringify(this.config, null, 2)}`);
     }
     /**
@@ -98,7 +97,7 @@ export class TJBotConfig {
      */
     loadInternalConfig(configFile) {
         const configPath = resolve(configFile, import.meta.url);
-        winston.debug(`${EMO} loading default TJBot configuration TOML from ${configPath}`);
+        logger.debug(`loading default TJBot configuration TOML from ${configPath}`);
         let config;
         try {
             const configData = fs.readFileSync(new URL(configPath), 'utf8');
@@ -118,7 +117,7 @@ export class TJBotConfig {
         const homeConfigPath = path.join(os.homedir(), '.tjbot', 'tjbot.toml');
         try {
             if (fs.existsSync(homeConfigPath) && fs.lstatSync(homeConfigPath).isFile()) {
-                winston.debug(`${EMO} loading user TJBot configuration from ${homeConfigPath}`);
+                logger.debug(`loading user TJBot configuration from ${homeConfigPath}`);
                 const configData = fs.readFileSync(homeConfigPath, 'utf8');
                 let config = TOML.parse(configData);
                 // Clean up the config to remove any Symbol keys
@@ -126,7 +125,7 @@ export class TJBotConfig {
                 return config;
             }
             else {
-                winston.debug(`${EMO} user configuration file ${homeConfigPath} not found, skipping`);
+                logger.debug(`user configuration file ${homeConfigPath} not found, skipping`);
                 return null;
             }
         }
@@ -145,7 +144,7 @@ export class TJBotConfig {
             : path.join(process.cwd(), recipeConfigPath);
         try {
             if (fs.existsSync(absoluteRecipeConfigPath) && fs.lstatSync(absoluteRecipeConfigPath).isFile()) {
-                winston.debug(`${EMO} loading recipe configuration from ${absoluteRecipeConfigPath}`);
+                logger.debug(`loading recipe configuration from ${absoluteRecipeConfigPath}`);
                 const configData = fs.readFileSync(absoluteRecipeConfigPath, 'utf8');
                 let config = TOML.parse(configData);
                 // Clean up the config to remove any Symbol keys
@@ -153,7 +152,7 @@ export class TJBotConfig {
                 return config;
             }
             else {
-                winston.debug(`${EMO} recipe configuration file ${absoluteRecipeConfigPath} not found, skipping`);
+                logger.debug(`recipe configuration file ${absoluteRecipeConfigPath} not found, skipping`);
                 return null;
             }
         }
@@ -222,7 +221,7 @@ export class TJBotConfig {
                 }
                 else {
                     // Warn about non-string keys being removed
-                    winston.warn(`${EMO} Removing non-string configuration key from TOML: ${typeof key === 'symbol' ? 'Symbol' : typeof key}`);
+                    logger.warn(`Removing non-string configuration key from TOML: ${typeof key === 'symbol' ? 'Symbol' : typeof key}`);
                 }
             }
             return cleaned;

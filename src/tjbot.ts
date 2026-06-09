@@ -31,7 +31,7 @@ import {
     sleep as asyncSleep,
     TJBotError,
 } from './utils/index.js';
-import { LogEmoji } from './utils/logging.js';
+import { getLogger } from './utils/logging.js';
 import { ModelType } from './utils/model-registry.js';
 import {
     FaceDetectionMetadata,
@@ -47,7 +47,8 @@ import { easeInOutQuad } from 'js-easing-functions';
 import { dirname, join } from 'path';
 import temp from 'temp';
 import { fileURLToPath } from 'url';
-import winston from 'winston';
+
+const logger = getLogger(import.meta.url);
 
 // Read version from package.json
 const DIRNAME = dirname(fileURLToPath(import.meta.url));
@@ -157,13 +158,13 @@ class TJBot {
      * @public
      */
     async initialize(overrideConfig?: Partial<TJBotConfigSchema>, recipeConfigPath?: string): Promise<TJBot> {
-        winston.info(`${LogEmoji.GENERAL} Initializing TJBot...`);
+        logger.info('Initializing TJBot...');
 
         this.installProcessCleanupHooks();
 
         // Cleanup previous initialization if any
         if (this._initialized) {
-            winston.info(`${LogEmoji.GENERAL} Cleaning up previous initialization...`);
+            logger.info('Cleaning up previous initialization...');
             await this.cleanup();
         }
 
@@ -173,12 +174,12 @@ class TJBot {
         // Update log level from config
         const logConfig = this.config.log;
         if (logConfig && logConfig.level) {
-            winston.level = logConfig.level;
+            logger.level = logConfig.level;
         }
 
         // Detect Raspberry Pi model and instantiate driver
         this.rpiModel = RPiDetect.model();
-        winston.info(`${LogEmoji.RPI} Detected hardware: ${this.rpiModel}`);
+        logger.info(`Detected hardware: ${this.rpiModel}`);
 
         if (this.rpiModel.startsWith('Raspberry Pi 3')) {
             this.rpiDriver = new RPi3Driver();
@@ -187,14 +188,14 @@ class TJBot {
         } else if (this.rpiModel.startsWith('Raspberry Pi 5')) {
             this.rpiDriver = new RPi5Driver();
         } else {
-            winston.warn(
-                `${LogEmoji.RPI} TJBot is running on unsupported Raspberry Pi hardware. Resorting to RPi3 hardware driver, but errors may occur.`
+            logger.warn(
+                'TJBot is running on unsupported Raspberry Pi hardware. Resorting to RPi3 hardware driver, but errors may occur.'
             );
             this.rpiDriver = new RPi3Driver();
         }
 
-        winston.verbose(`${LogEmoji.GENERAL} TJBot library version ${TJBot.VERSION}`);
-        winston.debug(`${LogEmoji.CONFIG} TJBot configuration:\n${JSON.stringify(this.config, null, 2)}`);
+        logger.verbose(`TJBot library version ${TJBot.VERSION}`);
+        logger.debug(`TJBot configuration:\n${JSON.stringify(this.config, null, 2)}`);
 
         // Initialize hardware
         await this.initializeHardware();
@@ -203,7 +204,7 @@ class TJBot {
         await this.initializeAIModels();
 
         this._initialized = true;
-        winston.info(`${LogEmoji.GENERAL} TJBot initialization complete`);
+        logger.info('TJBot initialization complete');
 
         return this;
     }
@@ -215,7 +216,7 @@ class TJBot {
     private async initializeHardware(): Promise<void> {
         const hwConfig = this.config.hardware;
         if (!hwConfig || Object.keys(hwConfig).length === 0) {
-            winston.debug(`${LogEmoji.CONFIG} No hardware configured`);
+            logger.debug('No hardware configured');
             return;
         }
 
@@ -242,7 +243,7 @@ class TJBot {
             return;
         }
 
-        winston.info(`${LogEmoji.HARDWARE} Initializing hardware...`);
+        logger.info('Initializing hardware...');
 
         for (const device of hardwareToInit) {
             switch (device) {
@@ -264,8 +265,8 @@ class TJBot {
                     }
 
                     if (hasNeopixel) {
-                        winston.info(
-                            `${LogEmoji.LED} Setting up NeoPixel LED ` +
+                        logger.info(
+                            'Setting up NeoPixel LED ' +
                                 '[' +
                                 (shineConfig?.neopixel?.gpioPin ? `pin: ${shineConfig?.neopixel?.gpioPin}` : '') +
                                 ' ' +
@@ -277,8 +278,8 @@ class TJBot {
                     }
 
                     if (hasCommonAnode) {
-                        winston.info(
-                            `${LogEmoji.LED} Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`
+                        logger.info(
+                            `Setting up Common Anode LED [r/g/b pins: ${shineConfig?.commonanode?.redPin}/${shineConfig?.commonanode?.greenPin}/${shineConfig?.commonanode?.bluePin}]`
                         );
                     }
 
@@ -288,21 +289,21 @@ class TJBot {
 
                 case Hardware.MICROPHONE: {
                     const config = this.config.listen;
-                    winston.info(`${LogEmoji.MIC} Setting up microphone [device: ${config?.device || 'default'}]`);
+                    logger.info(`Setting up microphone [device: ${config?.device || 'default'}]`);
                     this.rpiDriver.setupMicrophone(config);
                     break;
                 }
 
                 case Hardware.SERVO: {
                     const config = this.config.wave;
-                    winston.info(`${LogEmoji.SERVO} Setting up servo [pin: ${config?.servoPin}]`);
+                    logger.info(`Setting up servo [pin: ${config?.servoPin}]`);
                     this.rpiDriver.setupServo(config);
                     break;
                 }
 
                 case Hardware.SPEAKER: {
                     const config = this.config.speak;
-                    winston.info(`${LogEmoji.SPEAKER} Setting up speaker [device: ${config?.device || 'default'}]`);
+                    logger.info(`Setting up speaker [device: ${config?.device || 'default'}]`);
                     this.rpiDriver.setupSpeaker(config);
                     break;
                 }
@@ -319,19 +320,19 @@ class TJBot {
     private async initializeAIModels(): Promise<void> {
         // Initialize STT engine if microphone is configured
         if (this.rpiDriver.hasCapability(Capability.LISTEN)) {
-            winston.info(`${LogEmoji.STT} Initializing STT engine...`);
+            logger.info('Initializing STT engine...');
             await this.rpiDriver.initializeSTTEngine();
         }
 
         // Initialize TTS engine if speaker is configured
         if (this.rpiDriver.hasCapability(Capability.SPEAK)) {
-            winston.info(`${LogEmoji.TTS} Initializing TTS engine...`);
+            logger.info('Initializing TTS engine...');
             await this.rpiDriver.initializeTTSEngine();
         }
 
         // Initialize Vision engine if camera is configured
         if (this.rpiDriver.hasCapability(Capability.SEE)) {
-            winston.info(`${LogEmoji.VISION} Initializing Vision engine...`);
+            logger.info('Initializing Vision engine...');
             await this.rpiDriver.initializeVisionEngine();
         }
     }
@@ -391,15 +392,13 @@ class TJBot {
         });
 
         process.once('uncaughtException', (err) => {
-            winston.error(
-                `${LogEmoji.GENERAL} uncaughtException: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`
-            );
+            logger.error(`uncaughtException: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}`);
             void this.runLifecycleCleanup('uncaughtException', 1);
         });
 
         process.once('unhandledRejection', (reason) => {
-            winston.error(
-                `${LogEmoji.GENERAL} unhandledRejection: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`
+            logger.error(
+                `unhandledRejection: ${reason instanceof Error ? (reason.stack ?? reason.message) : String(reason)}`
             );
             void this.runLifecycleCleanup('unhandledRejection', 1);
         });
@@ -416,7 +415,7 @@ class TJBot {
             try {
                 await this.cleanup();
             } catch (err) {
-                winston.warn(`${LogEmoji.GENERAL} automatic cleanup failed during ${reason}: ${String(err)}`);
+                logger.warn(`automatic cleanup failed during ${reason}: ${String(err)}`);
             }
             process.exit(0);
             return;
@@ -430,7 +429,7 @@ class TJBot {
                 new Promise<void>((resolve) => setTimeout(resolve, CLEANUP_TIMEOUT_MS)),
             ]);
         } catch (err) {
-            winston.warn(`${LogEmoji.GENERAL} automatic cleanup failed during ${reason}: ${String(err)}`);
+            logger.warn(`automatic cleanup failed during ${reason}: ${String(err)}`);
         } finally {
             process.exit(exitCode);
         }
@@ -442,7 +441,7 @@ class TJBot {
      * @public
      */
     setLogLevel(level: string) {
-        winston.level = level;
+        logger.level = level;
     }
 
     /**
@@ -457,8 +456,8 @@ class TJBot {
             );
         }
 
-        winston.debug(`${LogEmoji.GENERAL} Asserting capability: ${capability}`);
-        winston.silly(`${LogEmoji.GENERAL} TJBot capabilities: ${Array.from(this.rpiDriver.getHardware()).join(', ')}`);
+        logger.debug(`Asserting capability: ${capability}`);
+        logger.silly(`TJBot capabilities: ${Array.from(this.rpiDriver.getHardware()).join(', ')}`);
 
         switch (capability) {
             case Capability.LISTEN:
@@ -593,7 +592,7 @@ class TJBot {
 
         // Offline / single-shot: return the transcript
         const message = await this.rpiDriver.listenForTranscript();
-        winston.info(`${LogEmoji.STT} Heard: "${message}"`);
+        logger.info(`Heard: "${message}"`);
         return message;
     }
 
@@ -725,11 +724,11 @@ class TJBot {
         this.assertCapability(Capability.SHINE);
 
         if (duration < 0.5) {
-            winston.warn(`${LogEmoji.LED} TJBot cannot pulse for less than 0.5 seconds, using duration of 0.5 seconds`);
+            logger.warn('TJBot cannot pulse for less than 0.5 seconds, using duration of 0.5 seconds');
             duration = 0.5;
         }
         if (duration > 2.0) {
-            winston.warn(`${LogEmoji.LED} TJBot cannot pulse for more than 2 seconds, using duration of 2.0 seconds`);
+            logger.warn('TJBot cannot pulse for more than 2 seconds, using duration of 2.0 seconds');
             duration = 2.0;
         }
 
@@ -762,14 +761,14 @@ class TJBot {
             const l = 0.0 + (i / (numSteps / 2)) * 0.5;
             colorRamp[i] = hex.toHsl().lightness(l).toRgb().toHexString().replace('#', '0x');
         }
-        winston.silly(`${LogEmoji.LED} color ramp for pulse: ${colorRamp.join(', ')}`);
+        logger.silly(`color ramp for pulse: ${colorRamp.join(', ')}`);
 
         // perform the ease
-        winston.verbose(`${LogEmoji.LED} pulsing my LED to RGB color ${rgb}`);
+        logger.verbose(`pulsing my LED to RGB color ${rgb}`);
         for (let i = 0; i < easeDelays.length; i += 1) {
             const c =
                 i < colorRamp.length ? colorRamp[i] : colorRamp[colorRamp.length - 1 - (i - colorRamp.length) - 1];
-            winston.silly(`${LogEmoji.LED} pulse step ${i}: setting color to ${c}`);
+            logger.silly(`pulse step ${i}: setting color to ${c}`);
             await this.shine(c);
             await asyncSleep(easeDelays[i]);
         }
@@ -813,7 +812,7 @@ class TJBot {
     async speak(message: string): Promise<void> {
         this.assertCapability(Capability.SPEAK);
 
-        winston.info(`${LogEmoji.TTS} Speaking: "${message}"`);
+        logger.info(`Speaking: "${message}"`);
 
         // Delegate to the SpeakerController which handles TTS synthesis and audio playback
         await this.rpiDriver.speak(message);
@@ -825,7 +824,7 @@ class TJBot {
      * @public
      */
     async play(soundFile: string): Promise<void> {
-        winston.info(`${LogEmoji.SPEAKER} Playing sound: ${soundFile}`);
+        logger.info(`Playing sound: ${soundFile}`);
         await this.rpiDriver.playAudio(soundFile);
     }
 
@@ -842,7 +841,7 @@ class TJBot {
      */
     armBack(): Promise<void> {
         this.assertCapability(Capability.WAVE);
-        winston.info(`${LogEmoji.SERVO} Moving TJBot's arm back`);
+        logger.info("Moving TJBot's arm back");
 
         return new Promise((resolve) => {
             this.rpiDriver.renderServoPosition(ServoPosition.ARM_BACK);
@@ -859,7 +858,7 @@ class TJBot {
      */
     async raiseArm(): Promise<void> {
         this.assertCapability(Capability.WAVE);
-        winston.info(`${LogEmoji.SERVO} Raising TJBot's arm`);
+        logger.info("Raising TJBot's arm");
 
         return new Promise((resolve) => {
             this.rpiDriver.renderServoPosition(ServoPosition.ARM_UP);
@@ -876,7 +875,7 @@ class TJBot {
      */
     async lowerArm(): Promise<void> {
         this.assertCapability(Capability.WAVE);
-        winston.info(`${LogEmoji.SERVO} Lowering TJBot's arm`);
+        logger.info("Lowering TJBot's arm");
 
         return new Promise((resolve) => {
             this.rpiDriver.renderServoPosition(ServoPosition.ARM_DOWN);
@@ -893,7 +892,7 @@ class TJBot {
      */
     async wave(): Promise<void> {
         this.assertCapability(Capability.WAVE);
-        winston.verbose(`${LogEmoji.SERVO} Waving TJBot's arm`);
+        logger.verbose("Waving TJBot's arm");
 
         const delay = 0.2;
 

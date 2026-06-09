@@ -17,11 +17,10 @@ import fs from 'fs';
 import * as ort from 'onnxruntime-node';
 import path from 'path';
 import sharp from 'sharp';
-import winston from 'winston';
 import { ModelRegistry, TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { VisionEngine, } from '../vision-engine.js';
-const EMO = LogEmoji.VISION;
+const logger = getLogger(import.meta.url);
 export class ONNXVisionEngine extends VisionEngine {
     manager = ModelRegistry.getInstance();
     models = new Map();
@@ -43,8 +42,8 @@ export class ONNXVisionEngine extends VisionEngine {
         await this.loadModel(config.objectDetectionModel);
         await this.loadModel(config.imageClassificationModel);
         await this.loadModel(config.faceDetectionModel);
-        winston.info(`${EMO} ONNX vision engine initialized`);
-        winston.debug(`${EMO} Initialized ONNXVisionEngine with config:
+        logger.info('ONNX vision engine initialized');
+        logger.debug(`Initialized ONNXVisionEngine with config:
             objectDetectionModel: ${config.objectDetectionModel},
             objectDetectionConfidence: ${config.objectDetectionConfidence},
             imageClassificationModel: ${config.imageClassificationModel},
@@ -62,7 +61,7 @@ export class ONNXVisionEngine extends VisionEngine {
         if (this.models.has(modelName)) {
             return; // Already loaded
         }
-        winston.verbose(`${EMO} Loading ONNX model: ${modelName}`);
+        logger.verbose(`Loading ONNX model: ${modelName}`);
         // Get model metadata and download
         const metadata = await this.manager.loadModel(modelName);
         // Build model path
@@ -89,13 +88,13 @@ export class ONNXVisionEngine extends VisionEngine {
             inputShape,
             kind: metadata.kind,
         });
-        winston.info(`${EMO} Loaded ONNX model: ${modelName} (${metadata.kind})`);
+        logger.info(`Loaded ONNX model: ${modelName} (${metadata.kind})`);
     }
     /**
      * Load label file for a model
      */
     async loadLabels(modelName, metadata, modelDir) {
-        winston.info(`${EMO} Loading labels for model: ${modelName}`);
+        logger.info(`Loading labels for model: ${modelName}`);
         try {
             // Try common label file names based on model kind
             let labelFile;
@@ -120,10 +119,10 @@ export class ONNXVisionEngine extends VisionEngine {
                 }
             }
             if (!labelFile) {
-                winston.warn(`${EMO} No label file found for model: ${modelName}`);
+                logger.warn(`No label file found for model: ${modelName}`);
                 return [];
             }
-            winston.debug(`${EMO} Found label file for ${modelName}: ${labelFile}`);
+            logger.debug(`Found label file for ${modelName}: ${labelFile}`);
             const content = fs.readFileSync(labelFile, 'utf8');
             // Parse YAML files for detection models
             if (labelFile.endsWith('.yaml') && metadata.kind === 'detection') {
@@ -169,7 +168,7 @@ export class ONNXVisionEngine extends VisionEngine {
             return labels;
         }
         catch (error) {
-            winston.warn(`Failed to load labels for ${modelName}:`, error);
+            logger.warn(`Failed to load labels for ${modelName}:`, error);
             return [];
         }
     }
@@ -179,7 +178,7 @@ export class ONNXVisionEngine extends VisionEngine {
     async getOrLoadModel(modelName) {
         let model = this.models.get(modelName);
         if (!model) {
-            winston.debug(`${EMO} model ${modelName} not yet loaded, loading now...`);
+            logger.debug(`model ${modelName} not yet loaded, loading now...`);
             await this.loadModel(modelName);
             model = this.models.get(modelName);
         }
@@ -219,7 +218,7 @@ export class ONNXVisionEngine extends VisionEngine {
         }
         const modelName = config.objectDetectionModel;
         const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
-        winston.info(`${EMO} Running object detection using model ${modelName} with confidence threshold ${resolvedConfidenceThreshold}`);
+        logger.info(`Running object detection using model ${modelName} with confidence threshold ${resolvedConfidenceThreshold}`);
         const model = await this.getOrLoadModel(modelName);
         try {
             // Preprocess image using model's expected input size
@@ -246,7 +245,7 @@ export class ONNXVisionEngine extends VisionEngine {
         }
         const modelName = config.imageClassificationModel;
         const resolvedConfidenceThreshold = this.getImageClassificationConfidenceThreshold();
-        winston.info(`${EMO} Running image classification using model ${modelName} with confidence threshold ${resolvedConfidenceThreshold}`);
+        logger.info(`Running image classification using model ${modelName} with confidence threshold ${resolvedConfidenceThreshold}`);
         const model = await this.getOrLoadModel(modelName);
         try {
             // Preprocess image using model's expected input size
@@ -273,7 +272,7 @@ export class ONNXVisionEngine extends VisionEngine {
         }
         const modelName = config.faceDetectionModel;
         const confidenceThreshold = this.getFaceDetectionConfidenceThreshold();
-        winston.info(`${EMO} Running face detection using model ${modelName} with confidence threshold ${confidenceThreshold}`);
+        logger.info(`Running face detection using model ${modelName} with confidence threshold ${confidenceThreshold}`);
         const model = await this.getOrLoadModel(modelName);
         try {
             // Preprocess image using model's expected input size
@@ -283,9 +282,9 @@ export class ONNXVisionEngine extends VisionEngine {
             const feeds = {};
             feeds[model.session.inputNames[0]] = input;
             const results = await model.session.run(feeds);
-            winston.debug(`Face model output: ${model.session.outputNames.join(', ')}`);
+            logger.debug(`Face model output: ${model.session.outputNames.join(', ')}`);
             const outputTensor = results[model.session.outputNames[0]];
-            winston.debug(`Output shape: [${outputTensor.dims.join(', ')}], size: ${outputTensor.size}`);
+            logger.debug(`Output shape: [${outputTensor.dims.join(', ')}], size: ${outputTensor.size}`);
             // Postprocess face detection output
             const metadata = this.postprocessFaceDetection(results, confidenceThreshold, [width, height]);
             return {
@@ -596,13 +595,13 @@ export class ONNXVisionEngine extends VisionEngine {
             { stride: 16, scoreKey: '466', bboxKey: '469', kpsKey: '472' },
             { stride: 32, scoreKey: '486', bboxKey: '489', kpsKey: '492' },
         ];
-        winston.debug(`${EMO} Processing SCRFD-2.5G multi-scale output...`);
+        logger.debug('Processing SCRFD-2.5G multi-scale output...');
         for (const scale of scales) {
             const scoreTensor = results[scale.scoreKey];
             const bboxTensor = results[scale.bboxKey];
             const kpsTensor = results[scale.kpsKey];
             if (!scoreTensor || !bboxTensor) {
-                winston.warn(`${EMO} Missing SCRFD tensors for stride ${scale.stride}`);
+                logger.warn(`Missing SCRFD tensors for stride ${scale.stride}`);
                 continue;
             }
             const scores = scoreTensor.data;

@@ -17,9 +17,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { TJBotError } from './errors.js';
-import winston from 'winston';
-import { LogEmoji } from './logging.js';
-const EMO = LogEmoji.CONFIG;
+import { getLogger } from './logging.js';
+const logger = getLogger(import.meta.url);
 /**
  * Resolves a credentials file path by checking provided path, then CWD, then ~/.tjbot.
  * @param filename - The filename to look for (e.g., 'azure-credentials.env')
@@ -28,7 +27,7 @@ const EMO = LogEmoji.CONFIG;
  */
 export function resolveCredentialsPath(filename, providedPath) {
     if (providedPath) {
-        winston.verbose(`${EMO} Using specified path for credentials: ${providedPath}`);
+        logger.verbose(`Using specified path for credentials: ${providedPath}`);
         if (!fs.existsSync(providedPath)) {
             throw new TJBotError(`Credentials file not found at: ${providedPath}`);
         }
@@ -37,7 +36,7 @@ export function resolveCredentialsPath(filename, providedPath) {
     const defaultPaths = [path.join(process.cwd(), filename), path.join(os.homedir(), '.tjbot', filename)];
     for (const defaultPath of defaultPaths) {
         if (fs.existsSync(defaultPath)) {
-            winston.verbose(`${EMO} Found credentials file at: ${defaultPath}`);
+            logger.verbose(`Found credentials file at: ${defaultPath}`);
             return defaultPath;
         }
     }
@@ -59,7 +58,7 @@ function parseEnvCredentialsFile(credentialsPath) {
             }
         }
     });
-    winston.debug(`${EMO} Parsed ${Object.keys(raw).length} credentials from file: ${credentialsPath}`);
+    logger.debug(`Parsed ${Object.keys(raw).length} credentials from file: ${credentialsPath}`);
     return raw;
 }
 /**
@@ -69,7 +68,7 @@ function parseEnvCredentialsFile(credentialsPath) {
 function loadCredentialsIntoEnvironment(credentials) {
     Object.entries(credentials).forEach(([key, value]) => {
         process.env[key] = value;
-        winston.debug(`${EMO} loaded credential into environment: ${key}=***`);
+        logger.debug(`loaded credential into environment: ${key}=***`);
     });
 }
 /**
@@ -77,11 +76,11 @@ function loadCredentialsIntoEnvironment(credentials) {
  */
 export function loadAzureCredentials(providedPath) {
     const credentialsPath = resolveCredentialsPath('azure-credentials.env', providedPath);
-    winston.verbose(`${EMO} Loading Azure credentials from file: ${credentialsPath}`);
+    logger.verbose(`Loading Azure credentials from file: ${credentialsPath}`);
     try {
         const raw = parseEnvCredentialsFile(credentialsPath);
         loadCredentialsIntoEnvironment(raw);
-        winston.debug(`${EMO} Loaded Azure credentials from: ${credentialsPath}`);
+        logger.debug(`Loaded Azure credentials from: ${credentialsPath}`);
         return {
             speechKey: raw.AZURE_SPEECH_KEY,
             speechRegion: raw.AZURE_SPEECH_REGION,
@@ -98,7 +97,7 @@ export function loadAzureCredentials(providedPath) {
  */
 export function loadGoogleCloudCredentials(providedPath) {
     const credentialsPath = resolveCredentialsPath('google-credentials.json', providedPath);
-    winston.verbose(`${EMO} Loading Google Cloud credentials from file: ${credentialsPath}`);
+    logger.verbose(`Loading Google Cloud credentials from file: ${credentialsPath}`);
     if (!fs.existsSync(credentialsPath)) {
         throw new TJBotError(`Google Cloud credentials file not found at: ${credentialsPath}`);
     }
@@ -110,7 +109,7 @@ export function loadGoogleCloudCredentials(providedPath) {
  */
 export function loadIBMWatsonCloudCredentials(providedPath) {
     const credentialsPath = resolveCredentialsPath('ibm-credentials.env', providedPath);
-    winston.verbose(`${EMO} Loading IBM Watson credentials from file: ${credentialsPath}`);
+    logger.verbose(`Loading IBM Watson credentials from file: ${credentialsPath}`);
     try {
         const raw = parseEnvCredentialsFile(credentialsPath);
         loadCredentialsIntoEnvironment(raw);

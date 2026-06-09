@@ -15,13 +15,12 @@
  * limitations under the License.
  */
 import SpeechToTextV1 from 'ibm-watson/speech-to-text/v1.js';
-import winston from 'winston';
 import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { STTEngine } from '../stt-engine.js';
 import { isNoSpeechLikeReason, isTimeoutLikeStreamEndReason, resolveTranscriptForStreamEnd } from '../stt-utils.js';
-const EMO = LogEmoji.STT;
+const logger = getLogger(import.meta.url);
 /**
  * IBM Watson Speech-to-Text Engine
  *
@@ -42,8 +41,8 @@ export class IBMWatsonSTTEngine extends STTEngine {
         this.microphoneRate = microphoneRate;
         this.microphoneChannels = microphoneChannels;
         this.sttService = new SpeechToTextV1({});
-        winston.info(`${EMO} IBM Watson STT engine initialized`);
-        winston.debug(`${EMO} Initialized IBMWatsonSTTEngine with config:
+        logger.info('IBM Watson STT engine initialized');
+        logger.debug(`Initialized IBMWatsonSTTEngine with config:
             model: ${config?.model},
             inactivityTimeout: ${config?.inactivityTimeout},
             backgroundAudioSuppression: ${config?.backgroundAudioSuppression},
@@ -61,7 +60,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
         const inactivityTimeout = config?.inactivityTimeout ?? -1;
         const backgroundAudioSuppression = config?.backgroundAudioSuppression ?? 0.4;
         const interimResults = config?.interimResults ?? false;
-        winston.verbose(`${EMO} Transcribing speech with IBM Watson STT (model=${model})`);
+        logger.verbose(`Transcribing speech with IBM Watson STT (model=${model})`);
         const params = {
             objectMode: true,
             contentType: `audio/l16; rate=${this.microphoneRate}; channels=${this.microphoneChannels}`,
@@ -70,7 +69,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
             interimResults,
             backgroundAudioSuppression,
         };
-        winston.silly(`${EMO} IBM Watson STT params:`, JSON.stringify(params, null, 2));
+        logger.silly('IBM Watson STT params:', JSON.stringify(params, null, 2));
         const recognizeStream = this.sttService.recognizeUsingWebSocket(params);
         // Pipe microphone to STT
         this.ensureStream(micStream).pipe(recognizeStream);
@@ -114,7 +113,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
                 }
                 if (result.final) {
                     latestFinalTranscript = transcript;
-                    winston.debug(`${EMO} IBM Watson STT recognized: ${transcript}`);
+                    logger.debug(`IBM Watson STT recognized: ${transcript}`);
                     if (interimResults) {
                         options.onFinalResult?.(transcript);
                     }
@@ -122,7 +121,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
                 }
             };
             const handleError = (err) => {
-                winston.error(`${EMO} IBM Watson STT stream error:`, err);
+                logger.error('IBM Watson STT stream error:', err);
                 const timeoutLikeEnd = isTimeoutLikeStreamEndReason(err.message);
                 const noSpeechLikeError = isNoSpeechLikeReason(err.message);
                 const fallbackTranscript = resolveTranscriptForStreamEnd({
@@ -132,7 +131,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
                     timeoutLikeEnd,
                 });
                 if (fallbackTranscript) {
-                    winston.debug(`${EMO} IBM Watson STT finalized using partial transcript after stream timeout`);
+                    logger.debug('IBM Watson STT finalized using partial transcript after stream timeout');
                     if (interimResults) {
                         options.onFinalResult?.(fallbackTranscript);
                     }
@@ -155,7 +154,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
                     timeoutLikeEnd: true,
                 });
                 if (fallbackTranscript) {
-                    winston.debug(`${EMO} IBM Watson STT finalized using partial transcript after stream end`);
+                    logger.debug('IBM Watson STT finalized using partial transcript after stream end');
                     if (interimResults) {
                         options.onFinalResult?.(fallbackTranscript);
                     }
@@ -175,7 +174,7 @@ export class IBMWatsonSTTEngine extends STTEngine {
                     this.ensureStream(micStream).unpipe(recognizeStream);
                 }
                 catch (err) {
-                    winston.debug(`${EMO} mic unpipe failed (likely already closed)`, err);
+                    logger.debug('mic unpipe failed (likely already closed)', err);
                 }
                 if (typeof recognizeStream.destroy === 'function') {
                     recognizeStream.destroy();

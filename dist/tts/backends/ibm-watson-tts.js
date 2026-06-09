@@ -15,12 +15,11 @@
  * limitations under the License.
  */
 import TextToSpeechV1 from 'ibm-watson/text-to-speech/v1.js';
-import winston from 'winston';
 import { loadIBMWatsonCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { TTSEngine } from '../tts-engine.js';
-const EMO = LogEmoji.TTS;
+const logger = getLogger(import.meta.url);
 /**
  * IBM Watson Text-to-Speech Engine
  *
@@ -41,8 +40,8 @@ export class IBMTTSEngine extends TTSEngine {
             throw new TJBotError('IBM Watson TTS voice not specified. Provide voice in speak.backend.ibm-watson-tts config.');
         }
         this.ttsService = new TextToSpeechV1({});
-        winston.info(`${EMO} IBM Watson TTS engine initialized`);
-        winston.debug(`${EMO} Initialized IBMWatsonTTSEngine with config:
+        logger.info('IBM Watson TTS engine initialized');
+        logger.debug(`Initialized IBMWatsonTTSEngine with config:
             voice: ${config?.voice},
             credentialsPath: ${config?.credentialsPath}`);
     }
@@ -70,7 +69,7 @@ export class IBMTTSEngine extends TTSEngine {
                 voice: voiceName,
                 accept: 'audio/wav',
             };
-            winston.verbose(`${EMO} Synthesizing speech with IBM Watson TTS (voice=${voiceName})`);
+            logger.verbose(`Synthesizing speech with IBM Watson TTS (voice=${voiceName})`);
             const response = await this.ttsService.synthesize(params);
             if (!response.result) {
                 throw new TJBotError('No audio data returned from IBM Watson TTS');
@@ -83,11 +82,11 @@ export class IBMTTSEngine extends TTSEngine {
                 });
                 response.result.on('end', () => {
                     const buffer = Buffer.concat(chunks);
-                    winston.debug(`${EMO} IBM Watson TTS synthesis complete: ${buffer.length} bytes`);
+                    logger.debug(`IBM Watson TTS synthesis complete: ${buffer.length} bytes`);
                     resolve(buffer);
                 });
                 response.result.on('error', (err) => {
-                    winston.error(`${EMO} Error during IBM Watson TTS synthesis:`, err);
+                    logger.error('Error during IBM Watson TTS synthesis:', err);
                     reject(err);
                 });
             });

@@ -15,14 +15,13 @@
  */
 
 import { TextToSpeechClient, protos as ttsProtos } from '@google-cloud/text-to-speech';
-import winston from 'winston';
 import type { TTSBackendGoogleCloudConfig } from '../../config/config-types.js';
 import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { TTSEngine } from '../tts-engine.js';
 
-const EMO = LogEmoji.TTS;
+const logger = getLogger(import.meta.url);
 
 /**
  * Google Cloud Text-to-Speech Engine
@@ -51,8 +50,8 @@ export class GoogleCloudTTSEngine extends TTSEngine {
 
         this.client = new TextToSpeechClient();
 
-        winston.info(`${EMO} Google Cloud TTS engine initialized`);
-        winston.debug(`${EMO} Initialized GoogleCloudTTSEngine with config:
+        logger.info('Google Cloud TTS engine initialized');
+        logger.debug(`Initialized GoogleCloudTTSEngine with config:
             voice: ${config?.voice},
             languageCode: ${config?.languageCode},
             credentialsPath: ${credentials.credentialsPath}`);
@@ -69,9 +68,7 @@ export class GoogleCloudTTSEngine extends TTSEngine {
             const voice = this.config?.voice as string;
             const languageCode = this.config?.languageCode as string;
 
-            winston.verbose(
-                `${EMO} Synthesizing speech with Google Cloud TTS (voice=${voice}, language=${languageCode})`
-            );
+            logger.verbose(`Synthesizing speech with Google Cloud TTS (voice=${voice}, language=${languageCode})`);
 
             const request: ttsProtos.google.cloud.texttospeech.v1.ISynthesizeSpeechRequest = {
                 input: { text },
@@ -97,7 +94,7 @@ export class GoogleCloudTTSEngine extends TTSEngine {
             // Google returns raw LINEAR16 PCM, we need to add WAV header
             const wavBuffer = this.addWavHeader(audioBuffer, 24000, 1, 16);
 
-            winston.debug(`${EMO} Google Cloud TTS synthesis complete: ${wavBuffer.length} bytes`);
+            logger.debug(`Google Cloud TTS synthesis complete: ${wavBuffer.length} bytes`);
             return wavBuffer;
         } catch (error) {
             throw new TJBotError('Google Cloud TTS synthesis failed', { cause: error as Error });

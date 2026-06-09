@@ -17,7 +17,7 @@
 export { convertHexToRgbColor, getShineColors, normalizeColor } from './colors.js';
 export { Capability, Hardware } from './constants.js';
 export { TJBotError } from './errors.js';
-export { initWinston } from './logging.js';
+export { getLogger, initWinston } from './logging.js';
 export { ModelRegistry } from './model-registry.js';
 export { isCommandAvailable, sleep, sleepSync } from './utils.js';
 //# sourceMappingURL=index.js.map

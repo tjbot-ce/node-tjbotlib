@@ -14,11 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import winston from 'winston';
 import { TJBotError } from '../utils/errors.js';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 import { createSTTEngine } from './stt-engine.js';
-const EMO = LogEmoji.STT;
+const logger = getLogger(import.meta.url);
 /**
  * STT controller manages speech-to-text synthesis and engine lifecycle.
  * STT engine is eagerly initialized during setupMicrophone() and cached for reuse.
@@ -41,7 +40,7 @@ export class STTController {
         this.sttEngine = await createSTTEngine(this.listenConfig);
         const microphoneRate = this.listenConfig.microphoneRate;
         const microphoneChannels = this.listenConfig.microphoneChannels;
-        winston.debug(`${EMO} Initializing STT engine with microphone settings: rate=${microphoneRate}, channels=${microphoneChannels}`);
+        logger.debug(`Initializing STT engine with microphone settings: rate=${microphoneRate}, channels=${microphoneChannels}`);
         await this.sttEngine.initialize(microphoneRate, microphoneChannels);
     }
     /**
@@ -68,12 +67,12 @@ export class STTController {
                     onFinalResult: options?.onFinalResult,
                     abortSignal: options?.abortSignal,
                 });
-                winston.debug(`${EMO} Transcript: ${transcript}`);
+                logger.debug(`Transcript: ${transcript}`);
                 return transcript;
             }
             catch (error) {
                 if (this.isNoSpeechError(error)) {
-                    winston.verbose(`${EMO} No speech detected; continuing to listen`);
+                    logger.verbose('No speech detected; continuing to listen');
                     continue;
                 }
                 throw error;
@@ -92,7 +91,7 @@ export class STTController {
      */
     async cleanup() {
         if (this.sttEngine) {
-            winston.debug(`${EMO} STTController cleanup`);
+            logger.debug('STTController cleanup');
             await this.sttEngine.cleanup?.();
             this.sttEngine = undefined;
         }

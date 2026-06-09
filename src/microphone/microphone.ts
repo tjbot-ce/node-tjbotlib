@@ -16,12 +16,11 @@
  */
 
 import Mic from 'mic';
-import winston from 'winston';
 import { Transform } from 'stream';
 import { execSync } from 'child_process';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 
-const EMO = LogEmoji.MIC;
+const logger = getLogger(import.meta.url);
 
 interface MicInstance {
     start(): void;
@@ -68,14 +67,14 @@ export class MicrophoneController {
                 const card = match[1];
                 const device = match[2];
                 const deviceString = `plughw:${card},${device}`;
-                winston.debug(`${EMO} auto-detected microphone device: ${deviceString}`);
+                logger.debug(`auto-detected microphone device: ${deviceString}`);
                 return deviceString;
             }
 
-            winston.warn(`${EMO} no audio capture devices found`);
+            logger.warn('no audio capture devices found');
             return '';
         } catch (error) {
-            winston.error(`${EMO} error detecting microphone device:`, error);
+            logger.error('error detecting microphone device:', error);
             return '';
         }
     }
@@ -103,11 +102,11 @@ export class MicrophoneController {
 
         if (device && device !== '') {
             params['device'] = device;
-            winston.verbose(`${EMO} Initializing microphone with user-defined audio device: ${device}`);
+            logger.verbose(`Initializing microphone with user-defined audio device: ${device}`);
         } else {
             const selectedDevice = this.detectMicrophoneDevice();
             params['device'] = selectedDevice;
-            winston.verbose(`${EMO} Initializing microphone with auto-detected audio device: ${selectedDevice}`);
+            logger.verbose(`Initializing microphone with auto-detected audio device: ${selectedDevice}`);
         }
 
         // create the microphone
@@ -118,32 +117,32 @@ export class MicrophoneController {
 
         // event handlers
         this.micInputStream.on('startComplete', () => {
-            winston.verbose(`${EMO} Microphone started`);
+            logger.verbose('Microphone started');
         });
 
         this.micInputStream.on('pauseComplete', () => {
-            winston.verbose(`${EMO} Microphone paused`);
+            logger.verbose('Microphone paused');
         });
 
         this.micInputStream.on('data', (data) => {
-            winston.silly(`${EMO} microphone received ${data.length} bytes`);
+            logger.silly(`microphone received ${data.length} bytes`);
         });
 
         // log errors in the mic input stream
         this.micInputStream.on('error', (err) => {
-            winston.error(`${EMO} Microphone input stream experienced an error`, err);
+            logger.error('Microphone input stream experienced an error', err);
         });
 
         this.micInputStream.on('processExitComplete', () => {
-            winston.verbose(`${EMO} Microphone recording process exited`);
+            logger.verbose('Microphone recording process exited');
         });
 
         // ignore silence
         this.micInputStream.on('silence', () => {
-            winston.verbose(`${EMO} Microphone silence`);
+            logger.verbose('Microphone silence');
         });
 
-        winston.debug(`${EMO} initialized microphone with config:
+        logger.debug(`initialized microphone with config:
             rate: ${rate}
             channels: ${channels}
             device: ${device}
@@ -182,7 +181,7 @@ export class MicrophoneController {
             this.isPaused = false;
 
             // there is no resume event, so log it here
-            winston.verbose(`${EMO} Microphone resumed`);
+            logger.verbose('Microphone resumed');
         }
     }
 
@@ -208,7 +207,7 @@ export class MicrophoneController {
      * Clean up resources
      */
     cleanup(): void {
-        winston.debug(`${EMO} MicrophoneController cleanup`);
+        logger.debug('MicrophoneController cleanup');
         this.stop();
     }
 }

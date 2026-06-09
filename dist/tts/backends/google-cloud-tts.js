@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 import { TextToSpeechClient, protos as ttsProtos } from '@google-cloud/text-to-speech';
-import winston from 'winston';
 import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { TTSEngine } from '../tts-engine.js';
-const EMO = LogEmoji.TTS;
+const logger = getLogger(import.meta.url);
 /**
  * Google Cloud Text-to-Speech Engine
  *
@@ -39,8 +38,8 @@ export class GoogleCloudTTSEngine extends TTSEngine {
             throw new TJBotError('Google Cloud TTS languageCode not specified. Provide languageCode in speak.backend.google-cloud-tts config.');
         }
         this.client = new TextToSpeechClient();
-        winston.info(`${EMO} Google Cloud TTS engine initialized`);
-        winston.debug(`${EMO} Initialized GoogleCloudTTSEngine with config:
+        logger.info('Google Cloud TTS engine initialized');
+        logger.debug(`Initialized GoogleCloudTTSEngine with config:
             voice: ${config?.voice},
             languageCode: ${config?.languageCode},
             credentialsPath: ${credentials.credentialsPath}`);
@@ -53,7 +52,7 @@ export class GoogleCloudTTSEngine extends TTSEngine {
         try {
             const voice = this.config?.voice;
             const languageCode = this.config?.languageCode;
-            winston.verbose(`${EMO} Synthesizing speech with Google Cloud TTS (voice=${voice}, language=${languageCode})`);
+            logger.verbose(`Synthesizing speech with Google Cloud TTS (voice=${voice}, language=${languageCode})`);
             const request = {
                 input: { text },
                 voice: {
@@ -73,7 +72,7 @@ export class GoogleCloudTTSEngine extends TTSEngine {
             const audioBuffer = Buffer.from(response.audioContent);
             // Google returns raw LINEAR16 PCM, we need to add WAV header
             const wavBuffer = this.addWavHeader(audioBuffer, 24000, 1, 16);
-            winston.debug(`${EMO} Google Cloud TTS synthesis complete: ${wavBuffer.length} bytes`);
+            logger.debug(`Google Cloud TTS synthesis complete: ${wavBuffer.length} bytes`);
             return wavBuffer;
         }
         catch (error) {

@@ -17,10 +17,9 @@
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import SPI from 'pi-spi';
-import winston from 'winston';
 import { TJBotError } from '../utils/errors.js';
-import { LogEmoji } from '../utils/logging.js';
-const EMO = LogEmoji.LED;
+import { getLogger } from '../utils/logging.js';
+const logger = getLogger(import.meta.url);
 /**
  * LED controller for SPI-based NeoPixel LEDs (Raspberry Pi 5)
  * This is based on pi5neo.py:
@@ -115,30 +114,30 @@ export class LEDNeopixelSPI {
         this.spi.bitOrder(SPI.order.MSB_FIRST);
         this.useGRBFormat = useGRB;
         this.isPrimed = false;
-        winston.verbose(`${EMO} Initialized NeoPixel SPI LED on interface ${i} with GRB format: ${useGRB}`);
+        logger.verbose(`Initialized NeoPixel SPI LED on interface ${i} with GRB format: ${useGRB}`);
     }
     static sleep(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
     }
     async primeLink() {
-        winston.debug(`${EMO} Priming NeoPixel SPI link with OFF frames`);
+        logger.debug('Priming NeoPixel SPI link with OFF frames');
         const offFrame = this.buildFramedBitstream('000000');
         for (let i = 0; i < LEDNeopixelSPI.PRIME_OFF_FRAMES; i++) {
             await this.transferFrame(offFrame);
             await LEDNeopixelSPI.sleep(LEDNeopixelSPI.PRIME_DELAY_MS);
         }
-        winston.debug(`${EMO} NeoPixel SPI link prime complete`);
+        logger.debug('NeoPixel SPI link prime complete');
     }
     async transferFrame(bitstream) {
         for (let i = 0; i < LEDNeopixelSPI.FRAME_REPEATS; i++) {
             await new Promise((resolve, reject) => {
                 this.spi.transfer(bitstream, (err) => {
                     if (err) {
-                        winston.error(`${EMO} SPI transfer error:`, err);
+                        logger.error('SPI transfer error:', err);
                         reject(new TJBotError('SPI transfer failed', { cause: err }));
                     }
                     else {
-                        winston.debug(`${EMO} LEDNeopixelSPI.render spi.transfer success`);
+                        logger.debug('LEDNeopixelSPI.render spi.transfer success');
                         resolve();
                     }
                 });
@@ -185,7 +184,7 @@ export class LEDNeopixelSPI {
      * @returns A promise that resolves when the SPI transfer completes.
      */
     async render(color) {
-        winston.debug(`${EMO} Rendering NeoPixel LED (SPI) with color: ${color}`);
+        logger.debug(`Rendering NeoPixel LED (SPI) with color: ${color}`);
         try {
             if (!this.isPrimed) {
                 await this.primeLink();
@@ -194,15 +193,15 @@ export class LEDNeopixelSPI {
             const bitstream = this.buildFramedBitstream(color);
             // Transfer data via SPI to update the LED
             // Wait for the transfer to complete before returning
-            winston.debug(`${EMO} LEDNeopixelSPI.render about to call spi.transfer`);
+            logger.debug('LEDNeopixelSPI.render about to call spi.transfer');
             await this.transferFrame(bitstream);
-            winston.debug(`${EMO} LEDNeopixelSPI.render completed normally`);
+            logger.debug('LEDNeopixelSPI.render completed normally');
         }
         catch (e) {
-            winston.error(`${EMO} Exception in LEDNeopixelSPI.render:`, e);
+            logger.error('Exception in LEDNeopixelSPI.render:', e);
             // Print stack trace if available
             if (e instanceof Error && e.stack) {
-                winston.error(e.stack);
+                logger.error(e.stack);
             }
             throw e;
         }
@@ -211,7 +210,7 @@ export class LEDNeopixelSPI {
      * Clean up resources
      */
     cleanup() {
-        winston.debug(`${EMO} LEDNeopixelSPI cleanup (no-op)`);
+        logger.debug('LEDNeopixelSPI cleanup (no-op)');
     }
 }
 //# sourceMappingURL=led-neopixel-spi.js.map

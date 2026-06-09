@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 import { ImageAnnotatorClient } from '@google-cloud/vision';
-import winston from 'winston';
 import fs from 'fs';
 import { loadGoogleCloudCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/errors.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { VisionEngine, } from '../vision-engine.js';
-const EMO = LogEmoji.VISION;
+const logger = getLogger(import.meta.url);
 export class GoogleCloudVisionEngine extends VisionEngine {
     client;
     async initialize() {
@@ -29,8 +28,8 @@ export class GoogleCloudVisionEngine extends VisionEngine {
         // Create client using Application Default Credentials (ADC)
         // which reads GOOGLE_APPLICATION_CREDENTIALS environment variable
         this.client = new ImageAnnotatorClient();
-        winston.info(`${EMO} Google Cloud Vision engine initialized`);
-        winston.debug(`${EMO} Initialized GoogleCloudVisionEngine with config:
+        logger.info('Google Cloud Vision engine initialized');
+        logger.debug(`Initialized GoogleCloudVisionEngine with config:
             credentialsPath: ${config.credentialsPath}`);
     }
     readImageBuffer(image) {
@@ -65,7 +64,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
         const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
-        winston.verbose(`${EMO} Running object detection using Google Cloud Vision API`);
+        logger.verbose('Running object detection using Google Cloud Vision API');
         const imageBuffer = this.readImageBuffer(image);
         try {
             const request = {
@@ -104,7 +103,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
         const resolvedConfidenceThreshold = this.getImageClassificationConfidenceThreshold();
-        winston.verbose(`${EMO} Classifying image with Google Cloud Vision API`);
+        logger.verbose('Classifying image with Google Cloud Vision API');
         const imageBuffer = this.readImageBuffer(image);
         try {
             const request = {
@@ -130,7 +129,7 @@ export class GoogleCloudVisionEngine extends VisionEngine {
             throw new TJBotError('Google Cloud Vision client not initialized. Call initialize() first.');
         }
         const confidenceThreshold = this.getFaceDetectionConfidenceThreshold();
-        winston.verbose(`${EMO} Detecting faces in image with Google Cloud Vision API`);
+        logger.verbose('Detecting faces in image with Google Cloud Vision API');
         const imageBuffer = this.readImageBuffer(image);
         try {
             const request = {

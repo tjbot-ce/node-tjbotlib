@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 import winston from 'winston';
+import { fileURLToPath } from 'url';
 export var LogEmoji;
 (function (LogEmoji) {
     LogEmoji["CAMERA"] = "\uD83D\uDCF7";
@@ -32,11 +33,51 @@ export var LogEmoji;
     LogEmoji["VISION"] = "\uD83D\uDC41\uFE0F";
 })(LogEmoji || (LogEmoji = {}));
 let winstonInitialized = false;
+const LOGGER_NAME_EMOJI_RULES = [
+    ['/camera/', LogEmoji.CAMERA],
+    ['/config/', LogEmoji.CONFIG],
+    ['/led/', LogEmoji.LED],
+    ['/microphone/', LogEmoji.MIC],
+    ['/rpi-drivers/', LogEmoji.RPI],
+    ['/servo/', LogEmoji.SERVO],
+    ['/speaker/', LogEmoji.SPEAKER],
+    ['/stt/', LogEmoji.STT],
+    ['/tts/', LogEmoji.TTS],
+    ['/vision/', LogEmoji.VISION],
+    ['model-registry', LogEmoji.MODEL],
+    ['colors', LogEmoji.COLOR],
+];
+function normalizeModuleName(moduleName) {
+    if (!moduleName) {
+        return '';
+    }
+    const lower = moduleName.toLowerCase();
+    if (!lower.startsWith('file://')) {
+        return lower;
+    }
+    try {
+        return fileURLToPath(moduleName).toLowerCase();
+    }
+    catch {
+        return lower;
+    }
+}
+function emojiForModuleName(moduleName) {
+    const normalized = normalizeModuleName(moduleName);
+    for (const [pattern, emoji] of LOGGER_NAME_EMOJI_RULES) {
+        if (normalized.includes(pattern)) {
+            return emoji;
+        }
+    }
+    return LogEmoji.GENERAL;
+}
 const prettyErrorFormat = winston.format.printf(((info) => {
-    let message = `${info.level}: ${info.message}`;
+    const emoji = emojiForModuleName(typeof info.moduleName === 'string' ? info.moduleName : undefined);
+    let message = `${info.level}: ${emoji} ${info.message}`;
     const metadata = { ...info };
     delete metadata.level;
     delete metadata.message;
+    delete metadata.moduleName;
     delete metadata[Symbol.for('level')];
     delete metadata[Symbol.for('message')];
     delete metadata[Symbol.for('splat')];
@@ -62,5 +103,11 @@ export function initWinston(level = 'info') {
         return;
     }
     winston.level = level;
+}
+/**
+ * Get a module-scoped logger that lets the formatter infer a category emoji.
+ */
+export function getLogger(moduleName) {
+    return winston.child({ moduleName });
 }
 //# sourceMappingURL=logging.js.map

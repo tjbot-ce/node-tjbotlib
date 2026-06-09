@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import winston from 'winston';
 export type TJBotLogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug';
 export declare enum LogEmoji {
     CAMERA = "\uD83D\uDCF7",
@@ -36,4 +37,8 @@ export declare enum LogEmoji {
  * Later calls only update log level.
  */
 export declare function initWinston(level?: TJBotLogLevel): void;
+/**
+ * Get a module-scoped logger that lets the formatter infer a category emoji.
+ */
+export declare function getLogger(moduleName: string): winston.Logger;
 //# sourceMappingURL=logging.d.ts.map

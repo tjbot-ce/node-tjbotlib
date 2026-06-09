@@ -15,14 +15,13 @@
  */
 
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
-import winston from 'winston';
 import type { TTSBackendAzureConfig } from '../../config/config-types.js';
 import { loadAzureCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { TTSEngine } from '../tts-engine.js';
 
-const EMO = LogEmoji.TTS;
+const logger = getLogger(import.meta.url);
 
 /**
  * Azure Cognitive Services Text-to-Speech Engine
@@ -48,8 +47,8 @@ export class AzureTTSEngine extends TTSEngine {
             throw new TJBotError('Azure Speech subscription key and region are required.');
         }
 
-        winston.info(`${EMO} Azure TTS engine initialized`);
-        winston.debug(`${EMO} Initialized AzureTTSEngine with config:
+        logger.info('Azure TTS engine initialized');
+        logger.debug(`Initialized AzureTTSEngine with config:
             voice: ${config?.voice},
             region: ${this.region},
             subscriptionKey: ${this.subscriptionKey ? '***' : 'not set'}`);
@@ -68,7 +67,7 @@ export class AzureTTSEngine extends TTSEngine {
                 throw new TJBotError('Azure TTS voice not specified. Provide voice in speak config.');
             }
 
-            winston.verbose(`${EMO} Synthesizing speech with Azure TTS (voice=${voiceName})`);
+            logger.verbose(`Synthesizing speech with Azure TTS (voice=${voiceName})`);
 
             // Create speech config
             const speechConfig = sdk.SpeechConfig.fromSubscription(this.subscriptionKey, this.region);
@@ -86,7 +85,7 @@ export class AzureTTSEngine extends TTSEngine {
 
                         if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
                             const audioData = Buffer.from(result.audioData);
-                            winston.debug(`${EMO} Azure TTS synthesis complete: ${audioData.length} bytes`);
+                            logger.debug(`Azure TTS synthesis complete: ${audioData.length} bytes`);
                             resolve(audioData);
                         } else if (result.reason === sdk.ResultReason.Canceled) {
                             const cancellation = (

@@ -16,12 +16,11 @@
 import { ComputerVisionClient } from '@azure/cognitiveservices-computervision';
 import { ApiKeyCredentials } from '@azure/ms-rest-js';
 import fs from 'fs';
-import winston from 'winston';
 import { loadAzureCredentials } from '../../utils/credentials.js';
 import { TJBotError } from '../../utils/index.js';
-import { LogEmoji } from '../../utils/logging.js';
+import { getLogger } from '../../utils/logging.js';
 import { VisionEngine, } from '../vision-engine.js';
-const EMO = LogEmoji.VISION;
+const logger = getLogger(import.meta.url);
 export class AzureVisionEngine extends VisionEngine {
     visionKey;
     visionEndpoint;
@@ -36,8 +35,8 @@ export class AzureVisionEngine extends VisionEngine {
         }
         const apiKeyCredentials = new ApiKeyCredentials({ inHeader: { 'Ocp-Apim-Subscription-Key': this.visionKey } });
         this.client = new ComputerVisionClient(apiKeyCredentials, this.visionEndpoint);
-        winston.info(`${EMO} Azure Vision engine initialized`);
-        winston.debug(`${EMO} Initialized AzureVisionEngine with config:
+        logger.info('Azure Vision engine initialized');
+        logger.debug(`Initialized AzureVisionEngine with config:
             visionKey: ${this.visionKey ? '***' : 'not set'},
             visionEndpoint: ${this.visionEndpoint ? this.visionEndpoint : 'not set'}`);
     }
@@ -66,7 +65,7 @@ export class AzureVisionEngine extends VisionEngine {
             throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
         const resolvedConfidenceThreshold = this.getObjectDetectionConfidenceThreshold();
-        winston.verbose(`${EMO} Running object detection using Azure Computer Vision API`);
+        logger.verbose('Running object detection using Azure Computer Vision API');
         const imageBuffer = this.readImageBuffer(image);
         try {
             const result = await this.client.analyzeImageInStream(imageBuffer, {
@@ -96,7 +95,7 @@ export class AzureVisionEngine extends VisionEngine {
             throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
         const resolvedConfidenceThreshold = this.getImageClassificationConfidenceThreshold();
-        winston.verbose(`${EMO} Classifying image with Azure Computer Vision API`);
+        logger.verbose('Classifying image with Azure Computer Vision API');
         const imageBuffer = this.readImageBuffer(image);
         try {
             const result = await this.client.analyzeImageInStream(imageBuffer, {
@@ -123,7 +122,7 @@ export class AzureVisionEngine extends VisionEngine {
         if (!this.client) {
             throw new TJBotError('Azure Vision client not initialized. Call initialize() first.');
         }
-        winston.verbose(`${EMO} Describing image with Azure Computer Vision API`);
+        logger.verbose('Describing image with Azure Computer Vision API');
         const imageBuffer = this.readImageBuffer(image);
         try {
             const result = await this.client.analyzeImageInStream(imageBuffer, {

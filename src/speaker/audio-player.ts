@@ -16,10 +16,9 @@
 
 import { EventEmitter } from 'events';
 import { spawn, ChildProcess } from 'child_process';
-import winston from 'winston';
-import { LogEmoji } from '../utils/logging.js';
+import { getLogger } from '../utils/logging.js';
 
-const EMO = LogEmoji.SPEAKER;
+const logger = getLogger(import.meta.url);
 
 /**
  * Native audio player that uses aplay for audio playback on Raspbian/ALSA systems
@@ -42,7 +41,7 @@ export class AudioPlayer extends EventEmitter {
         }
 
         // Log the command being executed
-        winston.verbose(`${EMO} Playing audio with command: aplay ${args.join(' ')}`);
+        logger.verbose(`Playing audio with command: aplay ${args.join(' ')}`);
 
         // Spawn aplay process
         this.process = spawn('aplay', args, {
