@@ -88,6 +88,8 @@
     "prebuild": "rm -rf dist/* && node scripts/sync-tjbot-config.mjs && npm run generate:config-types",
     "prepack": "npm run build",
     "pretest": "npm run build",
+    "publish": "npm publish --access public",
+    "publish-dry-run": "npm publish --dry-run --access public",
     "sync:config-schema": "node scripts/sync-config-schema.mjs",
     "test": "vitest run tests/core",
     "test:coverage": "vitest --coverage",
