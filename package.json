@@ -1,5 +1,5 @@
 {
-  "name": "tjbot",
+  "name": "tjbot-ce",
   "version": "3.0.0",
   "description": "TJBot: Community Edition - Node.js library for writing TJBot recipes",
   "dependencies": {

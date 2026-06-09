@@ -40,7 +40,7 @@ sudo apt-get install libgpiod-dev liblgpiod-dev rpicam-apps-lite
 Install the library from npm:
 
 ```bash
-npm install --save tjbot
+npm install --save tjbot-ce
 ```
 
 > [!TIP]
