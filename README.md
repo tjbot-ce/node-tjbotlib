@@ -53,7 +53,7 @@ npm install --save tjbot-ce
 Use ES6 module syntax to import the TJBot class in your recipe. This example initializes TJBot's LED and servo motor.
 
 ```ts
-import TJBot from 'tjbot';
+import TJBot from 'tjbot-ce';
 
 tj = TJBot.getInstance().initialize({
    hardware: {
@@ -70,7 +70,7 @@ tj = TJBot.getInstance().initialize({
 This example initializes a NeoPixel LED on the GPIO 18 pin and sets it to various colors:
 
 ```ts
-import TJBot from 'tjbot';
+import TJBot from 'tjbot-ce';
 
 const tj = TJBot.getInstance().initialize({
    hardware: {
@@ -102,7 +102,7 @@ This example demonstrates how to make TJBot speak using on-device Text-to-Speech
 > The text-to-speech backend used by TJBot is set in TJBot's configuration file, located at `~/.tjbot/tjbot.toml`. By default, TJBot uses the `sherpa-onnx` text-to-speech backend.
 
 ```ts
-import TJBot from 'tjbot';
+import TJBot from 'tjbot-ce';
 
 const tj = TJBot.getInstance().initialize({
    hardware: {
@@ -158,7 +158,7 @@ cloud_api_key = "xyzabc"
 Recipe-specific settings are loaded using the `TJBot.getRecipeConfig()` class method.
 
 ```ts
-import TJBot from 'tjbot';
+import TJBot from 'tjbot-ce';
 
 // read recipe-specific config
 const config = TJBot.getRecipeConfig();
@@ -178,7 +178,7 @@ tj.shine(favorite_color);
 You can also pass specific configuration requirements directly to the `TJBot.initialize()` method using the `overrideConfig` parameter. This configuration **merges with** the cascaded defaults (not replaces them):
 
 ```ts
-import TJBot from 'tjbot';
+import TJBot from 'tjbot-ce';
 
 const config = {
     shine: {
