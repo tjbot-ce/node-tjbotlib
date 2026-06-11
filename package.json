@@ -90,7 +90,7 @@
     "pretest": "npm run build",
     "publish-registry": "npm publish --access public",
     "publish-registry-dry-run": "npm publish --dry-run --access public",
-    "sync:config-schema": "node scripts/sync-config-schema.mjs",
+    "sync:config-schema": "node scripts/sync-tjbot-config.mjs",
     "test": "vitest run tests/core",
     "test:coverage": "vitest --coverage",
     "test-camera": "tsx tests/live/camera.test.ts",

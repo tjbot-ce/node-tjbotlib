@@ -199,7 +199,7 @@ tj = TJBot.getInstance().initialize(config);
 
 TJBot uses [TOML](https://toml.io/en/) for its configuration. The canonical default configuration lives in [vendor/tjbot-config/tjbot.default.toml](vendor/tjbot-config/tjbot.default.toml) and follows the schema specified in [vendor/tjbot-config/tjbot-config.schema.yaml](vendor/tjbot-config/tjbot-config.schema.yaml).
 
-These files are synced into `src/config/` during builds. They can be syncled manually by running this command:
+These files are synced into `src/config/` during builds. They can be synced manually by running this command:
 
 ```bash
 npm run sync:config-schema
