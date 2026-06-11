@@ -1,6 +1,6 @@
 {
   "name": "tjbot-ce",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "TJBot: Community Edition - Node.js library for writing TJBot recipes",
   "dependencies": {
     "@iarna/toml": "^2.2.5",
