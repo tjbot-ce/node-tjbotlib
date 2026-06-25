@@ -544,28 +544,36 @@ class TJBot {
 
     /**
      * Listen for a spoken utterance (offline mode - returns transcript).
+     * @param timeout Optional timeout in seconds. If speech is not detected within this time, the promise rejects.
      * @returns {Promise<string>} The transcribed text
      * @throws {TJBotError} if the microphone hardware is not initialized
      * @public
      */
-    listen(): Promise<string>;
+    listen(timeout?: number): Promise<string>;
 
     /**
      * Listen for a spoken utterance (streaming mode - uses callbacks).
      * @param onPartialResult Callback for partial transcription results
      * @param onFinalResult Callback for final transcription result
+     * @param timeout Optional timeout in seconds. If speech is not detected within this time, the promise rejects.
      * @returns {Promise<void>} Promise that resolves when transcription completes
      * @throws {TJBotError} if the microphone hardware is not initialized
      * @public
      */
-    listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void): Promise<void>;
+    listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void, timeout?: number): Promise<void>;
 
     async listen(
-        onPartialResult?: (text: string) => void,
-        onFinalResult?: (text: string) => void
+        onPartialResultOrTimeout?: ((text: string) => void) | number,
+        onFinalResult?: (text: string) => void,
+        timeout?: number
     ): Promise<string | void> {
         // make sure we can listen
         this.assertCapability(Capability.LISTEN);
+
+        const isStreamingCall = typeof onPartialResultOrTimeout === 'function';
+        const onPartialResult = isStreamingCall ? onPartialResultOrTimeout : undefined;
+        const timeoutSec = isStreamingCall ? timeout : (onPartialResultOrTimeout as number | undefined);
+        const abortSignal = timeoutSec !== undefined ? AbortSignal.timeout(timeoutSec * 1000) : undefined;
 
         const listenConfig = this.config.listen ?? {};
         const mode = inferSTTMode(listenConfig);
@@ -587,11 +595,12 @@ class TJBot {
             return await this.rpiDriver.listenForTranscript({
                 onPartialResult: (text) => onPartialResult?.(text),
                 onFinalResult: (text) => onFinalResult?.(text),
+                abortSignal,
             });
         }
 
         // Offline / single-shot: return the transcript
-        const message = await this.rpiDriver.listenForTranscript();
+        const message = await this.rpiDriver.listenForTranscript({ abortSignal });
         logger.info(`Heard: "${message}"`);
         return message;
     }
