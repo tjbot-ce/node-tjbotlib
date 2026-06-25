@@ -75,7 +75,7 @@
   ],
   "scripts": {
     "build": "tsc",
-    "docs": "test -d ../tjbot-ce.github.io && typedoc --options typedoc.json || echo 'Skipping docs generation: ../tjbot-ce.github.io not found'",
+    "docs": "test -d ../tjbot-ce.github.io && typedoc --options typedoc.cjs || echo 'Skipping docs generation: ../tjbot-ce.github.io not found'",
     "format": "prettier --write \"src/**/*.{js,ts}\" \"tests/**/*.{js,ts}\"",
     "format:check": "prettier --check \"src/**/*.{js,ts}\" \"tests/**/*.{js,ts}\"",
     "generate:config-types": "node scripts/generate-config-types.mjs",

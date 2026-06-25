@@ -1,0 +1,29 @@
+const pkg = require('./package.json');
+
+module.exports = {
+  entryPoints: [
+    'src/tjbot.ts',
+    'src/camera/index.ts',
+    'src/config/index.ts',
+    'src/led/index.ts',
+    'src/microphone/index.ts',
+    'src/rpi-drivers/index.ts',
+    'src/servo/index.ts',
+    'src/speaker/index.ts',
+    'src/stt/index.ts',
+    'src/tts/index.ts',
+    'src/utils/index.ts',
+    'src/vision/index.ts',
+  ],
+  entryPointStrategy: 'resolve',
+  out: `../tjbot-ce.github.io/docs/node-tjbotlib/${pkg.version}/`,
+  tsconfig: './tsconfig.json',
+  excludePrivate: true,
+  excludeProtected: true,
+  excludeInternal: true,
+  excludeExternals: true,
+  readme: 'README.md',
+  includeVersion: true,
+  categorizeByGroup: true,
+  highlightLanguages: ['bash', 'console', 'css', 'html', 'javascript', 'json', 'jsonc', 'json5', 'yaml', 'toml', 'tsx', 'typescript'],
+};
