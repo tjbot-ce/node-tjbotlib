@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 import winston from 'winston';
-export type TJBotLogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug';
+export type TJBotLogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug' | 'silly';
 export declare enum LogEmoji {
     CAMERA = "\uD83D\uDCF7",
     COLOR = "\uD83C\uDFA8",

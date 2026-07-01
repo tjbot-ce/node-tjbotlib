@@ -16,7 +16,7 @@
 
 import { describe, expect, test } from 'vitest';
 import winston from 'winston';
-import { initWinston, LogEmoji } from '../../src/utils/logging.js';
+import { getLogger, initWinston, LogEmoji } from '../../src/utils/logging.js';
 
 describe('Logging formatter output and level mapping', () => {
     test('[test_init_logging_maps_debug_level] init logging maps debug level', () => {
@@ -27,6 +27,27 @@ describe('Logging formatter output and level mapping', () => {
     test('[test_set_log_level_maps_warn_level] set log level maps warn level', () => {
         initWinston('warn');
         expect(winston.level).toBe('warn');
+    });
+
+    test('[test_set_log_level_maps_silly_level] set log level maps silly level', () => {
+        initWinston('silly');
+        expect(winston.level).toBe('silly');
+    });
+
+    test('[test_debug_level_filters_out_silly] debug level filters out silly', () => {
+        initWinston('debug');
+        const logger = getLogger(import.meta.url);
+
+        expect(logger.isLevelEnabled('debug')).toBe(true);
+        expect(logger.isLevelEnabled('silly')).toBe(false);
+    });
+
+    test('[test_silly_level_includes_debug_and_silly] silly level includes debug and silly', () => {
+        initWinston('silly');
+        const logger = getLogger(import.meta.url);
+
+        expect(logger.isLevelEnabled('debug')).toBe(true);
+        expect(logger.isLevelEnabled('silly')).toBe(true);
     });
 
     test('[test_formatter_adds_module_emoji_prefix] formatter adds module emoji prefix', () => {

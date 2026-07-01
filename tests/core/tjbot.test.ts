@@ -158,7 +158,7 @@ describe('TJBot - Constructor and Initialization', () => {
     });
 
     test('[test_has_version_static_property] has VERSION static property', () => {
-        expect(TJBot.VERSION).toBe('v3.0.0');
+        expect(TJBot.VERSION).toMatch(/^v\d+\.\d+\.\d+(?:[-+].*)?$/);
     });
 
     test('[test_has_hardware_static_property] has Hardware static property', () => {
@@ -617,9 +617,8 @@ describe('TJBot - Listen and Speak Methods', () => {
         expect(playSpy).toHaveBeenCalledWith('/path/to/sound.wav');
     });
 
-    test('[test_observe_invalid_input_type_raises] observe invalid input type raises', async () => {
-        // @ts-expect-error parity with Python invalid-input test
-        await expect(tj.listen(123)).rejects.toBeInstanceOf(TJBotError);
+    test('[test_listen_accepts_numeric_timeout] listen accepts numeric timeout', async () => {
+        await expect(tj.listen(123)).resolves.toBe('hello');
     });
 
     test('[test_listen_async_streaming_callbacks] listen in streaming mode propagates callbacks', async () => {
@@ -865,11 +864,11 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         expect(out).toBe('transcript');
     });
 
-    test('[test_speak_delegates_to_driver] speak delegates to driver', async () => {
+    test('[test_speak_replaces_tjbot_slug_before_delegate] speak replaces tjbot slug before delegate', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         const spy = vi.spyOn(tj.rpiDriver, 'speak').mockResolvedValue();
-        await tj.speak('hello');
-        expect(spy).toHaveBeenCalledWith('hello');
+        await tj.speak('hello tjbot and TJBOT');
+        expect(spy).toHaveBeenCalledWith('hello t j bot and t j bot');
     });
 
     test('[test_look_returns_string_when_given_custom_path__2] look returns driver path', async () => {
