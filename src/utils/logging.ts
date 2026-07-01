@@ -17,7 +17,7 @@
 import winston from 'winston';
 import { fileURLToPath } from 'url';
 
-export type TJBotLogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug';
+export type TJBotLogLevel = 'error' | 'warn' | 'info' | 'verbose' | 'debug' | 'silly';
 
 export enum LogEmoji {
     CAMERA = '📷',
