@@ -153,20 +153,22 @@ declare class TJBot {
     /** ------------------------------------------------------------------------ */
     /**
      * Listen for a spoken utterance (offline mode - returns transcript).
+     * @param timeout Optional timeout in seconds. If speech is not detected within this time, the promise rejects.
      * @returns {Promise<string>} The transcribed text
      * @throws {TJBotError} if the microphone hardware is not initialized
      * @public
      */
-    listen(): Promise<string>;
+    listen(timeout?: number): Promise<string>;
     /**
      * Listen for a spoken utterance (streaming mode - uses callbacks).
      * @param onPartialResult Callback for partial transcription results
      * @param onFinalResult Callback for final transcription result
+     * @param timeout Optional timeout in seconds. If speech is not detected within this time, the promise rejects.
      * @returns {Promise<void>} Promise that resolves when transcription completes
      * @throws {TJBotError} if the microphone hardware is not initialized
      * @public
      */
-    listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void): Promise<void>;
+    listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void, timeout?: number): Promise<void>;
     /** ------------------------------------------------------------------------ */
     /** SEE                                                                      */
     /** ------------------------------------------------------------------------ */

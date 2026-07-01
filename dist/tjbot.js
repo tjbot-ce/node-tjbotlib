@@ -432,9 +432,13 @@ class TJBot {
         const models = registry.lookupModels(modelType, installedOnly);
         return models.map((model) => model.key);
     }
-    async listen(onPartialResult, onFinalResult) {
+    async listen(onPartialResultOrTimeout, onFinalResult, timeout) {
         // make sure we can listen
         this.assertCapability(Capability.LISTEN);
+        const isStreamingCall = typeof onPartialResultOrTimeout === 'function';
+        const onPartialResult = isStreamingCall ? onPartialResultOrTimeout : undefined;
+        const timeoutSec = isStreamingCall ? timeout : onPartialResultOrTimeout;
+        const abortSignal = timeoutSec !== undefined ? AbortSignal.timeout(timeoutSec * 1000) : undefined;
         const listenConfig = this.config.listen ?? {};
         const mode = inferSTTMode(listenConfig);
         const modelName = listenConfig.backend?.local?.model ?? '<unknown>';
@@ -449,10 +453,11 @@ class TJBot {
             return await this.rpiDriver.listenForTranscript({
                 onPartialResult: (text) => onPartialResult?.(text),
                 onFinalResult: (text) => onFinalResult?.(text),
+                abortSignal,
             });
         }
         // Offline / single-shot: return the transcript
-        const message = await this.rpiDriver.listenForTranscript();
+        const message = await this.rpiDriver.listenForTranscript({ abortSignal });
         logger.info(`Heard: "${message}"`);
         return message;
     }

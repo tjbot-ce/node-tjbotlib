@@ -560,7 +560,11 @@ class TJBot {
      * @throws {TJBotError} if the microphone hardware is not initialized
      * @public
      */
-    listen(onPartialResult: (text: string) => void, onFinalResult: (text: string) => void, timeout?: number): Promise<void>;
+    listen(
+        onPartialResult: (text: string) => void,
+        onFinalResult: (text: string) => void,
+        timeout?: number
+    ): Promise<void>;
 
     async listen(
         onPartialResultOrTimeout?: ((text: string) => void) | number,

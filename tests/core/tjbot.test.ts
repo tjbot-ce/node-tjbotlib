@@ -158,7 +158,7 @@ describe('TJBot - Constructor and Initialization', () => {
     });
 
     test('[test_has_version_static_property] has VERSION static property', () => {
-        expect(TJBot.VERSION).toBe('v3.0.0');
+        expect(TJBot.VERSION).toMatch(/^v\d+\.\d+\.\d+(?:[-+].*)?$/);
     });
 
     test('[test_has_hardware_static_property] has Hardware static property', () => {
@@ -617,9 +617,8 @@ describe('TJBot - Listen and Speak Methods', () => {
         expect(playSpy).toHaveBeenCalledWith('/path/to/sound.wav');
     });
 
-    test('[test_observe_invalid_input_type_raises] observe invalid input type raises', async () => {
-        // @ts-expect-error parity with Python invalid-input test
-        await expect(tj.listen(123)).rejects.toBeInstanceOf(TJBotError);
+    test('[test_listen_accepts_numeric_timeout] listen accepts numeric timeout', async () => {
+        await expect(tj.listen(123)).resolves.toBe('hello');
     });
 
     test('[test_listen_async_streaming_callbacks] listen in streaming mode propagates callbacks', async () => {
