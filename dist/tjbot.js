@@ -651,8 +651,11 @@ class TJBot {
     async speak(message) {
         this.assertCapability(Capability.SPEAK);
         logger.info(`Speaking: "${message}"`);
+        // silently change "tjbot" to "t j bot" so that TTS engines pronounce it correctly
+        const TJBOT_SLUG_PATTERN = /\btjbot\b/gi;
+        const normalizedMessage = message.replace(TJBOT_SLUG_PATTERN, 't j bot');
         // Delegate to the SpeakerController which handles TTS synthesis and audio playback
-        await this.rpiDriver.speak(message);
+        await this.rpiDriver.speak(normalizedMessage);
     }
     /**
      * Play a sound at the specified path.

@@ -864,11 +864,11 @@ describe('TJBot lifecycle resilience, async wrappers, and hardware initializatio
         expect(out).toBe('transcript');
     });
 
-    test('[test_speak_delegates_to_driver] speak delegates to driver', async () => {
+    test('[test_speak_replaces_tjbot_slug_before_delegate] speak replaces tjbot slug before delegate', async () => {
         vi.spyOn(tj.rpiDriver, 'hasCapability').mockReturnValue(true);
         const spy = vi.spyOn(tj.rpiDriver, 'speak').mockResolvedValue();
-        await tj.speak('hello');
-        expect(spy).toHaveBeenCalledWith('hello');
+        await tj.speak('hello tjbot and TJBOT');
+        expect(spy).toHaveBeenCalledWith('hello t j bot and t j bot');
     });
 
     test('[test_look_returns_string_when_given_custom_path__2] look returns driver path', async () => {

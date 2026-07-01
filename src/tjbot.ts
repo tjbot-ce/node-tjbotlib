@@ -827,8 +827,12 @@ class TJBot {
 
         logger.info(`Speaking: "${message}"`);
 
+        // silently change "tjbot" to "t j bot" so that TTS engines pronounce it correctly
+        const tjbot_pattern = /\btjbot\b/gi;
+        const normalizedMessage = message.replace(tjbot_pattern, 't j bot');
+
         // Delegate to the SpeakerController which handles TTS synthesis and audio playback
-        await this.rpiDriver.speak(message);
+        await this.rpiDriver.speak(normalizedMessage);
     }
 
     /**
